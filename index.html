@@ -1,0 +1,1533 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+  <title>FastClaim – Earn TON</title>
+  <meta name="description" content="Gana TON gratis con FastClaim. Reclama bonus cada hora, invita amigos y retira a tu wallet.">
+
+  <!-- Telegram WebApp SDK -->
+  <script src="https://telegram.org/js/telegram-web-app.js"></script>
+
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+
+  <!-- Font Awesome -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <style>
+    /* ─── Reset & Base ───────────────────────────────────── */
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg: #070714;
+      --bg2: #0d0d26;
+      --card: rgba(255,255,255,0.04);
+      --card-border: rgba(255,255,255,0.08);
+      --ton: #0098EA;
+      --ton2: #00d4ff;
+      --ton-glow: rgba(0,152,234,0.25);
+      --green: #00e676;
+      --green-glow: rgba(0,230,118,0.2);
+      --amber: #ffab00;
+      --red: #ff5252;
+      --text: #f0f0ff;
+      --text2: rgba(240,240,255,0.55);
+      --text3: rgba(240,240,255,0.3);
+      --radius: 18px;
+      --radius-sm: 12px;
+      --shadow: 0 8px 32px rgba(0,0,0,0.4);
+      --transition: 0.22s cubic-bezier(0.4,0,0.2,1);
+    }
+
+    html, body {
+      height: 100%;
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      -webkit-tap-highlight-color: transparent;
+      user-select: none;
+      overflow-x: hidden;
+    }
+
+    /* ─── Layout ─────────────────────────────────────────── */
+    #app {
+      max-width: 480px;
+      margin: 0 auto;
+      min-height: 100svh;
+      display: flex;
+      flex-direction: column;
+      position: relative;
+      overflow: hidden;
+    }
+
+    /* Background radial decorations */
+    #app::before {
+      content: '';
+      position: fixed;
+      top: -120px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 500px;
+      height: 500px;
+      background: radial-gradient(circle, rgba(0,152,234,0.12) 0%, transparent 70%);
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .content {
+      flex: 1;
+      overflow-y: auto;
+      overflow-x: hidden;
+      padding: 0 16px 100px;
+      position: relative;
+      z-index: 1;
+      scrollbar-width: none;
+    }
+    .content::-webkit-scrollbar { display: none; }
+
+    /* ─── Loading Screen ─────────────────────────────────── */
+    #loadingScreen {
+      position: fixed;
+      inset: 0;
+      background: var(--bg);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 20px;
+      z-index: 999;
+      transition: opacity 0.5s ease, visibility 0.5s ease;
+    }
+    #loadingScreen.hidden { opacity: 0; visibility: hidden; }
+
+    .loader-logo {
+      width: 72px;
+      height: 72px;
+      border-radius: 20px;
+      background: linear-gradient(135deg, var(--ton), var(--ton2));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 32px;
+      box-shadow: 0 0 40px var(--ton-glow);
+      animation: pulse-logo 1.5s ease-in-out infinite;
+    }
+    @keyframes pulse-logo {
+      0%, 100% { box-shadow: 0 0 40px var(--ton-glow); }
+      50% { box-shadow: 0 0 70px rgba(0,152,234,0.5); }
+    }
+
+    .loader-bar {
+      width: 160px;
+      height: 4px;
+      background: rgba(255,255,255,0.08);
+      border-radius: 4px;
+      overflow: hidden;
+    }
+    .loader-bar-fill {
+      height: 100%;
+      width: 0%;
+      background: linear-gradient(90deg, var(--ton), var(--ton2));
+      border-radius: 4px;
+      animation: load-fill 1.2s ease forwards;
+    }
+    @keyframes load-fill { to { width: 100%; } }
+
+    /* ─── Header ─────────────────────────────────────────── */
+    .header {
+      padding: 20px 16px 12px;
+      position: relative;
+      z-index: 2;
+    }
+
+    .header-top {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .app-brand {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+    .brand-icon {
+      width: 36px;
+      height: 36px;
+      border-radius: 10px;
+      background: linear-gradient(135deg, var(--ton), var(--ton2));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 18px;
+      box-shadow: 0 0 20px var(--ton-glow);
+    }
+    .brand-name {
+      font-size: 20px;
+      font-weight: 800;
+      background: linear-gradient(135deg, #fff, var(--ton2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+    }
+
+    .online-badge {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      font-weight: 600;
+      color: var(--green);
+      background: rgba(0,230,118,0.1);
+      border: 1px solid rgba(0,230,118,0.25);
+      padding: 5px 12px;
+      border-radius: 20px;
+    }
+    .online-dot {
+      width: 7px;
+      height: 7px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: blink 1.5s ease-in-out infinite;
+    }
+    @keyframes blink { 0%,100% { opacity:1; } 50% { opacity:0.3; } }
+
+    /* ─── Cards ──────────────────────────────────────────── */
+    .card {
+      background: var(--card);
+      border: 1px solid var(--card-border);
+      border-radius: var(--radius);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+    }
+
+    /* ─── Profile Card ───────────────────────────────────── */
+    .profile-card {
+      padding: 20px;
+      margin-top: 16px;
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      position: relative;
+      overflow: hidden;
+    }
+    .profile-card::before {
+      content: '';
+      position: absolute;
+      top: -40px;
+      right: -40px;
+      width: 160px;
+      height: 160px;
+      background: radial-gradient(circle, rgba(0,152,234,0.15) 0%, transparent 70%);
+    }
+
+    .avatar-wrap {
+      position: relative;
+      flex-shrink: 0;
+    }
+    .avatar {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: linear-gradient(135deg, var(--ton), var(--ton2));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 26px;
+      font-weight: 800;
+      color: white;
+      overflow: hidden;
+      border: 2px solid rgba(0,152,234,0.4);
+      box-shadow: 0 0 20px var(--ton-glow);
+    }
+    .avatar img { width: 100%; height: 100%; object-fit: cover; }
+    .avatar-ring {
+      position: absolute;
+      inset: -4px;
+      border-radius: 50%;
+      background: conic-gradient(var(--ton), var(--ton2), var(--ton));
+      z-index: -1;
+      animation: spin 3s linear infinite;
+      opacity: 0.6;
+    }
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    .profile-info { flex: 1; min-width: 0; }
+    .profile-name {
+      font-size: 17px;
+      font-weight: 700;
+      color: var(--text);
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .profile-username {
+      font-size: 12px;
+      color: var(--ton2);
+      font-weight: 500;
+      margin-top: 2px;
+    }
+    .profile-joined {
+      font-size: 11px;
+      color: var(--text3);
+      margin-top: 4px;
+    }
+
+    .profile-balance-pill {
+      text-align: right;
+      flex-shrink: 0;
+    }
+    .balance-label {
+      font-size: 10px;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      font-weight: 600;
+    }
+    .balance-value {
+      font-size: 22px;
+      font-weight: 900;
+      color: var(--ton2);
+      line-height: 1.1;
+      margin-top: 2px;
+      font-variant-numeric: tabular-nums;
+    }
+    .balance-unit { font-size: 12px; color: var(--ton); font-weight: 700; }
+
+    /* ─── Balance Big Card ───────────────────────────────── */
+    .balance-card {
+      margin-top: 16px;
+      padding: 24px 20px;
+      text-align: center;
+      position: relative;
+      overflow: hidden;
+      background: linear-gradient(135deg, rgba(0,152,234,0.1), rgba(0,212,255,0.05));
+      border-color: rgba(0,152,234,0.25);
+    }
+    .balance-card::after {
+      content: '';
+      position: absolute;
+      bottom: -50px;
+      right: -50px;
+      width: 200px;
+      height: 200px;
+      background: radial-gradient(circle, rgba(0,152,234,0.08) 0%, transparent 70%);
+    }
+
+    .balance-card .bl {
+      font-size: 11px;
+      color: var(--text3);
+      text-transform: uppercase;
+      letter-spacing: 2px;
+      font-weight: 600;
+    }
+    .balance-card .bv {
+      font-size: 52px;
+      font-weight: 900;
+      background: linear-gradient(135deg, #fff 30%, var(--ton2));
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      line-height: 1;
+      margin: 8px 0 4px;
+      font-variant-numeric: tabular-nums;
+    }
+    .balance-card .bu { font-size: 18px; font-weight: 700; color: var(--ton); }
+    .balance-card .stats-row {
+      display: flex;
+      justify-content: center;
+      gap: 24px;
+      margin-top: 16px;
+    }
+    .stat-item { text-align: center; }
+    .stat-value { font-size: 16px; font-weight: 700; color: var(--text); }
+    .stat-label { font-size: 10px; color: var(--text3); font-weight: 500; margin-top: 2px; }
+
+    /* ─── Claim Button ───────────────────────────────────── */
+    .claim-section {
+      margin-top: 20px;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .claim-btn-wrap {
+      position: relative;
+      width: 140px;
+      height: 140px;
+    }
+    .claim-ring-svg {
+      width: 140px;
+      height: 140px;
+      transform: rotate(-90deg);
+      position: absolute;
+      top: 0;
+      left: 0;
+    }
+    .ring-bg { stroke: rgba(255,255,255,0.06); }
+    .ring-fill {
+      stroke: var(--ton);
+      stroke-linecap: round;
+      transition: stroke-dashoffset 1s linear;
+      filter: drop-shadow(0 0 6px var(--ton));
+    }
+
+    .claim-btn {
+      position: absolute;
+      inset: 10px;
+      border-radius: 50%;
+      border: none;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+      font-weight: 800;
+      transition: all var(--transition);
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 4px;
+    }
+
+    .claim-btn.active {
+      background: linear-gradient(135deg, var(--ton), var(--ton2));
+      box-shadow: 0 0 30px var(--ton-glow), inset 0 1px 0 rgba(255,255,255,0.2);
+      animation: glow-pulse 2s ease-in-out infinite;
+    }
+    @keyframes glow-pulse {
+      0%,100% { box-shadow: 0 0 30px var(--ton-glow); }
+      50% { box-shadow: 0 0 55px rgba(0,152,234,0.5); }
+    }
+    .claim-btn.active:hover { transform: scale(1.05); }
+    .claim-btn.active:active { transform: scale(0.97); }
+
+    .claim-btn.cooldown {
+      background: rgba(255,255,255,0.04);
+      cursor: not-allowed;
+    }
+
+    .claim-btn .claim-icon { font-size: 22px; color: white; }
+    .claim-btn .claim-label { font-size: 11px; color: rgba(255,255,255,0.9); font-weight: 700; }
+    .claim-btn .claim-timer { font-size: 13px; color: var(--text2); font-weight: 600; font-variant-numeric: tabular-nums; }
+    .claim-btn .claim-amount { font-size: 14px; color: white; font-weight: 800; }
+
+    .claim-hint {
+      font-size: 12px;
+      color: var(--text3);
+      text-align: center;
+      max-width: 240px;
+    }
+
+    /* Claim success flash */
+    @keyframes flash-success {
+      0% { background: linear-gradient(135deg, var(--green), #00bfa5); transform: scale(1.08); }
+      100% { background: linear-gradient(135deg, var(--ton), var(--ton2)); transform: scale(1); }
+    }
+    .claim-btn.flash { animation: flash-success 0.5s ease forwards; }
+
+    /* ─── Section Titles ─────────────────────────────────── */
+    .section-title {
+      font-size: 13px;
+      font-weight: 700;
+      color: var(--text2);
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      margin: 24px 0 12px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    .section-title::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: var(--card-border);
+    }
+
+    /* ─── Quick Stats Row ────────────────────────────────── */
+    .quick-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr 1fr;
+      gap: 10px;
+      margin-top: 16px;
+    }
+    .qs-card {
+      padding: 14px 10px;
+      text-align: center;
+      border-radius: var(--radius-sm);
+    }
+    .qs-icon { font-size: 20px; margin-bottom: 6px; }
+    .qs-value { font-size: 18px; font-weight: 800; color: var(--text); }
+    .qs-label { font-size: 10px; color: var(--text3); font-weight: 500; margin-top: 2px; }
+
+    /* ─── Tab Navigation ─────────────────────────────────── */
+    .nav {
+      position: fixed;
+      bottom: 0;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 100%;
+      max-width: 480px;
+      background: rgba(7,7,20,0.9);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      border-top: 1px solid var(--card-border);
+      display: flex;
+      padding: 8px 16px 20px;
+      gap: 0;
+      z-index: 100;
+    }
+    .nav-btn {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      background: none;
+      border: none;
+      cursor: pointer;
+      padding: 8px 0;
+      border-radius: var(--radius-sm);
+      transition: all var(--transition);
+      font-family: 'Inter', sans-serif;
+      color: var(--text3);
+    }
+    .nav-btn i { font-size: 20px; transition: all var(--transition); }
+    .nav-btn span { font-size: 10px; font-weight: 600; transition: all var(--transition); }
+    .nav-btn.active { color: var(--ton2); }
+    .nav-btn.active i { filter: drop-shadow(0 0 8px var(--ton)); }
+
+    /* ─── Pages ──────────────────────────────────────────── */
+    .page { display: none; }
+    .page.active { display: block; }
+
+    /* ─── Referral Page ──────────────────────────────────── */
+    .ref-hero {
+      margin-top: 16px;
+      padding: 24px 20px;
+      text-align: center;
+      background: linear-gradient(135deg, rgba(0,230,118,0.08), rgba(0,152,234,0.06));
+      border-color: rgba(0,230,118,0.2);
+      position: relative;
+      overflow: hidden;
+    }
+    .ref-hero-icon { font-size: 40px; margin-bottom: 12px; }
+    .ref-hero-title { font-size: 20px; font-weight: 800; color: var(--text); }
+    .ref-hero-sub { font-size: 13px; color: var(--text2); margin-top: 6px; line-height: 1.5; }
+
+    .ref-reward-badges {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-top: 16px;
+    }
+    .reward-badge {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 4px;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid rgba(255,255,255,0.08);
+      border-radius: 12px;
+      padding: 12px 16px;
+      min-width: 90px;
+    }
+    .reward-badge-val { font-size: 18px; font-weight: 900; color: var(--green); }
+    .reward-badge-lbl { font-size: 10px; color: var(--text3); font-weight: 500; text-align: center; }
+
+    .ref-link-box {
+      margin-top: 20px;
+      padding: 20px;
+    }
+    .ref-link-label { font-size: 12px; color: var(--text3); font-weight: 500; margin-bottom: 8px; }
+    .ref-link-input-wrap {
+      display: flex;
+      gap: 8px;
+      align-items: center;
+    }
+    .ref-link-input {
+      flex: 1;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 12px 14px;
+      font-size: 12px;
+      color: var(--ton2);
+      font-family: 'Inter', monospace;
+      outline: none;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .icon-btn {
+      width: 44px;
+      height: 44px;
+      border-radius: 12px;
+      border: none;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 16px;
+      transition: all var(--transition);
+      flex-shrink: 0;
+    }
+    .icon-btn.copy-btn {
+      background: rgba(0,152,234,0.15);
+      border: 1px solid rgba(0,152,234,0.3);
+      color: var(--ton2);
+    }
+    .icon-btn.copy-btn:hover { background: rgba(0,152,234,0.25); }
+    .icon-btn.copy-btn.copied { background: rgba(0,230,118,0.15); border-color: rgba(0,230,118,0.3); color: var(--green); }
+    .icon-btn.share-btn {
+      background: rgba(0,230,118,0.12);
+      border: 1px solid rgba(0,230,118,0.25);
+      color: var(--green);
+    }
+    .icon-btn.share-btn:hover { background: rgba(0,230,118,0.22); }
+
+    .ref-stats {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin-top: 12px;
+      padding: 0 0;
+    }
+    .ref-stat-card {
+      padding: 16px;
+      text-align: center;
+      border-radius: var(--radius-sm);
+    }
+    .ref-stat-icon { font-size: 22px; margin-bottom: 6px; }
+    .ref-stat-val { font-size: 22px; font-weight: 800; color: var(--text); }
+    .ref-stat-lbl { font-size: 10px; color: var(--text3); font-weight: 500; margin-top: 2px; }
+
+    /* ─── Withdraw Page ──────────────────────────────────── */
+    .withdraw-hero {
+      margin-top: 16px;
+      padding: 20px;
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+    .withdraw-hero-icon {
+      width: 52px;
+      height: 52px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, rgba(0,152,234,0.2), rgba(0,212,255,0.1));
+      border: 1px solid rgba(0,152,234,0.3);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 24px;
+      flex-shrink: 0;
+    }
+    .withdraw-hero-text h3 { font-size: 17px; font-weight: 800; }
+    .withdraw-hero-text p { font-size: 12px; color: var(--text2); margin-top: 3px; line-height: 1.5; }
+
+    .form-card {
+      padding: 20px;
+      margin-top: 0;
+    }
+    .form-group { margin-bottom: 16px; }
+    .form-label {
+      font-size: 11px;
+      color: var(--text3);
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+      display: block;
+    }
+    .form-input {
+      width: 100%;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 14px 16px;
+      font-size: 14px;
+      color: var(--text);
+      font-family: 'Inter', sans-serif;
+      outline: none;
+      transition: border-color var(--transition);
+    }
+    .form-input::placeholder { color: var(--text3); }
+    .form-input:focus { border-color: rgba(0,152,234,0.5); }
+
+    .balance-hint {
+      font-size: 11px;
+      color: var(--text2);
+      margin-top: 6px;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+    }
+    .max-btn {
+      background: rgba(0,152,234,0.12);
+      border: 1px solid rgba(0,152,234,0.25);
+      border-radius: 6px;
+      color: var(--ton2);
+      font-size: 10px;
+      font-weight: 700;
+      padding: 3px 8px;
+      cursor: pointer;
+      font-family: 'Inter', sans-serif;
+    }
+
+    .btn-primary {
+      width: 100%;
+      padding: 16px;
+      background: linear-gradient(135deg, var(--ton), var(--ton2));
+      border: none;
+      border-radius: var(--radius-sm);
+      color: white;
+      font-size: 15px;
+      font-weight: 800;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      transition: all var(--transition);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      box-shadow: 0 8px 24px rgba(0,152,234,0.3);
+    }
+    .btn-primary:hover { transform: translateY(-1px); box-shadow: 0 12px 32px rgba(0,152,234,0.4); }
+    .btn-primary:active { transform: translateY(0); }
+    .btn-primary:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .info-box {
+      padding: 12px 14px;
+      background: rgba(255,171,0,0.08);
+      border: 1px solid rgba(255,171,0,0.2);
+      border-radius: 10px;
+      font-size: 12px;
+      color: var(--amber);
+      margin-bottom: 16px;
+      display: flex;
+      gap: 8px;
+      align-items: flex-start;
+      line-height: 1.5;
+    }
+
+    /* Withdrawal history */
+    .withdrawal-history { margin-top: 12px; }
+    .withdrawal-item {
+      padding: 14px 16px;
+      border-radius: var(--radius-sm);
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+    .wi-status-dot {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      flex-shrink: 0;
+    }
+    .wi-status-dot.pending { background: var(--amber); box-shadow: 0 0 8px rgba(255,171,0,0.4); }
+    .wi-status-dot.approved { background: var(--green); box-shadow: 0 0 8px var(--green-glow); }
+    .wi-status-dot.rejected { background: var(--red); }
+
+    .wi-info { flex: 1; min-width: 0; }
+    .wi-amount { font-size: 15px; font-weight: 700; color: var(--text); }
+    .wi-wallet { font-size: 11px; color: var(--text3); font-weight: 400; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+    .wi-date { font-size: 10px; color: var(--text3); }
+
+    .wi-badge {
+      font-size: 10px;
+      font-weight: 700;
+      padding: 4px 8px;
+      border-radius: 6px;
+      flex-shrink: 0;
+    }
+    .wi-badge.pending { background: rgba(255,171,0,0.12); color: var(--amber); }
+    .wi-badge.approved { background: rgba(0,230,118,0.12); color: var(--green); }
+    .wi-badge.rejected { background: rgba(255,82,82,0.12); color: var(--red); }
+
+    /* ─── Toast ──────────────────────────────────────────── */
+    #toast {
+      position: fixed;
+      bottom: 100px;
+      left: 50%;
+      transform: translateX(-50%) translateY(20px);
+      background: rgba(20,20,40,0.95);
+      border: 1px solid var(--card-border);
+      backdrop-filter: blur(20px);
+      -webkit-backdrop-filter: blur(20px);
+      padding: 12px 20px;
+      border-radius: 12px;
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      white-space: nowrap;
+      z-index: 500;
+      opacity: 0;
+      transition: all 0.3s ease;
+      pointer-events: none;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+    #toast.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+    #toast.success { border-color: rgba(0,230,118,0.3); }
+    #toast.error { border-color: rgba(255,82,82,0.3); }
+    #toast.info { border-color: rgba(0,152,234,0.3); }
+
+    /* ─── Skeleton Loader ────────────────────────────────── */
+    .skeleton {
+      background: linear-gradient(90deg, rgba(255,255,255,0.04) 25%, rgba(255,255,255,0.08) 50%, rgba(255,255,255,0.04) 75%);
+      background-size: 200% 100%;
+      animation: shimmer 1.5s infinite;
+      border-radius: 8px;
+    }
+    @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
+
+    /* ─── Empty State ────────────────────────────────────── */
+    .empty-state {
+      text-align: center;
+      padding: 32px 20px;
+      color: var(--text3);
+    }
+    .empty-state i { font-size: 36px; margin-bottom: 10px; display: block; }
+    .empty-state p { font-size: 13px; }
+
+    /* ─── Number counter animation ───────────────────────── */
+    @keyframes count-up {
+      from { transform: translateY(10px); opacity: 0; }
+      to { transform: translateY(0); opacity: 1; }
+    }
+    .count-anim { animation: count-up 0.4s ease forwards; }
+  </style>
+</head>
+<body>
+
+<!-- ─── Loading Screen ─────────────────────────────────── -->
+<div id="loadingScreen">
+  <div class="loader-logo">⚡</div>
+  <div style="text-align:center">
+    <div style="font-size:20px;font-weight:800;background:linear-gradient(135deg,#fff,var(--ton2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">FastClaim</div>
+    <div style="font-size:12px;color:var(--text3);margin-top:4px;">Cargando tu billetera TON...</div>
+  </div>
+  <div class="loader-bar"><div class="loader-bar-fill"></div></div>
+</div>
+
+<!-- ─── Main App ───────────────────────────────────────── -->
+<div id="app">
+  <!-- Header -->
+  <div class="header">
+    <div class="header-top">
+      <div class="app-brand">
+        <div class="brand-icon">⚡</div>
+        <span class="brand-name">FastClaim</span>
+      </div>
+      <div class="online-badge">
+        <span class="online-dot"></span>
+        En línea
+      </div>
+    </div>
+  </div>
+
+  <!-- Content Area -->
+  <div class="content">
+    
+    <!-- ═══ PAGE: HOME ═════════════════════════════════════ -->
+    <div id="pageHome" class="page active">
+
+      <!-- Profile Card -->
+      <div class="card profile-card">
+        <div class="avatar-wrap">
+          <div class="avatar" id="userAvatar">
+            <span id="avatarInitial">?</span>
+          </div>
+          <div class="avatar-ring"></div>
+        </div>
+        <div class="profile-info">
+          <div class="profile-name" id="profileName">Cargando...</div>
+          <div class="profile-username" id="profileUsername">@usuario</div>
+          <div class="profile-joined" id="profileJoined">Miembro desde —</div>
+        </div>
+        <div class="profile-balance-pill">
+          <div class="balance-label">Balance</div>
+          <div class="balance-value" id="profileBalance">0.000</div>
+          <div class="balance-unit">TON</div>
+        </div>
+      </div>
+
+      <!-- Balance Big Card -->
+      <div class="card balance-card">
+        <div class="bl">Tu Balance Total</div>
+        <div class="bv" id="bigBalance">0.000</div>
+        <div class="bu">TON</div>
+        <div class="stats-row">
+          <div class="stat-item">
+            <div class="stat-value" id="statClaims">0</div>
+            <div class="stat-label">Claims Totales</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" id="statRefs">0</div>
+            <div class="stat-label">Referidos</div>
+          </div>
+          <div class="stat-item">
+            <div class="stat-value" id="statBonus">0.01</div>
+            <div class="stat-label">TON / Claim</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Claim Button Section -->
+      <div class="claim-section">
+        <div class="claim-btn-wrap">
+          <!-- Progress ring SVG -->
+          <svg class="claim-ring-svg" viewBox="0 0 140 140">
+            <circle class="ring-bg" cx="70" cy="70" r="58" stroke-width="6" fill="none"/>
+            <circle class="ring-fill" id="ringFill" cx="70" cy="70" r="58" stroke-width="6" fill="none"
+              stroke-dasharray="364.4" stroke-dashoffset="0"/>
+          </svg>
+          <!-- Center Button -->
+          <button class="claim-btn active" id="claimBtn" onclick="handleClaim()">
+            <i class="fa-solid fa-bolt claim-icon"></i>
+            <span class="claim-amount" id="claimBtnAmount">+0.01 TON</span>
+            <span class="claim-label" id="claimBtnLabel">¡RECLAMAR!</span>
+          </button>
+        </div>
+        <p class="claim-hint" id="claimHint">Reclama tu bonus de TON cada hora. ¡Sin límite de veces!</p>
+      </div>
+
+      <!-- Quick Stats -->
+      <p class="section-title"><i class="fa-solid fa-chart-bar" style="color:var(--ton)"></i> Estadísticas</p>
+      <div class="quick-stats">
+        <div class="card qs-card">
+          <div class="qs-icon">⚡</div>
+          <div class="qs-value" id="qsClaims">—</div>
+          <div class="qs-label">Claims</div>
+        </div>
+        <div class="card qs-card">
+          <div class="qs-icon">👥</div>
+          <div class="qs-value" id="qsRefs">—</div>
+          <div class="qs-label">Referidos</div>
+        </div>
+        <div class="card qs-card">
+          <div class="qs-icon">💎</div>
+          <div class="qs-value" id="qsBalance">—</div>
+          <div class="qs-label">TON Ganados</div>
+        </div>
+      </div>
+
+    </div><!-- end pageHome -->
+
+    <!-- ═══ PAGE: REFERRALS ════════════════════════════════ -->
+    <div id="pageReferrals" class="page">
+
+      <div class="card ref-hero">
+        <div class="ref-hero-icon">🎁</div>
+        <div class="ref-hero-title">Gana invitando amigos</div>
+        <div class="ref-hero-sub">Por cada amigo que se una con tu link, <strong style="color:var(--green)">tú ganas TON automáticamente</strong>.</div>
+        <div class="ref-reward-badges">
+          <div class="reward-badge">
+            <div class="reward-badge-val" id="refRewardVal">0.05</div>
+            <div class="reward-badge-lbl">TON por<br>referido</div>
+          </div>
+          <div class="reward-badge">
+            <div class="reward-badge-val" id="refCountBig">0</div>
+            <div class="reward-badge-lbl">Amigos<br>invitados</div>
+          </div>
+          <div class="reward-badge">
+            <div class="reward-badge-val" id="refEarnedBig">0.00</div>
+            <div class="reward-badge-lbl">TON<br>ganados</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Ref Link Box -->
+      <div class="card ref-link-box" style="margin-top:12px;">
+        <div class="ref-link-label">Tu enlace de invitación</div>
+        <div class="ref-link-input-wrap">
+          <input type="text" class="ref-link-input" id="refLinkInput" readonly value="Cargando...">
+          <button class="icon-btn copy-btn" id="copyRefBtn" onclick="copyRefLink()" title="Copiar enlace">
+            <i class="fa-regular fa-copy"></i>
+          </button>
+          <button class="icon-btn share-btn" onclick="shareRefLink()" title="Compartir">
+            <i class="fa-solid fa-share-nodes"></i>
+          </button>
+        </div>
+      </div>
+
+      <!-- Ref Stats -->
+      <p class="section-title"><i class="fa-solid fa-users" style="color:var(--green)"></i> Tus Referidos</p>
+      <div class="ref-stats">
+        <div class="card ref-stat-card">
+          <div class="ref-stat-icon">👥</div>
+          <div class="ref-stat-val" id="refStatCount">0</div>
+          <div class="ref-stat-lbl">Amigos invitados</div>
+        </div>
+        <div class="card ref-stat-card">
+          <div class="ref-stat-icon">💰</div>
+          <div class="ref-stat-val" id="refStatEarned">0.00</div>
+          <div class="ref-stat-lbl">TON ganados</div>
+        </div>
+      </div>
+
+      <!-- How it works -->
+      <p class="section-title"><i class="fa-solid fa-circle-info" style="color:var(--ton)"></i> Cómo funciona</p>
+      <div class="card" style="padding:16px;">
+        <div style="display:flex;flex-direction:column;gap:14px;">
+          <div style="display:flex;gap:12px;align-items:flex-start;">
+            <div style="width:32px;height:32px;border-radius:50%;background:rgba(0,152,234,0.15);border:1px solid rgba(0,152,234,0.3);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--ton2);flex-shrink:0;">1</div>
+            <div><div style="font-size:13px;font-weight:700;color:var(--text);">Copia tu enlace único</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">Cada usuario tiene un código único de referido.</div></div>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start;">
+            <div style="width:32px;height:32px;border-radius:50%;background:rgba(0,152,234,0.15);border:1px solid rgba(0,152,234,0.3);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--ton2);flex-shrink:0;">2</div>
+            <div><div style="font-size:13px;font-weight:700;color:var(--text);">Invita a tus amigos</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">Comparte el link en tus grupos de Telegram, WhatsApp, etc.</div></div>
+          </div>
+          <div style="display:flex;gap:12px;align-items:flex-start;">
+            <div style="width:32px;height:32px;border-radius:50%;background:rgba(0,230,118,0.12);border:1px solid rgba(0,230,118,0.25);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--green);flex-shrink:0;">3</div>
+            <div><div style="font-size:13px;font-weight:700;color:var(--text);">Gana TON automáticamente</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">Cuando tu amigo se registre, <span style="color:var(--green);font-weight:700;">recibirás TON al instante</span>.</div></div>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end pageReferrals -->
+
+    <!-- ═══ PAGE: WITHDRAW ═════════════════════════════════ -->
+    <div id="pageWithdraw" class="page">
+
+      <div class="card withdraw-hero">
+        <div class="withdraw-hero-icon">💸</div>
+        <div class="withdraw-hero-text">
+          <h3>Retirar TON</h3>
+          <p>Envía tus ganancias directamente a tu wallet de TON. Procesamos en 24-48 horas.</p>
+        </div>
+      </div>
+
+      <div class="card form-card" style="margin-top:12px;">
+        <div class="info-box">
+          <i class="fa-solid fa-triangle-exclamation"></i>
+          <span>Mínimo de retiro: <strong id="minWithdrawInfo">0.1 TON</strong>. Tu balance disponible: <strong id="withdrawBalanceInfo">0.000 TON</strong>.</span>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="walletInput">Dirección de Wallet TON</label>
+          <input type="text" id="walletInput" class="form-input" placeholder="UQ... o EQ... (dirección TON)">
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="amountInput">Monto a retirar (TON)</label>
+          <input type="number" id="amountInput" class="form-input" placeholder="0.00" min="0.1" step="0.01">
+          <div class="balance-hint">
+            <span>Disponible: <span id="withdrawAvail">0.000</span> TON</span>
+            <button class="max-btn" onclick="setMaxWithdraw()">MAX</button>
+          </div>
+        </div>
+
+        <button class="btn-primary" id="withdrawBtn" onclick="handleWithdraw()">
+          <i class="fa-solid fa-paper-plane"></i>
+          Solicitar Retiro
+        </button>
+      </div>
+
+      <!-- History -->
+      <p class="section-title"><i class="fa-solid fa-clock-rotate-left" style="color:var(--ton)"></i> Historial</p>
+      <div class="withdrawal-history" id="withdrawHistory">
+        <div class="card">
+          <div class="empty-state">
+            <i class="fa-regular fa-clock"></i>
+            <p>No tienes retiros aún</p>
+          </div>
+        </div>
+      </div>
+
+    </div><!-- end pageWithdraw -->
+
+  </div><!-- end content -->
+
+  <!-- ─── Bottom Nav ──────────────────────────────────────── -->
+  <nav class="nav">
+    <button class="nav-btn active" id="navHome" onclick="switchPage('Home')">
+      <i class="fa-solid fa-house"></i>
+      <span>Inicio</span>
+    </button>
+    <button class="nav-btn" id="navReferrals" onclick="switchPage('Referrals')">
+      <i class="fa-solid fa-users"></i>
+      <span>Referidos</span>
+    </button>
+    <button class="nav-btn" id="navWithdraw" onclick="switchPage('Withdraw')">
+      <i class="fa-solid fa-wallet"></i>
+      <span>Retirar</span>
+    </button>
+  </nav>
+
+</div><!-- end app -->
+
+<!-- ─── Toast ───────────────────────────────────────────── -->
+<div id="toast"></div>
+
+<script>
+// ─── Config & State ───────────────────────────────────────
+const API_BASE = window.location.origin; // mismo servidor
+let userData = null;
+let claimTimer = null;
+let claimCooldownRemaining = 0;
+const CIRCUMFERENCE = 364.4; // 2π * 58
+
+// ─── Telegram SDK ─────────────────────────────────────────
+const tg = window.Telegram?.WebApp;
+if (tg) {
+  tg.expand();
+  tg.ready();
+}
+
+function getTelegramUser() {
+  if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
+    return tg.initDataUnsafe.user;
+  }
+  // Fallback para desarrollo en browser
+  return {
+    id: 'dev_' + Math.random().toString(36).substr(2, 8),
+    username: 'devuser',
+    first_name: 'Dev',
+    last_name: 'User',
+    photo_url: ''
+  };
+}
+
+function getRefCode() {
+  // Check Telegram start_param
+  if (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) {
+    return tg.initDataUnsafe.start_param;
+  }
+  // Check URL param
+  const params = new URLSearchParams(window.location.search);
+  return params.get('ref') || null;
+}
+
+// ─── Init ─────────────────────────────────────────────────
+window.addEventListener('load', async () => {
+  await initApp();
+});
+
+async function initApp() {
+  const tgUser = getTelegramUser();
+  const refCode = getRefCode();
+
+  try {
+    const res = await fetch(`${API_BASE}/api/user`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        telegram_id: String(tgUser.id),
+        username: tgUser.username || '',
+        first_name: tgUser.first_name || 'User',
+        photo_url: tgUser.photo_url || '',
+        ref: refCode
+      })
+    });
+
+    if (!res.ok) throw new Error('API error');
+    userData = await res.json();
+
+    renderUserData();
+    startClaimCycle();
+    loadWithdrawalHistory();
+
+  } catch (err) {
+    console.error('Error al inicializar:', err);
+    showToast('⚠️ No se pudo conectar al servidor', 'error');
+  } finally {
+    // Ocultar loading
+    setTimeout(() => {
+      document.getElementById('loadingScreen').classList.add('hidden');
+    }, 600);
+  }
+}
+
+// ─── Render User Data ─────────────────────────────────────
+function renderUserData() {
+  if (!userData) return;
+
+  // Avatar
+  const avatarEl = document.getElementById('userAvatar');
+  const avatarInitial = document.getElementById('avatarInitial');
+  if (userData.photo_url) {
+    avatarEl.innerHTML = `<img src="${userData.photo_url}" alt="Avatar">`;
+  } else {
+    avatarInitial.textContent = (userData.first_name || 'U').charAt(0).toUpperCase();
+  }
+
+  // Profile info
+  document.getElementById('profileName').textContent = userData.first_name || 'Usuario';
+  document.getElementById('profileUsername').textContent = userData.username ? '@' + userData.username : 'Sin @username';
+  document.getElementById('profileJoined').textContent = 'Miembro desde ' + formatDate(userData.created_at);
+
+  // Balances
+  const balance = parseFloat(userData.balance || 0);
+  animateNumber('profileBalance', balance, 3);
+  animateNumber('bigBalance', balance, 3);
+  animateNumber('qsBalance', balance, 3);
+
+  // Stats
+  document.getElementById('statClaims').textContent = userData.total_claimed || 0;
+  document.getElementById('statRefs').textContent = userData.referral_count || 0;
+  document.getElementById('statBonus').textContent = userData.bonus_amount || '0.01';
+  document.getElementById('qsClaims').textContent = userData.total_claimed || 0;
+  document.getElementById('qsRefs').textContent = userData.referral_count || 0;
+
+  // Claim button amount
+  document.getElementById('claimBtnAmount').textContent = '+' + (userData.bonus_amount || '0.01') + ' TON';
+
+  // Referral link
+  const botUsername = tg?.initDataUnsafe?.via_bot_username || 'YourBot';
+  const refLink = `https://t.me/${botUsername}?start=${userData.referral_code}`;
+  document.getElementById('refLinkInput').value = refLink;
+
+  // Referral stats
+  const refCount = userData.referral_count || 0;
+  const refReward = parseFloat(userData.bonus_amount ? '0.05' : '0.05'); // from server ideally
+  const refEarned = (refCount * 0.05).toFixed(2);
+  
+  document.getElementById('refCountBig').textContent = refCount;
+  document.getElementById('refEarnedBig').textContent = refEarned;
+  document.getElementById('refStatCount').textContent = refCount;
+  document.getElementById('refStatEarned').textContent = refEarned;
+  document.getElementById('refRewardVal').textContent = '0.05';
+
+  // Withdraw page
+  const minWD = userData.min_withdraw || 0.1;
+  document.getElementById('minWithdrawInfo').textContent = minWD + ' TON';
+  document.getElementById('withdrawBalanceInfo').textContent = balance.toFixed(3) + ' TON';
+  document.getElementById('withdrawAvail').textContent = balance.toFixed(3);
+  document.getElementById('amountInput').min = minWD;
+}
+
+// ─── Claim System ─────────────────────────────────────────
+function startClaimCycle() {
+  if (!userData) return;
+
+  if (claimTimer) {
+    clearInterval(claimTimer);
+    claimTimer = null;
+  }
+
+  if (userData.can_claim) {
+    setClaimReady();
+  } else {
+    claimCooldownRemaining = userData.next_claim_in || 3600;
+    setClaimCooldown();
+    claimTimer = setInterval(() => {
+      claimCooldownRemaining--;
+      if (claimCooldownRemaining <= 0) {
+        clearInterval(claimTimer);
+        claimTimer = null;
+        setClaimReady();
+      } else {
+        updateClaimTimer();
+      }
+    }, 1000);
+  }
+}
+
+function setClaimReady() {
+  const btn = document.getElementById('claimBtn');
+  btn.className = 'claim-btn active';
+  btn.innerHTML = `
+    <i class="fa-solid fa-bolt claim-icon"></i>
+    <span class="claim-amount">+${userData?.bonus_amount || '0.01'} TON</span>
+    <span class="claim-label">¡RECLAMAR!</span>
+  `;
+  document.getElementById('ringFill').style.strokeDashoffset = '0';
+  document.getElementById('claimHint').textContent = 'Tu bonus está listo. ¡Toca para reclamar!';
+}
+
+function setClaimCooldown() {
+  const btn = document.getElementById('claimBtn');
+  btn.className = 'claim-btn cooldown';
+  updateClaimTimer();
+}
+
+function updateClaimTimer() {
+  const totalSecs = (userData?.next_claim_in || 3600);
+  const btn = document.getElementById('claimBtn');
+  const timeStr = formatSeconds(claimCooldownRemaining);
+  btn.innerHTML = `
+    <i class="fa-solid fa-clock claim-icon" style="color:var(--text3)"></i>
+    <span class="claim-timer">${timeStr}</span>
+    <span class="claim-label" style="color:var(--text3)">próximo bonus</span>
+  `;
+
+  // Update ring
+  const progress = claimCooldownRemaining / totalSecs;
+  const offset = CIRCUMFERENCE * progress;
+  document.getElementById('ringFill').style.strokeDashoffset = offset;
+  document.getElementById('claimHint').textContent = `Próximo bonus disponible en ${timeStr}`;
+}
+
+async function handleClaim() {
+  const btn = document.getElementById('claimBtn');
+  if (!btn.classList.contains('active')) return;
+  if (!userData) return;
+
+  btn.style.pointerEvents = 'none';
+
+  try {
+    const res = await fetch(`${API_BASE}/api/claim`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: userData.telegram_id })
+    });
+
+    const data = await res.json();
+
+    if (!res.ok) {
+      if (data.next_claim_in) {
+        userData.can_claim = false;
+        userData.next_claim_in = data.next_claim_in;
+        claimCooldownRemaining = data.next_claim_in;
+        setClaimCooldown();
+        startClaimCycle();
+      }
+      showToast('⏳ ' + (data.error || 'Cooldown activo'), 'info');
+      return;
+    }
+
+    // Success
+    btn.classList.add('flash');
+    setTimeout(() => { btn.classList.remove('flash'); }, 500);
+
+    // Haptic
+    tg?.HapticFeedback?.notificationOccurred('success');
+
+    // Update state
+    userData.balance = data.new_balance;
+    userData.total_claimed = data.total_claimed;
+    userData.can_claim = false;
+    userData.next_claim_in = data.next_claim_in;
+    claimCooldownRemaining = data.next_claim_in;
+
+    // Animate balance
+    animateNumber('bigBalance', data.new_balance, 3);
+    animateNumber('profileBalance', data.new_balance, 3);
+    animateNumber('qsBalance', data.new_balance, 3);
+    document.getElementById('statClaims').textContent = data.total_claimed;
+    document.getElementById('qsClaims').textContent = data.total_claimed;
+    document.getElementById('withdrawBalanceInfo').textContent = data.new_balance.toFixed(3) + ' TON';
+    document.getElementById('withdrawAvail').textContent = data.new_balance.toFixed(3);
+
+    showToast(`⚡ +${data.bonus_amount} TON reclamado!`, 'success');
+
+    // Start cooldown
+    setClaimCooldown();
+    claimTimer = setInterval(() => {
+      claimCooldownRemaining--;
+      if (claimCooldownRemaining <= 0) {
+        clearInterval(claimTimer);
+        claimTimer = null;
+        setClaimReady();
+      } else {
+        updateClaimTimer();
+      }
+    }, 1000);
+
+  } catch (err) {
+    console.error(err);
+    showToast('❌ Error al reclamar. Intenta de nuevo.', 'error');
+  } finally {
+    btn.style.pointerEvents = '';
+  }
+}
+
+// ─── Withdrawal ───────────────────────────────────────────
+async function handleWithdraw() {
+  const wallet = document.getElementById('walletInput').value.trim();
+  const amount = parseFloat(document.getElementById('amountInput').value);
+  const btn = document.getElementById('withdrawBtn');
+
+  if (!wallet) return showToast('⚠️ Ingresa tu dirección de wallet', 'error');
+  if (!wallet.startsWith('UQ') && !wallet.startsWith('EQ') && !wallet.startsWith('0:')) {
+    return showToast('⚠️ Dirección TON inválida (debe empezar con UQ o EQ)', 'error');
+  }
+  if (isNaN(amount) || amount <= 0) return showToast('⚠️ Ingresa un monto válido', 'error');
+  if (amount < (userData?.min_withdraw || 0.1)) {
+    return showToast(`⚠️ Mínimo ${userData?.min_withdraw || 0.1} TON`, 'error');
+  }
+  if (amount > (userData?.balance || 0)) {
+    return showToast('❌ Balance insuficiente', 'error');
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Procesando...';
+
+  try {
+    const res = await fetch(`${API_BASE}/api/withdraw`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        telegram_id: userData.telegram_id,
+        amount,
+        wallet_address: wallet
+      })
+    });
+
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Error en retiro');
+
+    userData.balance = data.new_balance;
+    animateNumber('bigBalance', data.new_balance, 3);
+    animateNumber('profileBalance', data.new_balance, 3);
+    document.getElementById('withdrawAvail').textContent = data.new_balance.toFixed(3);
+    document.getElementById('withdrawBalanceInfo').textContent = data.new_balance.toFixed(3) + ' TON';
+    document.getElementById('qsBalance').textContent = data.new_balance.toFixed(3);
+
+    document.getElementById('walletInput').value = '';
+    document.getElementById('amountInput').value = '';
+
+    tg?.HapticFeedback?.notificationOccurred('success');
+    showToast('✅ Retiro solicitado. Procesamos en 24-48h.', 'success');
+    loadWithdrawalHistory();
+
+  } catch (err) {
+    showToast('❌ ' + err.message, 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Solicitar Retiro';
+  }
+}
+
+async function loadWithdrawalHistory() {
+  if (!userData) return;
+  const container = document.getElementById('withdrawHistory');
+
+  try {
+    const res = await fetch(`${API_BASE}/api/withdrawals/${userData.telegram_id}`);
+    const data = await res.json();
+
+    if (!data || data.length === 0) {
+      container.innerHTML = `<div class="card"><div class="empty-state"><i class="fa-regular fa-clock"></i><p>No tienes retiros aún</p></div></div>`;
+      return;
+    }
+
+    container.innerHTML = data.map(w => `
+      <div class="card withdrawal-item">
+        <div class="wi-status-dot ${w.status}"></div>
+        <div class="wi-info">
+          <div class="wi-amount">${parseFloat(w.amount).toFixed(3)} TON</div>
+          <div class="wi-wallet">${w.wallet_address}</div>
+          <div class="wi-date">${formatDate(w.created_at)}</div>
+        </div>
+        <div class="wi-badge ${w.status}">${statusLabel(w.status)}</div>
+      </div>
+    `).join('');
+
+  } catch (err) {
+    console.error('Error historial:', err);
+  }
+}
+
+function statusLabel(s) {
+  return { pending: 'Pendiente', approved: 'Aprobado', rejected: 'Rechazado' }[s] || s;
+}
+
+function setMaxWithdraw() {
+  const balance = userData?.balance || 0;
+  document.getElementById('amountInput').value = balance.toFixed(3);
+}
+
+// ─── Referral ─────────────────────────────────────────────
+async function copyRefLink() {
+  const link = document.getElementById('refLinkInput').value;
+  try {
+    await navigator.clipboard.writeText(link);
+    const btn = document.getElementById('copyRefBtn');
+    btn.classList.add('copied');
+    btn.innerHTML = '<i class="fa-solid fa-check"></i>';
+    showToast('✅ Enlace copiado al portapapeles', 'success');
+    setTimeout(() => {
+      btn.classList.remove('copied');
+      btn.innerHTML = '<i class="fa-regular fa-copy"></i>';
+    }, 2000);
+  } catch {
+    showToast('⚠️ No se pudo copiar', 'error');
+  }
+}
+
+function shareRefLink() {
+  const link = document.getElementById('refLinkInput').value;
+  const text = `🚀 Gana TON gratis con FastClaim!\n\n⚡ Reclama bonus cada hora\n💰 Gana más invitando amigos\n\nÚsate mi enlace: ${link}`;
+  if (tg) {
+    tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent('🚀 Gana TON gratis con FastClaim! ⚡ Reclama bonus cada hora. Únete con mi enlace:')}`);
+  } else if (navigator.share) {
+    navigator.share({ title: 'FastClaim TON', text, url: link });
+  } else {
+    copyRefLink();
+  }
+}
+
+// ─── Page Navigation ──────────────────────────────────────
+function switchPage(page) {
+  ['Home', 'Referrals', 'Withdraw'].forEach(p => {
+    document.getElementById('page' + p).classList.remove('active');
+    document.getElementById('nav' + p).classList.remove('active');
+  });
+  document.getElementById('page' + page).classList.add('active');
+  document.getElementById('nav' + page).classList.add('active');
+  document.querySelector('.content').scrollTop = 0;
+}
+
+// ─── Utilities ────────────────────────────────────────────
+function formatSeconds(secs) {
+  if (secs <= 0) return '00:00';
+  const h = Math.floor(secs / 3600);
+  const m = Math.floor((secs % 3600) / 60);
+  const s = secs % 60;
+  if (h > 0) return `${pad(h)}:${pad(m)}:${pad(s)}`;
+  return `${pad(m)}:${pad(s)}`;
+}
+
+function pad(n) { return String(n).padStart(2, '0'); }
+
+function formatDate(dateStr) {
+  if (!dateStr) return '—';
+  try {
+    const d = new Date(dateStr);
+    return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
+  } catch { return dateStr; }
+}
+
+function animateNumber(elId, target, decimals = 0) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  const start = parseFloat(el.textContent) || 0;
+  const diff = target - start;
+  const duration = 600;
+  const startTime = performance.now();
+
+  function step(now) {
+    const elapsed = now - startTime;
+    const progress = Math.min(elapsed / duration, 1);
+    const eased = 1 - Math.pow(1 - progress, 3);
+    const current = start + diff * eased;
+    el.textContent = current.toFixed(decimals);
+    if (progress < 1) requestAnimationFrame(step);
+  }
+  requestAnimationFrame(step);
+}
+
+let toastTimeout;
+function showToast(msg, type = 'info') {
+  const toast = document.getElementById('toast');
+  const icons = { success: '✅', error: '❌', info: 'ℹ️' };
+  toast.textContent = msg;
+  toast.className = 'show ' + type;
+  if (toastTimeout) clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => { toast.className = ''; }, 3000);
+}
+</script>
+</body>
+</html>
