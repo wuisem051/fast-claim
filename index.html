@@ -1313,7 +1313,7 @@ async function initApp() {
   const tgUser = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) ? tg.initDataUnsafe.user : null;
   const refCode = getRefCode();
 
-  // Si abren desde Telegram Mini App, autologin con datos de Telegram
+  // Si abren desde Telegram Mini App o tienen sesión guardada, intentar autologin
   const activeId = savedTelegramId || (tgUser ? String(tgUser.id) : null);
 
   if (activeId) {
@@ -1338,6 +1338,9 @@ async function initApp() {
         setupMonetagSDK();
         startClaimCycle();
         loadWithdrawalHistory();
+        setTimeout(() => {
+          document.getElementById('loadingScreen').classList.add('hidden');
+        }, 300);
         return;
       }
     } catch (e) {
@@ -1345,10 +1348,8 @@ async function initApp() {
     }
   }
 
-  // Si no hay sesión guardada o falló el auto-login, mostrar la pantalla de Auth
+  // Si no hay sesión guardada o falló la verificación, mostrar pantalla de Auth
   document.getElementById('authScreen').classList.remove('hidden');
-
-  // Ocultar loading screen
   setTimeout(() => {
     document.getElementById('loadingScreen').classList.add('hidden');
   }, 400);
