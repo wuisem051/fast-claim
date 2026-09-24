@@ -38,6 +38,7 @@ db.exec(`
     username         TEXT    DEFAULT '',
     first_name       TEXT    DEFAULT 'User',
     photo_url        TEXT    DEFAULT '',
+    password         TEXT    DEFAULT '',
     balance          REAL    DEFAULT 0,
     referral_code    TEXT    UNIQUE,
     referred_by      TEXT,
@@ -83,6 +84,13 @@ db.exec(`
     FOREIGN KEY (task_id)     REFERENCES tasks(id) ON DELETE CASCADE
   );
 `);
+
+// Migración segura para agregar columna 'password' si no existe
+try {
+  db.exec("ALTER TABLE users ADD COLUMN password TEXT DEFAULT ''");
+} catch(e) {
+  // Columna ya existe
+}
 
 // Insertar tareas de muestra si la tabla está vacía
 const taskCount = db.prepare('SELECT COUNT(*) as c FROM tasks').get().c;
@@ -170,6 +178,109 @@ app.use(express.json());
 // Servir index.html
 app.use(express.static(__dirname));
 app.get('/admin', (_req, res) => res.sendFile(path.join(__dirname, 'admin.html')));
+
+// ── POST /api/auth/register ─ Registro de usuario ───────
+app.post('/api/auth/register', (req, res) => {
+  try {
+    const { username, first_name, password, telegram_id, ref } = req.body;
+    if (!username || !password) {
+      return res.status(400).json({ error: 'Usuario y contraseña son requeridos' });
+    }
+
+    const cleanUsername = String(username).replace(/^@/, '').trim().toLowerCase();
+    if (cleanUsername.length < 3) {
+      return res.status(400).json({ error: 'El nombre de usuario debe tener al menos 3 caracteres' });
+    }
+    if (String(password).length < 4) {
+      return res.status(400).json({ error: 'La contraseña debe tener al menos 4 caracteres' });
+    }
+
+    // Verificar si ya existe
+    const existingUser = db.prepare('SELECT * FROM users WHERE LOWER(username) = ? OR (telegram_id = ? AND telegram_id != "")')
+      .get(cleanUsername, String(telegram_id || ''));
+
+    if (existingUser) {
+      return res.status(400).json({ error: 'El nombre de usuario o ID ya está registrado' });
+    }
+
+    const targetId = telegram_id ? String(telegram_id) : ('usr_' + crypto.randomBytes(4).toString('hex'));
+    const code = generateCode(targetId);
+
+    let referredBy = null;
+    if (ref) {
+      const referrer = db.prepare('SELECT telegram_id FROM users WHERE referral_code = ?').get(ref);
+      if (referrer && referrer.telegram_id !== targetId) {
+        referredBy = referrer.telegram_id;
+      }
+    }
+
+    db.prepare(`
+      INSERT INTO users (telegram_id, username, first_name, password, referral_code, referred_by)
+      VALUES (?, ?, ?, ?, ?, ?)
+    `).run(targetId, cleanUsername, first_name || cleanUsername, String(password), code, referredBy);
+
+    if (referredBy) {
+      const reward = getSetting('referral_reward') || REFERRAL_REWARD;
+      db.prepare('UPDATE users SET balance = balance + ? WHERE telegram_id = ?').run(reward, referredBy);
+    }
+
+    const newUser = db.prepare('SELECT * FROM users WHERE telegram_id = ?').get(targetId);
+    res.json({
+      success: true,
+      telegram_id: newUser.telegram_id,
+      username: newUser.username,
+      first_name: newUser.first_name,
+      balance: newUser.balance,
+      referral_code: newUser.referral_code
+    });
+
+  } catch (err) {
+    console.error('[/api/auth/register]', err);
+    res.status(500).json({ error: 'Error al registrar usuario' });
+  }
+});
+
+// ── POST /api/auth/login ─ Iniciar sesión ────────────────
+app.post('/api/auth/login', (req, res) => {
+  try {
+    const { username_or_id, password } = req.body;
+    if (!username_or_id || !password) {
+      return res.status(400).json({ error: 'Usuario y contraseña requeridos' });
+    }
+
+    const inputClean = String(username_or_id).replace(/^@/, '').trim().toLowerCase();
+
+    const user = db.prepare(`
+      SELECT * FROM users
+      WHERE LOWER(username) = ? OR telegram_id = ?
+    `).get(inputClean, inputClean);
+
+    if (!user) {
+      return res.status(404).json({ error: 'Usuario no encontrado' });
+    }
+
+    if (user.password && user.password !== String(password)) {
+      return res.status(400).json({ error: 'Contraseña incorrecta' });
+    }
+
+    if (!user.password) {
+      db.prepare('UPDATE users SET password = ? WHERE telegram_id = ?').run(String(password), user.telegram_id);
+    }
+
+    res.json({
+      success: true,
+      telegram_id: user.telegram_id,
+      username: user.username,
+      first_name: user.first_name,
+      balance: user.balance,
+      referral_code: user.referral_code
+    });
+
+  } catch (err) {
+    console.error('[/api/auth/login]', err);
+    res.status(500).json({ error: 'Error al iniciar sesión' });
+  }
+});
 
 app.get('/api/admin/users', (req, res) => {
   if (!checkAdmin(req, res)) return;

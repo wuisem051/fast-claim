@@ -813,6 +813,80 @@
     }
     @keyframes shimmer { 0% { background-position: -200% 0; } 100% { background-position: 200% 0; } }
 
+    /* ─── Auth Overlay (Login / Registro) ─────────────────── */
+    .auth-overlay {
+      position: fixed;
+      inset: 0;
+      background: rgba(7,7,20,0.96);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      z-index: 950;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 20px;
+      transition: opacity 0.4s ease, visibility 0.4s ease;
+    }
+    .auth-overlay.hidden { opacity: 0; visibility: hidden; pointer-events: none; }
+
+    .auth-card {
+      width: 100%;
+      max-width: 400px;
+      background: var(--bg2);
+      border: 1px solid var(--card-border);
+      border-radius: 24px;
+      padding: 32px 24px;
+      text-align: center;
+      position: relative;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.6);
+    }
+
+    .auth-logo {
+      width: 64px;
+      height: 64px;
+      border-radius: 18px;
+      background: linear-gradient(135deg, var(--ton), var(--ton2));
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      font-size: 30px;
+      margin: 0 auto 16px;
+      box-shadow: 0 0 30px var(--ton-glow);
+    }
+    .auth-title { font-size: 22px; font-weight: 800; color: var(--text); }
+    .auth-subtitle { font-size: 13px; color: var(--text3); margin-top: 4px; margin-bottom: 24px; }
+
+    .auth-tabs {
+      display: flex;
+      background: rgba(255,255,255,0.04);
+      border: 1px solid var(--card-border);
+      border-radius: 12px;
+      padding: 4px;
+      margin-bottom: 20px;
+    }
+    .auth-tab-btn {
+      flex: 1;
+      padding: 10px;
+      border: none;
+      background: none;
+      color: var(--text3);
+      font-size: 13px;
+      font-weight: 700;
+      border-radius: 9px;
+      cursor: pointer;
+      transition: all var(--transition);
+      font-family: 'Inter', sans-serif;
+    }
+    .auth-tab-btn.active {
+      background: linear-gradient(135deg, var(--ton), var(--ton2));
+      color: white;
+      box-shadow: 0 4px 12px var(--ton-glow);
+    }
+
+    .auth-form { display: none; text-align: left; }
+    .auth-form.active { display: block; }
+    .auth-error { font-size: 12px; color: var(--red); margin-top: 10px; text-align: center; min-height: 18px; }
+
     /* ─── Empty State ────────────────────────────────────── */
     .empty-state {
       text-align: center;
@@ -851,9 +925,14 @@
         <div class="brand-icon">⚡</div>
         <span class="brand-name">FastClaim</span>
       </div>
-      <div class="online-badge">
-        <span class="online-dot"></span>
-        En línea
+      <div style="display:flex;align-items:center;gap:8px;">
+        <button class="icon-btn" onclick="handleUserLogout()" title="Cerrar sesión" style="width:34px;height:34px;font-size:14px;background:rgba(255,255,255,0.05);border-color:var(--card-border);color:var(--text2);">
+          <i class="fa-solid fa-arrow-right-from-bracket"></i>
+        </button>
+        <div class="online-badge">
+          <span class="online-dot"></span>
+          En línea
+        </div>
       </div>
     </div>
   </div>
@@ -1122,6 +1201,62 @@
 
 </div><!-- end app -->
 
+<!-- ─── Auth Screen (Login & Registro) ───────────────────── -->
+<div id="authScreen" class="auth-overlay hidden">
+  <div class="auth-card">
+    <div class="auth-logo">⚡</div>
+    <h2 class="auth-title">FastClaim ARPA</h2>
+    <p class="auth-subtitle">Inicia sesión o regístrate para ganar ARPA</p>
+
+    <!-- Tab Switcher -->
+    <div class="auth-tabs">
+      <button class="auth-tab-btn active" id="authTabLogin" onclick="switchAuthTab('login')">Iniciar Sesión</button>
+      <button class="auth-tab-btn" id="authTabRegister" onclick="switchAuthTab('register')">Registrarse</button>
+    </div>
+
+    <!-- Form: Iniciar Sesión -->
+    <div id="loginForm" class="auth-form active">
+      <div class="form-group">
+        <label class="form-label"><i class="fa-solid fa-user"></i> Usuario o Telegram ID</label>
+        <input type="text" id="loginUsername" class="form-input" placeholder="Ej: @usuario o ID">
+      </div>
+      <div class="form-group">
+        <label class="form-label"><i class="fa-solid fa-lock"></i> Contraseña</label>
+        <input type="password" id="loginPassword" class="form-input" placeholder="Tu contraseña">
+      </div>
+      <button class="btn-primary" id="loginSubmitBtn" onclick="handleAuthLogin()" style="margin-top:12px;">
+        <i class="fa-solid fa-right-to-bracket"></i> Iniciar Sesión
+      </button>
+      <div class="auth-error" id="loginErrorMsg"></div>
+    </div>
+
+    <!-- Form: Registrarse -->
+    <div id="registerForm" class="auth-form hidden">
+      <div class="form-group">
+        <label class="form-label"><i class="fa-solid fa-id-card"></i> Nombre completo</label>
+        <input type="text" id="regFirstName" class="form-input" placeholder="Ej: Alex Smith">
+      </div>
+      <div class="form-group">
+        <label class="form-label"><i class="fa-solid fa-at"></i> Nombre de usuario</label>
+        <input type="text" id="regUsername" class="form-input" placeholder="Ej: alex2024">
+      </div>
+      <div class="form-group">
+        <label class="form-label"><i class="fa-solid fa-lock"></i> Contraseña</label>
+        <input type="password" id="regPassword" class="form-input" placeholder="Crea una contraseña segura">
+      </div>
+      <div class="form-group">
+        <label class="form-label"><i class="fa-solid fa-gift"></i> Código de Referido (opcional)</label>
+        <input type="text" id="regRefCode" class="form-input" placeholder="Código de amigo">
+      </div>
+      <button class="btn-primary" id="regSubmitBtn" onclick="handleAuthRegister()" style="margin-top:12px;">
+        <i class="fa-solid fa-user-plus"></i> Crear Cuenta
+      </button>
+      <div class="auth-error" id="regErrorMsg"></div>
+    </div>
+
+  </div>
+</div>
+
 <!-- ─── Toast ───────────────────────────────────────────── -->
 <div id="toast"></div>
 
@@ -1166,43 +1301,166 @@ function getRefCode() {
 
 // ─── Init ─────────────────────────────────────────────────
 window.addEventListener('load', async () => {
+  const refCode = getRefCode();
+  if (refCode) {
+    document.getElementById('regRefCode').value = refCode;
+  }
   await initApp();
 });
 
 async function initApp() {
-  const tgUser = getTelegramUser();
+  const savedTelegramId = localStorage.getItem('fastclaim_telegram_id');
+  const tgUser = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) ? tg.initDataUnsafe.user : null;
   const refCode = getRefCode();
 
+  // Si abren desde Telegram Mini App, autologin con datos de Telegram
+  const activeId = savedTelegramId || (tgUser ? String(tgUser.id) : null);
+
+  if (activeId) {
+    try {
+      const res = await fetch(`${API_BASE}/api/user`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          telegram_id: activeId,
+          username: tgUser ? (tgUser.username || '') : '',
+          first_name: tgUser ? (tgUser.first_name || 'User') : '',
+          photo_url: tgUser ? (tgUser.photo_url || '') : '',
+          ref: refCode
+        })
+      });
+
+      if (res.ok) {
+        userData = await res.json();
+        localStorage.setItem('fastclaim_telegram_id', userData.telegram_id);
+        document.getElementById('authScreen').classList.add('hidden');
+        renderUserData();
+        setupMonetagSDK();
+        startClaimCycle();
+        loadWithdrawalHistory();
+        return;
+      }
+    } catch (e) {
+      console.warn('Auto-login falló:', e);
+    }
+  }
+
+  // Si no hay sesión guardada o falló el auto-login, mostrar la pantalla de Auth
+  document.getElementById('authScreen').classList.remove('hidden');
+
+  // Ocultar loading screen
+  setTimeout(() => {
+    document.getElementById('loadingScreen').classList.add('hidden');
+  }, 400);
+}
+
+// ─── Auth Handlers (Login / Registro) ─────────────────────
+function switchAuthTab(tab) {
+  document.getElementById('authTabLogin').classList.toggle('active', tab === 'login');
+  document.getElementById('authTabRegister').classList.toggle('active', tab === 'register');
+  document.getElementById('loginForm').classList.toggle('active', tab === 'login');
+  document.getElementById('loginForm').classList.toggle('hidden', tab !== 'login');
+  document.getElementById('registerForm').classList.toggle('active', tab === 'register');
+  document.getElementById('registerForm').classList.toggle('hidden', tab !== 'register');
+  document.getElementById('loginErrorMsg').textContent = '';
+  document.getElementById('regErrorMsg').textContent = '';
+}
+
+async function handleAuthLogin() {
+  const usernameOrId = document.getElementById('loginUsername').value.trim();
+  const password = document.getElementById('loginPassword').value.trim();
+  const errorEl = document.getElementById('loginErrorMsg');
+  const btn = document.getElementById('loginSubmitBtn');
+
+  if (!usernameOrId || !password) {
+    errorEl.textContent = 'Ingresa tu usuario y contraseña';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verificando...';
+  errorEl.textContent = '';
+
   try {
-    const res = await fetch(`${API_BASE}/api/user`, {
+    const res = await fetch(`${API_BASE}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username_or_id: usernameOrId, password })
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      errorEl.textContent = '❌ ' + (data.error || 'Error al iniciar sesión');
+      return;
+    }
+
+    localStorage.setItem('fastclaim_telegram_id', data.telegram_id);
+    document.getElementById('authScreen').classList.add('hidden');
+    showToast(`👋 ¡Bienvenido de nuevo, ${data.first_name}!`, 'success');
+    await initApp();
+
+  } catch (err) {
+    errorEl.textContent = '⚠️ Error al conectar con el servidor';
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Iniciar Sesión';
+  }
+}
+
+async function handleAuthRegister() {
+  const firstName = document.getElementById('regFirstName').value.trim();
+  const username = document.getElementById('regUsername').value.trim();
+  const password = document.getElementById('regPassword').value.trim();
+  const refCode = document.getElementById('regRefCode').value.trim() || getRefCode();
+  const errorEl = document.getElementById('regErrorMsg');
+  const btn = document.getElementById('regSubmitBtn');
+
+  if (!username || !password) {
+    errorEl.textContent = 'El nombre de usuario y la contraseña son obligatorios';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Registrando...';
+  errorEl.textContent = '';
+
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/register`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        telegram_id: String(tgUser.id),
-        username: tgUser.username || '',
-        first_name: tgUser.first_name || 'User',
-        photo_url: tgUser.photo_url || '',
+        first_name: firstName || username,
+        username,
+        password,
         ref: refCode
       })
     });
 
-    if (!res.ok) throw new Error('API error');
-    userData = await res.json();
+    const data = await res.json();
+    if (!res.ok) {
+      errorEl.textContent = '❌ ' + (data.error || 'Error al registrar usuario');
+      return;
+    }
 
-    renderUserData();
-    setupMonetagSDK();
-    startClaimCycle();
-    loadWithdrawalHistory();
+    localStorage.setItem('fastclaim_telegram_id', data.telegram_id);
+    document.getElementById('authScreen').classList.add('hidden');
+    showToast(`🎉 ¡Cuenta creada con éxito, ${data.first_name}!`, 'success');
+    await initApp();
 
   } catch (err) {
-    console.error('Error al inicializar:', err);
-    showToast('⚠️ No se pudo conectar al servidor', 'error');
+    errorEl.textContent = '⚠️ Error al conectar con el servidor';
   } finally {
-    // Ocultar loading
-    setTimeout(() => {
-      document.getElementById('loadingScreen').classList.add('hidden');
-    }, 600);
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-user-plus"></i> Crear Cuenta';
   }
+}
+
+function handleUserLogout() {
+  if (!confirm('¿Deseas cerrar sesión?')) return;
+  localStorage.removeItem('fastclaim_telegram_id');
+  userData = null;
+  document.getElementById('authScreen').classList.remove('hidden');
+  showToast('ℹ️ Sesión cerrada', 'info');
 }
 
 // ─── Monetag SDK Setup & Trigger ───────────────────────────
