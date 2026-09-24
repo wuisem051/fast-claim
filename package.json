@@ -1,7 +1,7 @@
 {
-  "name": "fast-claim-ton-miniapp",
+  "name": "fast-claim-arpa-miniapp",
   "version": "1.0.0",
-  "description": "Telegram Mini App - TON Earn con sistema de referidos, bonus horario y retiros",
+  "description": "Telegram Mini App - ARPA USDT Earn con sistema de referidos, bonus horario y retiros con publicidad Monetag",
   "main": "server.js",
   "scripts": {
     "start": "node server.js",
@@ -9,8 +9,10 @@
   },
   "keywords": [
     "telegram",
-    "ton",
+    "arpa",
+    "usdt",
     "miniapp",
+    "monetag",
     "referral",
     "sqlite"
   ],
@@ -21,6 +23,7 @@
     "cors": "^2.8.5",
     "dotenv": "^17.4.2",
     "express": "^4.18.3",
+    "firebase": "^12.19.0",
     "node-telegram-bot-api": "^2.1.0"
   }
 }

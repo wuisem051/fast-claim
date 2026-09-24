@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>FastClaim Admin Panel</title>
-  <meta name="description" content="Panel de administración de FastClaim TON Mini App">
+  <title>FastClaim Admin Panel - ARPA USDT</title>
+  <meta name="description" content="Panel de administración de FastClaim ARPA USDT Mini App">
 
   <!-- Google Fonts -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -13,6 +13,28 @@
 
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCg2M7CdvmsPv0sw-H4bh5WwPEv5iZdbdM",
+      authDomain: "fastclaim-355ff.firebaseapp.com",
+      projectId: "fastclaim-355ff",
+      storageBucket: "fastclaim-355ff.firebasestorage.app",
+      messagingSenderId: "1058467332296",
+      appId: "1:1058467332296:web:3230a699cefec5382525fd",
+      measurementId: "G-XSZ5YG04ZX"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    window.firebaseApp = app;
+    window.firebaseAnalytics = analytics;
+  </script>
 
   <style>
     /* ─── Reset & Base ─────────────────────────────────── */
@@ -29,8 +51,9 @@
       --accent: #6366f1;
       --accent2: #818cf8;
       --accent-glow: rgba(99,102,241,0.25);
-      --ton: #0098EA;
-      --ton2: #00d4ff;
+      --ton: #7c3aed;
+      --ton2: #a855f7;
+      --ton-glow: rgba(168,85,247,0.25);
       --green: #10b981;
       --green-bg: rgba(16,185,129,0.1);
       --green-border: rgba(16,185,129,0.25);
@@ -806,6 +829,11 @@
         </button>
       </li>
       <li>
+        <button class="sidebar-nav-item" data-page="tasks" onclick="switchAdminPage('tasks')">
+          <i class="fa-solid fa-list-check"></i> Tareas
+        </button>
+      </li>
+      <li>
         <button class="sidebar-nav-item" data-page="users" onclick="switchAdminPage('users')">
           <i class="fa-solid fa-users"></i> Usuarios
         </button>
@@ -873,7 +901,7 @@
           </div>
           <div class="stat-card-value" id="dTotalWithdrawn">—</div>
           <div class="stat-card-change" style="color:var(--accent2);">
-            <i class="fa-solid fa-gem"></i> TON aprobados
+            <i class="fa-solid fa-gem"></i> ARPA aprobados
           </div>
         </div>
       </div>
@@ -926,7 +954,7 @@
               <tr>
                 <th>ID</th>
                 <th>Usuario</th>
-                <th>Monto (TON)</th>
+                <th>Monto (ARPA)</th>
                 <th>Wallet</th>
                 <th>Estado</th>
                 <th>Nota</th>
@@ -966,7 +994,7 @@
               <tr>
                 <th>Usuario</th>
                 <th>Telegram ID</th>
-                <th>Balance (TON)</th>
+                <th>Balance (ARPA)</th>
                 <th>Claims</th>
                 <th>Referidos por</th>
                 <th>Código Referido</th>
@@ -991,14 +1019,14 @@
 
       <div class="panel">
         <div class="panel-header">
-          <div class="panel-title"><i class="fa-solid fa-sliders"></i> Parámetros del Sistema</div>
+          <div class="panel-title"><i class="fa-solid fa-sliders"></i> Parámetros del Sistema (ARPA USDT)</div>
         </div>
         <div class="panel-body">
           <div class="form-grid">
             <div class="form-group">
-              <label class="form-label"><i class="fa-solid fa-bolt"></i> Bonus por Claim (TON)</label>
+              <label class="form-label"><i class="fa-solid fa-bolt"></i> Bonus por Claim (ARPA)</label>
               <input type="number" class="form-control" id="settBonusAmount" step="0.001" min="0">
-              <span class="form-hint">Cantidad de TON que recibe el usuario por cada claim</span>
+              <span class="form-hint">Cantidad de ARPA que recibe el usuario por cada claim</span>
             </div>
             <div class="form-group">
               <label class="form-label"><i class="fa-solid fa-clock"></i> Cooldown entre Claims (horas)</label>
@@ -1006,21 +1034,125 @@
               <span class="form-hint">Tiempo de espera entre cada claim</span>
             </div>
             <div class="form-group">
-              <label class="form-label"><i class="fa-solid fa-user-plus"></i> Reward por Referido (TON)</label>
+              <label class="form-label"><i class="fa-solid fa-user-plus"></i> Reward por Referido (ARPA)</label>
               <input type="number" class="form-control" id="settReferralReward" step="0.001" min="0">
-              <span class="form-hint">TON que gana el referidor cuando alguien se registra</span>
+              <span class="form-hint">ARPA que gana el referidor cuando alguien se registra</span>
             </div>
             <div class="form-group">
-              <label class="form-label"><i class="fa-solid fa-wallet"></i> Retiro Mínimo (TON)</label>
+              <label class="form-label"><i class="fa-solid fa-wallet"></i> Retiro Mínimo (ARPA)</label>
               <input type="number" class="form-control" id="settMinWithdraw" step="0.01" min="0">
-              <span class="form-hint">Monto mínimo para solicitar un retiro</span>
+              <span class="form-hint">Monto mínimo de ARPA para solicitar un retiro</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Monetag Panel -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title"><i class="fa-solid fa-rectangle-ad"></i> Monetización & Publicidad (Monetag)</div>
+        </div>
+        <div class="panel-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label"><i class="fa-solid fa-toggle-on"></i> Publicidad Monetag</label>
+              <select class="form-control" id="settMonetagEnabled">
+                <option value="1">✅ Activada</option>
+                <option value="0">❌ Desactivada</option>
+              </select>
+              <span class="form-hint">Activa o desactiva la publicidad al dar Claim</span>
+            </div>
+            <div class="form-group" style="grid-column: span 2;">
+              <label class="form-label"><i class="fa-solid fa-link"></i> Monetag Direct Link URL (Smartlink / Enlace Directo)</label>
+              <input type="url" class="form-control" id="settMonetagDirectLink" placeholder="https://othen.com/... o https://directlink.monetag.com/...">
+              <span class="form-hint">Enlace directo de Monetag que se abrirá en nueva ventana al hacer Claim</span>
+            </div>
+            <div class="form-group" style="grid-column: span 2;">
+              <label class="form-label"><i class="fa-solid fa-code"></i> Monetag Script URL / SDK Tag</label>
+              <input type="text" class="form-control" id="settMonetagScriptUrl" placeholder="https://alwingulla.com/88/... (Script Tag Monetag Popunder / Push)">
+              <span class="form-hint">URL del script SDK de Monetag (opcional) que se cargará dinámicamente</span>
             </div>
           </div>
           <div style="margin-top:28px;display:flex;justify-content:flex-end;">
             <button class="btn btn-primary" onclick="saveSettings()" style="padding:12px 28px;font-size:14px;">
-              <i class="fa-solid fa-floppy-disk"></i> Guardar Cambios
+              <i class="fa-solid fa-floppy-disk"></i> Guardar Configuración
             </button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ═══ Tasks Page ═══════════════════════════════════ -->
+    <div id="pageTasks" class="admin-page">
+      <div class="page-header">
+        <h1 class="page-title">Gestión de Tareas</h1>
+        <p class="page-subtitle">Crea misiones para los usuarios (Seguir canales, enlaces, publicidad, reacciones)</p>
+      </div>
+
+      <!-- Crear Tarea Panel -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title"><i class="fa-solid fa-plus-circle"></i> Crear Nueva Tarea</div>
+        </div>
+        <div class="panel-body">
+          <div class="form-grid">
+            <div class="form-group">
+              <label class="form-label"><i class="fa-solid fa-heading"></i> Título de la Tarea</label>
+              <input type="text" class="form-control" id="newTaskTitle" placeholder="Ej: Unirse al Canal Oficial de Telegram">
+            </div>
+            <div class="form-group">
+              <label class="form-label"><i class="fa-solid fa-coins"></i> Recompensa (ARPA)</label>
+              <input type="number" class="form-control" id="newTaskReward" step="0.1" min="0.1" value="0.5">
+            </div>
+            <div class="form-group">
+              <label class="form-label"><i class="fa-solid fa-list-ol"></i> Tipo de Acción</label>
+              <select class="form-control" id="newTaskType">
+                <option value="telegram_join">📢 Seguir Canal de Telegram</option>
+                <option value="telegram_react">🔥 Reaccionar en Telegram</option>
+                <option value="link">🔗 Abrir Enlace Web</option>
+                <option value="ad">🎯 Clic en Publicidad / Sponsor</option>
+              </select>
+            </div>
+            <div class="form-group" style="grid-column: span 2;">
+              <label class="form-label"><i class="fa-solid fa-link"></i> URL de Destino / Link</label>
+              <input type="url" class="form-control" id="newTaskUrl" placeholder="https://t.me/... o https://tu-sitio.com">
+            </div>
+            <div class="form-group" style="grid-column: span 2;">
+              <label class="form-label"><i class="fa-solid fa-align-left"></i> Descripción / Instrucciones</label>
+              <input type="text" class="form-control" id="newTaskDesc" placeholder="Ej: Únete al canal y permanece dentro para recibir la recompensa.">
+            </div>
+          </div>
+          <div style="margin-top:20px;display:flex;justify-content:flex-end;">
+            <button class="btn btn-primary" onclick="createNewTask()" style="padding:11px 24px;">
+              <i class="fa-solid fa-plus"></i> Publicar Tarea
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <!-- Tabla de Tareas -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title"><i class="fa-solid fa-list-check"></i> Tareas Existentes</div>
+        </div>
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>ID</th>
+                <th>Título</th>
+                <th>Tipo</th>
+                <th>Recompensa</th>
+                <th>URL</th>
+                <th>Completadas</th>
+                <th>Estado</th>
+                <th>Acciones</th>
+              </tr>
+            </thead>
+            <tbody id="tasksTableBody">
+              <tr><td colspan="8" class="empty-row"><i class="fa-regular fa-folder-open"></i><p>Cargando tareas...</p></td></tr>
+            </tbody>
+          </table>
         </div>
       </div>
     </div>
@@ -1054,7 +1186,7 @@
     <p class="modal-subtitle" id="editUserSubtitle">Modificar balance del usuario</p>
     <input type="hidden" id="editUserId">
     <div class="form-group">
-      <label class="form-label"><i class="fa-solid fa-coins"></i> Nuevo Balance (TON)</label>
+      <label class="form-label"><i class="fa-solid fa-coins"></i> Nuevo Balance (ARPA)</label>
       <input type="number" class="form-control" id="editUserBalance" step="0.001" min="0">
     </div>
     <div class="modal-actions">
@@ -1166,6 +1298,7 @@ function switchAdminPage(page) {
   if (page === 'withdrawals') loadWithdrawals();
   if (page === 'users') loadUsers();
   if (page === 'settings') loadSettings();
+  if (page === 'tasks') loadTasks();
 }
 
 function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
@@ -1435,10 +1568,13 @@ async function loadSettings() {
     const res = await adminFetch('/api/admin/settings');
     const settings = await res.json();
 
-    document.getElementById('settBonusAmount').value = settings.bonus_amount || '0.01';
+    document.getElementById('settBonusAmount').value = settings.bonus_amount || '0.5';
     document.getElementById('settBonusCooldown').value = settings.bonus_cooldown_h || '1';
-    document.getElementById('settReferralReward').value = settings.referral_reward || '0.05';
-    document.getElementById('settMinWithdraw').value = settings.min_withdraw || '0.1';
+    document.getElementById('settReferralReward').value = settings.referral_reward || '1.0';
+    document.getElementById('settMinWithdraw').value = settings.min_withdraw || '10.0';
+    document.getElementById('settMonetagEnabled').value = settings.monetag_enabled !== undefined ? settings.monetag_enabled : '1';
+    document.getElementById('settMonetagDirectLink').value = settings.monetag_direct_link || '';
+    document.getElementById('settMonetagScriptUrl').value = settings.monetag_script_url || '';
 
   } catch (err) {
     console.error('Settings error:', err);
@@ -1450,7 +1586,10 @@ async function saveSettings() {
     bonus_amount: document.getElementById('settBonusAmount').value,
     bonus_cooldown_h: document.getElementById('settBonusCooldown').value,
     referral_reward: document.getElementById('settReferralReward').value,
-    min_withdraw: document.getElementById('settMinWithdraw').value
+    min_withdraw: document.getElementById('settMinWithdraw').value,
+    monetag_enabled: document.getElementById('settMonetagEnabled').value,
+    monetag_direct_link: document.getElementById('settMonetagDirectLink').value.trim(),
+    monetag_script_url: document.getElementById('settMonetagScriptUrl').value.trim()
   };
 
   try {
@@ -1499,6 +1638,117 @@ function showAdminToast(msg, type = 'info') {
   toast.className = 'show ' + type;
   if (adminToastTimeout) clearTimeout(adminToastTimeout);
   adminToastTimeout = setTimeout(() => { toast.className = ''; }, 3500);
+}
+// ─── Tasks ────────────────────────────────────────────────
+async function loadTasks() {
+  try {
+    const res = await adminFetch('/api/admin/tasks');
+    const tasks = await res.json();
+    renderTasks(tasks);
+  } catch (err) {
+    console.error('Error cargando tareas:', err);
+  }
+}
+
+function renderTasks(tasks) {
+  const tbody = document.getElementById('tasksTableBody');
+  if (!tasks || tasks.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="8" class="empty-row"><i class="fa-regular fa-list-check"></i><p>No hay tareas creadas aún</p></td></tr>';
+    return;
+  }
+
+  const typeLabels = {
+    telegram_join: '📢 Canal Telegram',
+    telegram_react: '🔥 Reacción Telegram',
+    link: '🔗 Enlace Web',
+    ad: '🎯 Publicidad'
+  };
+
+  tbody.innerHTML = tasks.map(t => `
+    <tr>
+      <td class="mono">#${t.id}</td>
+      <td>
+        <div style="font-weight:600;color:var(--text);">${escapeHtml(t.title)}</div>
+        <div style="font-size:11px;color:var(--text3);">${escapeHtml(t.description || '')}</div>
+      </td>
+      <td><span class="badge" style="background:rgba(139,92,246,0.12);color:var(--accent2);border:1px solid rgba(139,92,246,0.3);">${typeLabels[t.type] || t.type}</span></td>
+      <td style="font-weight:700;color:var(--green);">+${parseFloat(t.reward).toFixed(2)} ARPA</td>
+      <td class="mono" title="${escapeHtml(t.url)}"><a href="${escapeHtml(t.url)}" target="_blank" style="color:var(--accent2);text-decoration:none;">${truncateWallet(t.url)}</a></td>
+      <td class="mono" style="font-weight:700;">${t.completion_count || 0} usuarios</td>
+      <td><span class="badge ${t.active ? 'approved' : 'rejected'}"><span class="badge-dot"></span> ${t.active ? 'Activa' : 'Inactiva'}</span></td>
+      <td>
+        <div class="action-btns">
+          <button class="btn" style="background:var(--card);border-color:var(--card-border);color:var(--text2);" onclick="toggleTaskStatus(${t.id}, ${t.active ? 0 : 1})">
+            ${t.active ? '<i class="fa-solid fa-eye-slash"></i> Pausar' : '<i class="fa-solid fa-eye"></i> Activar'}
+          </button>
+          <button class="btn btn-reject" onclick="deleteTask(${t.id})">
+            <i class="fa-solid fa-trash"></i>
+          </button>
+        </div>
+      </td>
+    </tr>
+  `).join('');
+}
+
+async function createNewTask() {
+  const title = document.getElementById('newTaskTitle').value.trim();
+  const reward = parseFloat(document.getElementById('newTaskReward').value);
+  const type = document.getElementById('newTaskType').value;
+  const url = document.getElementById('newTaskUrl').value.trim();
+  const description = document.getElementById('newTaskDesc').value.trim();
+
+  if (!title || !url) {
+    showAdminToast('⚠️ El título y la URL son obligatorios', 'error');
+    return;
+  }
+
+  try {
+    const res = await adminFetch('/api/admin/tasks', {
+      method: 'POST',
+      body: JSON.stringify({ title, reward, type, url, description })
+    });
+
+    if (!res.ok) throw new Error('Error al crear tarea');
+
+    showAdminToast('✅ Tarea creada correctamente', 'success');
+    document.getElementById('newTaskTitle').value = '';
+    document.getElementById('newTaskUrl').value = '';
+    document.getElementById('newTaskDesc').value = '';
+    loadTasks();
+
+  } catch (err) {
+    showAdminToast('⚠️ Error al crear tarea', 'error');
+  }
+}
+
+async function toggleTaskStatus(id, newActiveStatus) {
+  try {
+    const res = await adminFetch(`/api/admin/tasks/${id}`, {
+      method: 'PATCH',
+      body: JSON.stringify({ active: newActiveStatus })
+    });
+
+    if (!res.ok) throw new Error('Error al actualizar');
+    showAdminToast(`✅ Tarea ${newActiveStatus ? 'activada' : 'pausada'}`, 'success');
+    loadTasks();
+  } catch (err) {
+    showAdminToast('⚠️ Error al cambiar estado', 'error');
+  }
+}
+
+async function deleteTask(id) {
+  if (!confirm('¿Estás seguro de eliminar esta tarea?')) return;
+  try {
+    const res = await adminFetch(`/api/admin/tasks/${id}`, {
+      method: 'DELETE'
+    });
+
+    if (!res.ok) throw new Error('Error al eliminar');
+    showAdminToast('✅ Tarea eliminada', 'success');
+    loadTasks();
+  } catch (err) {
+    showAdminToast('⚠️ Error al eliminar tarea', 'error');
+  }
 }
 </script>
 </body>

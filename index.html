@@ -3,8 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>FastClaim – Earn TON</title>
-  <meta name="description" content="Gana TON gratis con FastClaim. Reclama bonus cada hora, invita amigos y retira a tu wallet.">
+  <title>FastClaim – Earn ARPA USDT</title>
+  <meta name="description" content="Gana ARPA USDT gratis con FastClaim. Reclama bonus cada hora, invita amigos y retira a tu wallet.">
 
   <!-- Telegram WebApp SDK -->
   <script src="https://telegram.org/js/telegram-web-app.js"></script>
@@ -17,6 +17,28 @@
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
+  <!-- Firebase SDK -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js";
+
+    const firebaseConfig = {
+      apiKey: "AIzaSyCg2M7CdvmsPv0sw-H4bh5WwPEv5iZdbdM",
+      authDomain: "fastclaim-355ff.firebaseapp.com",
+      projectId: "fastclaim-355ff",
+      storageBucket: "fastclaim-355ff.firebasestorage.app",
+      messagingSenderId: "1058467332296",
+      appId: "1:1058467332296:web:3230a699cefec5382525fd",
+      measurementId: "G-XSZ5YG04ZX"
+    };
+
+    // Initialize Firebase
+    const app = initializeApp(firebaseConfig);
+    const analytics = getAnalytics(app);
+    window.firebaseApp = app;
+    window.firebaseAnalytics = analytics;
+  </script>
+
   <style>
     /* ─── Reset & Base ───────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -26,9 +48,9 @@
       --bg2: #0d0d26;
       --card: rgba(255,255,255,0.04);
       --card-border: rgba(255,255,255,0.08);
-      --ton: #0098EA;
-      --ton2: #00d4ff;
-      --ton-glow: rgba(0,152,234,0.25);
+      --ton: #8b5cf6;
+      --ton2: #c084fc;
+      --ton-glow: rgba(139,92,246,0.3);
       --green: #00e676;
       --green-glow: rgba(0,230,118,0.2);
       --amber: #ffab00;
@@ -815,7 +837,7 @@
   <div class="loader-logo">⚡</div>
   <div style="text-align:center">
     <div style="font-size:20px;font-weight:800;background:linear-gradient(135deg,#fff,var(--ton2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">FastClaim</div>
-    <div style="font-size:12px;color:var(--text3);margin-top:4px;">Cargando tu billetera TON...</div>
+    <div style="font-size:12px;color:var(--text3);margin-top:4px;">Cargando tu billetera ARPA...</div>
   </div>
   <div class="loader-bar"><div class="loader-bar-fill"></div></div>
 </div>
@@ -858,7 +880,7 @@
         <div class="profile-balance-pill">
           <div class="balance-label">Balance</div>
           <div class="balance-value" id="profileBalance">0.000</div>
-          <div class="balance-unit">TON</div>
+          <div class="balance-unit">ARPA</div>
         </div>
       </div>
 
@@ -866,7 +888,7 @@
       <div class="card balance-card">
         <div class="bl">Tu Balance Total</div>
         <div class="bv" id="bigBalance">0.000</div>
-        <div class="bu">TON</div>
+        <div class="bu">ARPA USDT</div>
         <div class="stats-row">
           <div class="stat-item">
             <div class="stat-value" id="statClaims">0</div>
@@ -877,8 +899,8 @@
             <div class="stat-label">Referidos</div>
           </div>
           <div class="stat-item">
-            <div class="stat-value" id="statBonus">0.01</div>
-            <div class="stat-label">TON / Claim</div>
+            <div class="stat-value" id="statBonus">0.5</div>
+            <div class="stat-label">ARPA / Claim</div>
           </div>
         </div>
       </div>
@@ -895,11 +917,11 @@
           <!-- Center Button -->
           <button class="claim-btn active" id="claimBtn" onclick="handleClaim()">
             <i class="fa-solid fa-bolt claim-icon"></i>
-            <span class="claim-amount" id="claimBtnAmount">+0.01 TON</span>
+            <span class="claim-amount" id="claimBtnAmount">+0.5 ARPA</span>
             <span class="claim-label" id="claimBtnLabel">¡RECLAMAR!</span>
           </button>
         </div>
-        <p class="claim-hint" id="claimHint">Reclama tu bonus de TON cada hora. ¡Sin límite de veces!</p>
+        <p class="claim-hint" id="claimHint">Reclama tu bonus de ARPA cada hora. ¡Sin límite de veces!</p>
       </div>
 
       <!-- Quick Stats -->
@@ -918,7 +940,7 @@
         <div class="card qs-card">
           <div class="qs-icon">💎</div>
           <div class="qs-value" id="qsBalance">—</div>
-          <div class="qs-label">TON Ganados</div>
+          <div class="qs-label">ARPA Ganados</div>
         </div>
       </div>
 
@@ -930,11 +952,11 @@
       <div class="card ref-hero">
         <div class="ref-hero-icon">🎁</div>
         <div class="ref-hero-title">Gana invitando amigos</div>
-        <div class="ref-hero-sub">Por cada amigo que se una con tu link, <strong style="color:var(--green)">tú ganas TON automáticamente</strong>.</div>
+        <div class="ref-hero-sub">Por cada amigo que se una con tu link, <strong style="color:var(--green)">tú ganas ARPA automáticamente</strong>.</div>
         <div class="ref-reward-badges">
           <div class="reward-badge">
-            <div class="reward-badge-val" id="refRewardVal">0.05</div>
-            <div class="reward-badge-lbl">TON por<br>referido</div>
+            <div class="reward-badge-val" id="refRewardVal">1.0</div>
+            <div class="reward-badge-lbl">ARPA por<br>referido</div>
           </div>
           <div class="reward-badge">
             <div class="reward-badge-val" id="refCountBig">0</div>
@@ -942,7 +964,7 @@
           </div>
           <div class="reward-badge">
             <div class="reward-badge-val" id="refEarnedBig">0.00</div>
-            <div class="reward-badge-lbl">TON<br>ganados</div>
+            <div class="reward-badge-lbl">ARPA<br>ganados</div>
           </div>
         </div>
       </div>
@@ -972,7 +994,7 @@
         <div class="card ref-stat-card">
           <div class="ref-stat-icon">💰</div>
           <div class="ref-stat-val" id="refStatEarned">0.00</div>
-          <div class="ref-stat-lbl">TON ganados</div>
+          <div class="ref-stat-lbl">ARPA ganados</div>
         </div>
       </div>
 
@@ -989,8 +1011,8 @@
             <div><div style="font-size:13px;font-weight:700;color:var(--text);">Invita a tus amigos</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">Comparte el link en tus grupos de Telegram, WhatsApp, etc.</div></div>
           </div>
           <div style="display:flex;gap:12px;align-items:flex-start;">
-            <div style="width:32px;height:32px;border-radius:50%;background:rgba(0,230,118,0.12);border:1px solid rgba(0,230,118,0.25);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--green);flex-shrink:0;">3</div>
-            <div><div style="font-size:13px;font-weight:700;color:var(--text);">Gana TON automáticamente</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">Cuando tu amigo se registre, <span style="color:var(--green);font-weight:700;">recibirás TON al instante</span>.</div></div>
+            <div style="width:32px;height:32px;border-radius:50%;background:rgba(139,92,246,0.15);border:1px solid rgba(139,92,246,0.3);display:flex;align-items:center;justify-content:center;font-size:13px;font-weight:800;color:var(--ton2);flex-shrink:0;">3</div>
+            <div><div style="font-size:13px;font-weight:700;color:var(--text);">Gana ARPA automáticamente</div><div style="font-size:11px;color:var(--text3);margin-top:2px;">Cuando tu amigo se registre, <span style="color:var(--green);font-weight:700;">recibirás ARPA al instante</span>.</div></div>
           </div>
         </div>
       </div>
@@ -1003,27 +1025,27 @@
       <div class="card withdraw-hero">
         <div class="withdraw-hero-icon">💸</div>
         <div class="withdraw-hero-text">
-          <h3>Retirar TON</h3>
-          <p>Envía tus ganancias directamente a tu wallet de TON. Procesamos en 24-48 horas.</p>
+          <h3>Retirar ARPA USDT</h3>
+          <p>Envía tus ganancias directamente a tu wallet ARPA / USDT. Procesamos en 24-48 horas.</p>
         </div>
       </div>
 
       <div class="card form-card" style="margin-top:12px;">
         <div class="info-box">
           <i class="fa-solid fa-triangle-exclamation"></i>
-          <span>Mínimo de retiro: <strong id="minWithdrawInfo">0.1 TON</strong>. Tu balance disponible: <strong id="withdrawBalanceInfo">0.000 TON</strong>.</span>
+          <span>Mínimo de retiro: <strong id="minWithdrawInfo">10 ARPA</strong>. Tu balance disponible: <strong id="withdrawBalanceInfo">0.000 ARPA</strong>.</span>
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="walletInput">Dirección de Wallet TON</label>
-          <input type="text" id="walletInput" class="form-input" placeholder="UQ... o EQ... (dirección TON)">
+          <label class="form-label" for="walletInput">Dirección de Wallet ARPA / USDT</label>
+          <input type="text" id="walletInput" class="form-input" placeholder="0x... o T... (dirección de wallet)">
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="amountInput">Monto a retirar (TON)</label>
-          <input type="number" id="amountInput" class="form-input" placeholder="0.00" min="0.1" step="0.01">
+          <label class="form-label" for="amountInput">Monto a retirar (ARPA)</label>
+          <input type="number" id="amountInput" class="form-input" placeholder="0.00" min="10" step="0.1">
           <div class="balance-hint">
-            <span>Disponible: <span id="withdrawAvail">0.000</span> TON</span>
+            <span>Disponible: <span id="withdrawAvail">0.000</span> ARPA</span>
             <button class="max-btn" onclick="setMaxWithdraw()">MAX</button>
           </div>
         </div>
@@ -1047,6 +1069,35 @@
 
     </div><!-- end pageWithdraw -->
 
+    <!-- ═══ PAGE: TASKS ═════════════════════════════════════ -->
+    <div id="pageTasks" class="page">
+
+      <div class="card ref-hero" style="background:linear-gradient(135deg, rgba(139,92,246,0.12), rgba(192,132,252,0.06));border-color:rgba(139,92,246,0.25);">
+        <div class="ref-hero-icon">🎯</div>
+        <div class="ref-hero-title">Centro de Tareas</div>
+        <div class="ref-hero-sub">Completa misiones patrocinadas y <strong style="color:var(--green)">gana ARPA al instante</strong>.</div>
+      </div>
+
+      <!-- Filter Bar -->
+      <div class="filter-bar" style="margin-top:16px;display:flex;gap:8px;overflow-x:auto;padding-bottom:4px;" id="taskFilterBar">
+        <button class="filter-chip active" data-tfilter="all" onclick="filterUserTasks('all')">Todas</button>
+        <button class="filter-chip" data-tfilter="telegram" onclick="filterUserTasks('telegram')">📢 Telegram</button>
+        <button class="filter-chip" data-tfilter="ad" onclick="filterUserTasks('ad')">🎯 Publicidad</button>
+        <button class="filter-chip" data-tfilter="link" onclick="filterUserTasks('link')">🔗 Enlaces</button>
+      </div>
+
+      <p class="section-title"><i class="fa-solid fa-tasks" style="color:var(--ton)"></i> Tareas Disponibles</p>
+
+      <!-- Tasks List -->
+      <div id="userTasksList" style="display:flex;flex-direction:column;gap:12px;">
+        <div class="card" style="padding:24px;text-align:center;">
+          <i class="fa-solid fa-spinner fa-spin" style="font-size:24px;color:var(--ton2);"></i>
+          <p style="font-size:13px;color:var(--text3);margin-top:8px;">Cargando tareas...</p>
+        </div>
+      </div>
+
+    </div><!-- end pageTasks -->
+
   </div><!-- end content -->
 
   <!-- ─── Bottom Nav ──────────────────────────────────────── -->
@@ -1054,6 +1105,10 @@
     <button class="nav-btn active" id="navHome" onclick="switchPage('Home')">
       <i class="fa-solid fa-house"></i>
       <span>Inicio</span>
+    </button>
+    <button class="nav-btn" id="navTasks" onclick="switchPage('Tasks')">
+      <i class="fa-solid fa-list-check"></i>
+      <span>Tareas</span>
     </button>
     <button class="nav-btn" id="navReferrals" onclick="switchPage('Referrals')">
       <i class="fa-solid fa-users"></i>
@@ -1135,6 +1190,7 @@ async function initApp() {
     userData = await res.json();
 
     renderUserData();
+    setupMonetagSDK();
     startClaimCycle();
     loadWithdrawalHistory();
 
@@ -1146,6 +1202,44 @@ async function initApp() {
     setTimeout(() => {
       document.getElementById('loadingScreen').classList.add('hidden');
     }, 600);
+  }
+}
+
+// ─── Monetag SDK Setup & Trigger ───────────────────────────
+function setupMonetagSDK() {
+  if (!userData || !userData.monetag_script_url) return;
+  const scriptUrl = userData.monetag_script_url.trim();
+  if (!scriptUrl) return;
+
+  if (!document.querySelector(`script[src="${scriptUrl}"]`)) {
+    const script = document.createElement('script');
+    script.src = scriptUrl;
+    script.async = true;
+    script.setAttribute('data-cfasync', 'false');
+    document.head.appendChild(script);
+  }
+}
+
+function triggerMonetagAd() {
+  if (!userData) return;
+  const isEnabled = String(userData.monetag_enabled || '1') === '1';
+  if (!isEnabled) return;
+
+  const directLink = (userData.monetag_direct_link || '').trim();
+  if (directLink) {
+    try {
+      if (tg && typeof tg.openLink === 'function') {
+        tg.openLink(directLink);
+      } else {
+        window.open(directLink, '_blank');
+      }
+    } catch (e) {
+      console.warn('Error abriendo enlace Monetag:', e);
+    }
+  }
+
+  if (typeof window.show_monetag_ad === 'function') {
+    try { window.show_monetag_ad(); } catch(e){}
   }
 }
 
@@ -1174,14 +1268,16 @@ function renderUserData() {
   animateNumber('qsBalance', balance, 3);
 
   // Stats
+  const bonusAmt = userData.bonus_amount || '0.5';
+  const refReward = userData.referral_reward || '1.0';
   document.getElementById('statClaims').textContent = userData.total_claimed || 0;
   document.getElementById('statRefs').textContent = userData.referral_count || 0;
-  document.getElementById('statBonus').textContent = userData.bonus_amount || '0.01';
+  document.getElementById('statBonus').textContent = bonusAmt;
   document.getElementById('qsClaims').textContent = userData.total_claimed || 0;
   document.getElementById('qsRefs').textContent = userData.referral_count || 0;
 
   // Claim button amount
-  document.getElementById('claimBtnAmount').textContent = '+' + (userData.bonus_amount || '0.01') + ' TON';
+  document.getElementById('claimBtnAmount').textContent = '+' + bonusAmt + ' ARPA';
 
   // Referral link
   const botUsername = tg?.initDataUnsafe?.via_bot_username || 'YourBot';
@@ -1190,19 +1286,18 @@ function renderUserData() {
 
   // Referral stats
   const refCount = userData.referral_count || 0;
-  const refReward = parseFloat(userData.bonus_amount ? '0.05' : '0.05'); // from server ideally
-  const refEarned = (refCount * 0.05).toFixed(2);
+  const refEarned = (refCount * parseFloat(refReward)).toFixed(2);
   
   document.getElementById('refCountBig').textContent = refCount;
   document.getElementById('refEarnedBig').textContent = refEarned;
   document.getElementById('refStatCount').textContent = refCount;
   document.getElementById('refStatEarned').textContent = refEarned;
-  document.getElementById('refRewardVal').textContent = '0.05';
+  document.getElementById('refRewardVal').textContent = refReward;
 
   // Withdraw page
-  const minWD = userData.min_withdraw || 0.1;
-  document.getElementById('minWithdrawInfo').textContent = minWD + ' TON';
-  document.getElementById('withdrawBalanceInfo').textContent = balance.toFixed(3) + ' TON';
+  const minWD = userData.min_withdraw || 10;
+  document.getElementById('minWithdrawInfo').textContent = minWD + ' ARPA';
+  document.getElementById('withdrawBalanceInfo').textContent = balance.toFixed(3) + ' ARPA';
   document.getElementById('withdrawAvail').textContent = balance.toFixed(3);
   document.getElementById('amountInput').min = minWD;
 }
@@ -1239,11 +1334,11 @@ function setClaimReady() {
   btn.className = 'claim-btn active';
   btn.innerHTML = `
     <i class="fa-solid fa-bolt claim-icon"></i>
-    <span class="claim-amount">+${userData?.bonus_amount || '0.01'} TON</span>
+    <span class="claim-amount">+${userData?.bonus_amount || '0.5'} ARPA</span>
     <span class="claim-label">¡RECLAMAR!</span>
   `;
   document.getElementById('ringFill').style.strokeDashoffset = '0';
-  document.getElementById('claimHint').textContent = 'Tu bonus está listo. ¡Toca para reclamar!';
+  document.getElementById('claimHint').textContent = 'Tu bonus de ARPA está listo. ¡Toca para reclamar!';
 }
 
 function setClaimCooldown() {
@@ -1275,6 +1370,9 @@ async function handleClaim() {
   if (!userData) return;
 
   btn.style.pointerEvents = 'none';
+
+  // Abrir la publicidad de Monetag antes/durante el claim
+  triggerMonetagAd();
 
   try {
     const res = await fetch(`${API_BASE}/api/claim`, {
@@ -1317,10 +1415,10 @@ async function handleClaim() {
     animateNumber('qsBalance', data.new_balance, 3);
     document.getElementById('statClaims').textContent = data.total_claimed;
     document.getElementById('qsClaims').textContent = data.total_claimed;
-    document.getElementById('withdrawBalanceInfo').textContent = data.new_balance.toFixed(3) + ' TON';
+    document.getElementById('withdrawBalanceInfo').textContent = data.new_balance.toFixed(3) + ' ARPA';
     document.getElementById('withdrawAvail').textContent = data.new_balance.toFixed(3);
 
-    showToast(`⚡ +${data.bonus_amount} TON reclamado!`, 'success');
+    showToast(`⚡ +${data.bonus_amount} ARPA reclamado!`, 'success');
 
     // Start cooldown
     setClaimCooldown();
@@ -1350,12 +1448,12 @@ async function handleWithdraw() {
   const btn = document.getElementById('withdrawBtn');
 
   if (!wallet) return showToast('⚠️ Ingresa tu dirección de wallet', 'error');
-  if (!wallet.startsWith('UQ') && !wallet.startsWith('EQ') && !wallet.startsWith('0:')) {
-    return showToast('⚠️ Dirección TON inválida (debe empezar con UQ o EQ)', 'error');
+  if (wallet.length < 6) {
+    return showToast('⚠️ Dirección de wallet inválida', 'error');
   }
   if (isNaN(amount) || amount <= 0) return showToast('⚠️ Ingresa un monto válido', 'error');
-  if (amount < (userData?.min_withdraw || 0.1)) {
-    return showToast(`⚠️ Mínimo ${userData?.min_withdraw || 0.1} TON`, 'error');
+  if (amount < (userData?.min_withdraw || 10)) {
+    return showToast(`⚠️ Mínimo ${userData?.min_withdraw || 10} ARPA`, 'error');
   }
   if (amount > (userData?.balance || 0)) {
     return showToast('❌ Balance insuficiente', 'error');
@@ -1382,7 +1480,7 @@ async function handleWithdraw() {
     animateNumber('bigBalance', data.new_balance, 3);
     animateNumber('profileBalance', data.new_balance, 3);
     document.getElementById('withdrawAvail').textContent = data.new_balance.toFixed(3);
-    document.getElementById('withdrawBalanceInfo').textContent = data.new_balance.toFixed(3) + ' TON';
+    document.getElementById('withdrawBalanceInfo').textContent = data.new_balance.toFixed(3) + ' ARPA';
     document.getElementById('qsBalance').textContent = data.new_balance.toFixed(3);
 
     document.getElementById('walletInput').value = '';
@@ -1417,7 +1515,7 @@ async function loadWithdrawalHistory() {
       <div class="card withdrawal-item">
         <div class="wi-status-dot ${w.status}"></div>
         <div class="wi-info">
-          <div class="wi-amount">${parseFloat(w.amount).toFixed(3)} TON</div>
+          <div class="wi-amount">${parseFloat(w.amount).toFixed(3)} ARPA</div>
           <div class="wi-wallet">${w.wallet_address}</div>
           <div class="wi-date">${formatDate(w.created_at)}</div>
         </div>
@@ -1459,11 +1557,11 @@ async function copyRefLink() {
 
 function shareRefLink() {
   const link = document.getElementById('refLinkInput').value;
-  const text = `🚀 Gana TON gratis con FastClaim!\n\n⚡ Reclama bonus cada hora\n💰 Gana más invitando amigos\n\nÚsate mi enlace: ${link}`;
+  const text = `🚀 Gana ARPA USDT gratis con FastClaim!\n\n⚡ Reclama bonus cada hora\n💰 Gana más invitando amigos\n\nÚnete con mi enlace: ${link}`;
   if (tg) {
-    tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent('🚀 Gana TON gratis con FastClaim! ⚡ Reclama bonus cada hora. Únete con mi enlace:')}`);
+    tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent('🚀 Gana ARPA USDT gratis con FastClaim! ⚡ Reclama bonus cada hora. Únete con mi enlace:')}`);
   } else if (navigator.share) {
-    navigator.share({ title: 'FastClaim TON', text, url: link });
+    navigator.share({ title: 'FastClaim ARPA USDT', text, url: link });
   } else {
     copyRefLink();
   }
@@ -1471,13 +1569,21 @@ function shareRefLink() {
 
 // ─── Page Navigation ──────────────────────────────────────
 function switchPage(page) {
-  ['Home', 'Referrals', 'Withdraw'].forEach(p => {
-    document.getElementById('page' + p).classList.remove('active');
-    document.getElementById('nav' + p).classList.remove('active');
+  ['Home', 'Tasks', 'Referrals', 'Withdraw'].forEach(p => {
+    const pageEl = document.getElementById('page' + p);
+    const navEl = document.getElementById('nav' + p);
+    if (pageEl) pageEl.classList.remove('active');
+    if (navEl) navEl.classList.remove('active');
   });
-  document.getElementById('page' + page).classList.add('active');
-  document.getElementById('nav' + page).classList.add('active');
+
+  const targetPage = document.getElementById('page' + page);
+  const targetNav = document.getElementById('nav' + page);
+  if (targetPage) targetPage.classList.add('active');
+  if (targetNav) targetNav.classList.add('active');
+
   document.querySelector('.content').scrollTop = 0;
+
+  if (page === 'Tasks') loadUserTasks();
 }
 
 // ─── Utilities ────────────────────────────────────────────
@@ -1527,6 +1633,148 @@ function showToast(msg, type = 'info') {
   toast.className = 'show ' + type;
   if (toastTimeout) clearTimeout(toastTimeout);
   toastTimeout = setTimeout(() => { toast.className = ''; }, 3000);
+}
+
+// ─── User Tasks System ────────────────────────────────────
+let allUserTasks = [];
+let currentTaskFilter = 'all';
+
+async function loadUserTasks() {
+  if (!userData) return;
+  const container = document.getElementById('userTasksList');
+  try {
+    const res = await fetch(`${API_BASE}/api/tasks/${userData.telegram_id}`);
+    allUserTasks = await res.json();
+    renderUserTasksList();
+  } catch (err) {
+    console.error('Error al cargar tareas:', err);
+    container.innerHTML = '<div class="card" style="padding:20px;text-align:center;color:var(--red);">⚠️ Error al cargar las tareas</div>';
+  }
+}
+
+function filterUserTasks(filter) {
+  currentTaskFilter = filter;
+  document.querySelectorAll('#taskFilterBar .filter-chip').forEach(c => c.classList.remove('active'));
+  const activeChip = document.querySelector(`#taskFilterBar .filter-chip[data-tfilter="${filter}"]`);
+  if (activeChip) activeChip.classList.add('active');
+  renderUserTasksList();
+}
+
+function renderUserTasksList() {
+  const container = document.getElementById('userTasksList');
+  if (!allUserTasks || allUserTasks.length === 0) {
+    container.innerHTML = '<div class="card"><div class="empty-state"><i class="fa-solid fa-clipboard-check"></i><p>No hay tareas disponibles por ahora</p></div></div>';
+    return;
+  }
+
+  let filtered = allUserTasks;
+  if (currentTaskFilter === 'telegram') {
+    filtered = allUserTasks.filter(t => t.type === 'telegram_join' || t.type === 'telegram_react');
+  } else if (currentTaskFilter === 'ad') {
+    filtered = allUserTasks.filter(t => t.type === 'ad');
+  } else if (currentTaskFilter === 'link') {
+    filtered = allUserTasks.filter(t => t.type === 'link');
+  }
+
+  if (filtered.length === 0) {
+    container.innerHTML = '<div class="card"><div class="empty-state"><i class="fa-solid fa-filter"></i><p>No hay tareas para esta categoría</p></div></div>';
+    return;
+  }
+
+  const taskIcons = {
+    telegram_join: 'fa-brands fa-telegram',
+    telegram_react: 'fa-solid fa-heart',
+    ad: 'fa-solid fa-rectangle-ad',
+    link: 'fa-solid fa-arrow-up-right-from-square'
+  };
+
+  const typeLabels = {
+    telegram_join: 'Seguir Canal',
+    telegram_react: 'Reaccionar',
+    ad: 'Publicidad',
+    link: 'Abrir Enlace'
+  };
+
+  container.innerHTML = filtered.map(t => `
+    <div class="card" style="padding:16px;display:flex;flex-direction:column;gap:12px;position:relative;">
+      <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">
+        <div style="display:flex;gap:12px;align-items:center;">
+          <div style="width:40px;height:40px;border-radius:12px;background:rgba(139,92,246,0.15);border:1px solid rgba(139,92,246,0.3);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--ton2);flex-shrink:0;">
+            <i class="${taskIcons[t.type] || 'fa-solid fa-tasks'}"></i>
+          </div>
+          <div>
+            <div style="font-size:14px;font-weight:700;color:var(--text);">${escapeHtml(t.title)}</div>
+            <div style="font-size:11px;color:var(--text3);margin-top:2px;">${escapeHtml(t.description || typeLabels[t.type] || '')}</div>
+          </div>
+        </div>
+        <div style="font-size:13px;font-weight:900;color:var(--green);background:rgba(0,230,118,0.1);border:1px solid rgba(0,230,118,0.25);padding:4px 10px;border-radius:20px;white-space:nowrap;">
+          +${parseFloat(t.reward).toFixed(2)} ARPA
+        </div>
+      </div>
+
+      <div style="display:flex;justify-content:flex-end;">
+        ${t.completed ? `
+          <button class="btn-primary" disabled style="background:rgba(0,230,118,0.15);border:1px solid rgba(0,230,118,0.3);color:var(--green);box-shadow:none;padding:10px 16px;font-size:12px;">
+            <i class="fa-solid fa-circle-check"></i> Completada
+          </button>
+        ` : `
+          <button class="btn-primary" onclick="executeTask(${t.id}, '${escapeHtml(t.url)}', '${t.type}')" style="padding:10px 18px;font-size:12px;width:auto;">
+            <i class="fa-solid fa-bolt"></i> Realizar Tarea
+          </button>
+        `}
+      </div>
+    </div>
+  `).join('');
+}
+
+async function executeTask(taskId, targetUrl, taskType) {
+  if (!userData) return;
+
+  // 1. Abrir la acción/link de la tarea
+  try {
+    if (tg && typeof tg.openTelegramLink === 'function' && targetUrl.includes('t.me')) {
+      tg.openTelegramLink(targetUrl);
+    } else if (tg && typeof tg.openLink === 'function') {
+      tg.openLink(targetUrl);
+    } else {
+      window.open(targetUrl, '_blank');
+    }
+  } catch (e) {
+    console.warn('Error al abrir link:', e);
+  }
+
+  // 2. Notificar al backend la realización de la tarea
+  try {
+    const res = await fetch(`${API_BASE}/api/tasks/complete`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ telegram_id: userData.telegram_id, task_id: taskId })
+    });
+
+    const data = await res.json();
+    if (!res.ok) {
+      showToast('⚠️ ' + (data.error || 'No se pudo completar la tarea'), 'error');
+      return;
+    }
+
+    // Actualizar balance local
+    userData.balance = data.new_balance;
+    animateNumber('bigBalance', data.new_balance, 3);
+    animateNumber('profileBalance', data.new_balance, 3);
+    animateNumber('qsBalance', data.new_balance, 3);
+    document.getElementById('withdrawAvail').textContent = data.new_balance.toFixed(3);
+    document.getElementById('withdrawBalanceInfo').textContent = data.new_balance.toFixed(3) + ' ARPA';
+
+    tg?.HapticFeedback?.notificationOccurred('success');
+    showToast(`🎉 ¡+${data.reward} ARPA ganados por completar la tarea!`, 'success');
+
+    // Recargar tareas
+    loadUserTasks();
+
+  } catch (err) {
+    console.error('Error ejecutando tarea:', err);
+    showToast('❌ Error al acreditar la tarea', 'error');
+  }
 }
 </script>
 </body>
