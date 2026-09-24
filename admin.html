@@ -1676,8 +1676,8 @@ async function saveSettings() {
   let zoneId = elVal('settMonetagZoneId');
   let sdkFunc = elVal('settMonetagSdkFunc');
 
-  // Auto-parse if user pasted full <script src='...' data-zone='...' data-sdk='...'></script> tag
-  if (scriptUrl.includes('<script') || scriptUrl.includes('data-zone') || scriptUrl.includes('data-sdk') || scriptUrl.includes('show_')) {
+  // Auto-parse if user pasted full tag with src, data-zone, data-sdk, etc.
+  if (scriptUrl.includes('src=') || scriptUrl.includes('data-zone') || scriptUrl.includes('data-sdk') || scriptUrl.includes('show_')) {
     const srcMatch = scriptUrl.match(/src=['"]([^'"]+)['"]/i);
     const zoneMatch = scriptUrl.match(/data-zone=['"]([^'"]+)['"]/i);
     const sdkMatch = scriptUrl.match(/data-sdk=['"]([^'"]+)['"]/i);

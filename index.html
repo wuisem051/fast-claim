@@ -1650,7 +1650,7 @@ function setupMonetagSDK() {
   let zoneId = (settings?.monetag_zone_id || userData?.monetag_zone_id || '').trim();
   let sdkFunc = (settings?.monetag_sdk_func || userData?.monetag_sdk_func || '').trim();
 
-  if (url.includes('<script') || url.includes('data-zone') || url.includes('data-sdk')) {
+  if (url.includes('src=') || url.includes('data-zone') || url.includes('data-sdk')) {
     const srcMatch = url.match(/src=['"]([^'"]+)['"]/i);
     const zoneMatch = url.match(/data-zone=['"]([^'"]+)['"]/i);
     const sdkMatch = url.match(/data-sdk=['"]([^'"]+)['"]/i);
