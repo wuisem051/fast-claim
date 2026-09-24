@@ -1646,11 +1646,23 @@ window.handleUserLogout = async function() {
 
 // ─── Monetag SDK ──────────────────────────────────────────
 function setupMonetagSDK() {
-  const url = (settings?.monetag_script_url || userData?.monetag_script_url || '').trim();
-  const zoneId = (settings?.monetag_zone_id || userData?.monetag_zone_id || '').trim();
-  const sdkFunc = (settings?.monetag_sdk_func || userData?.monetag_sdk_func || '').trim();
+  let url = (settings?.monetag_script_url || userData?.monetag_script_url || '').trim();
+  let zoneId = (settings?.monetag_zone_id || userData?.monetag_zone_id || '').trim();
+  let sdkFunc = (settings?.monetag_sdk_func || userData?.monetag_sdk_func || '').trim();
 
-  if (!url) return;
+  if (url.includes('<script') || url.includes('data-zone') || url.includes('data-sdk')) {
+    const srcMatch = url.match(/src=['"]([^'"]+)['"]/i);
+    const zoneMatch = url.match(/data-zone=['"]([^'"]+)['"]/i);
+    const sdkMatch = url.match(/data-sdk=['"]([^'"]+)['"]/i);
+    const funcMatch = url.match(/(show_\d+)/i);
+
+    if (srcMatch) url = srcMatch[1];
+    if (zoneMatch && !zoneId) zoneId = zoneMatch[1];
+    if (sdkMatch && !sdkFunc) sdkFunc = sdkMatch[1];
+    else if (funcMatch && !sdkFunc) sdkFunc = funcMatch[1];
+  }
+
+  if (!url) url = '//libtl.com/sdk.js';
 
   const scriptId = 'monetag-sdk-script';
   if (!document.getElementById(scriptId)) {
@@ -1676,7 +1688,13 @@ function triggerMonetagAd() {
   }
 
   // 2. Función de la etiqueta SDK Monetag (ej: show_11881112)
-  const sdkFunc = (settings?.monetag_sdk_func || userData?.monetag_sdk_func || '').trim();
+  let sdkFunc = (settings?.monetag_sdk_func || userData?.monetag_sdk_func || '').trim();
+  if (!sdkFunc) {
+    const rawUrl = (settings?.monetag_script_url || userData?.monetag_script_url || '');
+    const match = rawUrl.match(/(show_\d+)/i);
+    if (match) sdkFunc = match[1];
+  }
+
   if (sdkFunc && typeof window[sdkFunc] === 'function') {
     try {
       window[sdkFunc]().then(() => {

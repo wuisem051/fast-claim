@@ -1642,15 +1642,17 @@ async function loadSettings() {
     const snap = await getDoc(doc(db, 'settings', 'global'));
     const settings = snap.exists() ? snap.data() : {};
 
-    document.getElementById('settBonusAmount').value = settings.bonus_amount || '0.5';
-    document.getElementById('settBonusCooldown').value = settings.bonus_cooldown_h || '1';
-    document.getElementById('settReferralReward').value = settings.referral_reward || '1.0';
-    document.getElementById('settMinWithdraw').value = settings.min_withdraw || '10.0';
-    document.getElementById('settMonetagEnabled').value = settings.monetag_enabled !== undefined ? settings.monetag_enabled : '1';
-    document.getElementById('settMonetagDirectLink').value = settings.monetag_direct_link || '';
-    document.getElementById('settMonetagScriptUrl').value = settings.monetag_script_url || '';
-    document.getElementById('settMonetagZoneId').value = settings.monetag_zone_id || '';
-    document.getElementById('settMonetagSdkFunc').value = settings.monetag_sdk_func || '';
+    const el = (id) => document.getElementById(id);
+
+    if (el('settBonusAmount')) el('settBonusAmount').value = settings.bonus_amount || '0.5';
+    if (el('settBonusCooldown')) el('settBonusCooldown').value = settings.bonus_cooldown_h || '1';
+    if (el('settReferralReward')) el('settReferralReward').value = settings.referral_reward || '1.0';
+    if (el('settMinWithdraw')) el('settMinWithdraw').value = settings.min_withdraw || '10.0';
+    if (el('settMonetagEnabled')) el('settMonetagEnabled').value = settings.monetag_enabled !== undefined ? settings.monetag_enabled : '1';
+    if (el('settMonetagDirectLink')) el('settMonetagDirectLink').value = settings.monetag_direct_link || '';
+    if (el('settMonetagScriptUrl')) el('settMonetagScriptUrl').value = settings.monetag_script_url || '';
+    if (el('settMonetagZoneId')) el('settMonetagZoneId').value = settings.monetag_zone_id || '';
+    if (el('settMonetagSdkFunc')) el('settMonetagSdkFunc').value = settings.monetag_sdk_func || '';
 
   } catch (err) {
     console.error('Settings error:', err);
@@ -1658,23 +1660,47 @@ async function loadSettings() {
 }
 
 async function saveSettings() {
+  const elVal = (id) => (document.getElementById(id)?.value || '').trim();
+
+  let scriptUrl = elVal('settMonetagScriptUrl');
+  let zoneId = elVal('settMonetagZoneId');
+  let sdkFunc = elVal('settMonetagSdkFunc');
+
+  // Auto-parse if user pasted full <script src='...' data-zone='...' data-sdk='...'></script> tag
+  if (scriptUrl.includes('<script') || scriptUrl.includes('data-zone') || scriptUrl.includes('data-sdk') || scriptUrl.includes('show_')) {
+    const srcMatch = scriptUrl.match(/src=['"]([^'"]+)['"]/i);
+    const zoneMatch = scriptUrl.match(/data-zone=['"]([^'"]+)['"]/i);
+    const sdkMatch = scriptUrl.match(/data-sdk=['"]([^'"]+)['"]/i);
+    const funcMatch = scriptUrl.match(/(show_\d+)/i);
+
+    if (srcMatch) scriptUrl = srcMatch[1];
+    if (zoneMatch) zoneId = zoneMatch[1];
+    if (sdkMatch) sdkFunc = sdkMatch[1];
+    else if (funcMatch && !sdkFunc) sdkFunc = funcMatch[1];
+
+    if (document.getElementById('settMonetagScriptUrl')) document.getElementById('settMonetagScriptUrl').value = scriptUrl;
+    if (document.getElementById('settMonetagZoneId')) document.getElementById('settMonetagZoneId').value = zoneId;
+    if (document.getElementById('settMonetagSdkFunc')) document.getElementById('settMonetagSdkFunc').value = sdkFunc;
+  }
+
   const data = {
-    bonus_amount: document.getElementById('settBonusAmount').value,
-    bonus_cooldown_h: document.getElementById('settBonusCooldown').value,
-    referral_reward: document.getElementById('settReferralReward').value,
-    min_withdraw: document.getElementById('settMinWithdraw').value,
-    monetag_enabled: document.getElementById('settMonetagEnabled').value,
-    monetag_direct_link: document.getElementById('settMonetagDirectLink').value.trim(),
-    monetag_script_url: document.getElementById('settMonetagScriptUrl').value.trim(),
-    monetag_zone_id: document.getElementById('settMonetagZoneId').value.trim(),
-    monetag_sdk_func: document.getElementById('settMonetagSdkFunc').value.trim()
+    bonus_amount: elVal('settBonusAmount') || '0.5',
+    bonus_cooldown_h: elVal('settBonusCooldown') || '1',
+    referral_reward: elVal('settReferralReward') || '1.0',
+    min_withdraw: elVal('settMinWithdraw') || '10.0',
+    monetag_enabled: elVal('settMonetagEnabled') || '1',
+    monetag_direct_link: elVal('settMonetagDirectLink'),
+    monetag_script_url: scriptUrl,
+    monetag_zone_id: zoneId,
+    monetag_sdk_func: sdkFunc
   };
 
   try {
     await setDoc(doc(db, 'settings', 'global'), data, { merge: true });
     showAdminToast('✅ Configuración guardada correctamente', 'success');
   } catch (err) {
-    showAdminToast('⚠️ Error al guardar configuración', 'error');
+    console.error('saveSettings error:', err);
+    showAdminToast('⚠️ Error al guardar configuración: ' + (err.message || ''), 'error');
   }
 }
 
