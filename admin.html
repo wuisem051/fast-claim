@@ -1700,7 +1700,8 @@ async function saveSettings() {
     showAdminToast('✅ Configuración guardada correctamente', 'success');
   } catch (err) {
     console.error('saveSettings error:', err);
-    showAdminToast('⚠️ Error al guardar configuración: ' + (err.message || ''), 'error');
+    alert('❌ Error al guardar en Firebase:\n' + (err.message || err));
+    showAdminToast('⚠️ Error al guardar: ' + (err.message || ''), 'error');
   }
 }
 
