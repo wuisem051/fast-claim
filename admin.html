@@ -1207,7 +1207,16 @@
   </div>
 </div>
 
-<script>
+<script type="module">
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+
+const app = window.firebaseApp;
+const db = window.firebaseDB;
+const { doc, getDoc, setDoc, updateDoc, collection, query, getDocs, where, addDoc, deleteDoc } = window.firebaseFS;
+
+const auth = getAuth(app);
+window.firebaseAuth = auth;
+
 // ─── State ────────────────────────────────────────────────
 const API_BASE = window.location.origin;
 let adminSecret = '';
@@ -1220,13 +1229,12 @@ let modalAction = '';
 let modalWithdrawalId = null;
 
 // ─── Login ────────────────────────────────────────────────
-document.getElementById('adminPasswordInput').addEventListener('keydown', (e) => {
+document.getElementById('adminPasswordInput')?.addEventListener('keydown', (e) => {
   if (e.key === 'Enter') handleLogin();
 });
-
-import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
-const auth = getAuth(app);
-window.firebaseAuth = auth;
+document.getElementById('adminEmailInput')?.addEventListener('keydown', (e) => {
+  if (e.key === 'Enter') handleLogin();
+});
 
 let adminUser = null;
 const ADMIN_EMAIL = 'wuisem051@gmail.com';
@@ -1785,6 +1793,33 @@ async function deleteTask(id) {
     showAdminToast('⚠️ Error al eliminar tarea', 'error');
   }
 }
+
+// ─── Window Exports for HTML Event Handlers ──────────────
+Object.assign(window, {
+  handleLogin,
+  handleLogout,
+  switchAdminPage,
+  loadDashboard,
+  loadWithdrawals,
+  filterWithdrawals,
+  renderWithdrawals,
+  openWithdrawalModal,
+  closeModal,
+  confirmModalAction,
+  loadUsers,
+  filterUsers,
+  renderUsers,
+  openEditUser,
+  closeEditUserModal,
+  saveUserEdit,
+  loadSettings,
+  saveSettings,
+  loadTasks,
+  renderTasks,
+  createNewTask,
+  toggleTaskStatus,
+  deleteTask
+});
 </script>
 </body>
 </html>
