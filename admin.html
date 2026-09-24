@@ -799,8 +799,12 @@
     <h1 class="login-title">FastClaim Admin</h1>
     <p class="login-subtitle">Ingresa tu clave de administrador</p>
     <div class="login-input-wrap">
-      <i class="fa-solid fa-key"></i>
-      <input type="password" id="adminSecretInput" class="login-input" placeholder="Admin Secret Key" autocomplete="off">
+      <i class="fa-solid fa-envelope"></i>
+      <input type="email" id="adminEmailInput" class="login-input" placeholder="Correo de Administrador" autocomplete="off">
+    </div>
+    <div class="login-input-wrap">
+      <i class="fa-solid fa-lock"></i>
+      <input type="password" id="adminPasswordInput" class="login-input" placeholder="Contraseña de Administrador" autocomplete="off">
     </div>
     <button class="login-btn" id="loginBtn" onclick="handleLogin()">
       <i class="fa-solid fa-right-to-bracket"></i> Ingresar
@@ -1216,63 +1220,81 @@ let modalAction = '';
 let modalWithdrawalId = null;
 
 // ─── Login ────────────────────────────────────────────────
-document.getElementById('adminSecretInput').addEventListener('keydown', (e) => {
+document.getElementById('adminPasswordInput').addEventListener('keydown', (e) => {
   if (e.key === 'Enter') handleLogin();
 });
 
-async function handleLogin() {
-  const secret = document.getElementById('adminSecretInput').value.trim();
-  if (!secret) {
-    document.getElementById('loginError').textContent = 'Ingresa la clave de administrador';
-    return;
-  }
+import { getAuth, signInWithEmailAndPassword, onAuthStateChanged, signOut, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+const auth = getAuth(app);
+window.firebaseAuth = auth;
 
-  document.getElementById('loginBtn').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verificando...';
-  document.getElementById('loginBtn').disabled = true;
+let adminUser = null;
+const ADMIN_EMAIL = 'wuisem051@gmail.com';
 
-  try {
-    const res = await fetch(`${API_BASE}/api/admin/stats`, {
-      headers: { 'x-admin-secret': secret }
-    });
-
-    if (res.status === 403) {
-      document.getElementById('loginError').textContent = '❌ Clave incorrecta';
-      return;
-    }
-
-    if (!res.ok) throw new Error('Error del servidor');
-
-    adminSecret = secret;
-    sessionStorage.setItem('admin_secret', secret);
+onAuthStateChanged(auth, (user) => {
+  if (user && user.email === ADMIN_EMAIL) {
+    adminUser = user;
     document.getElementById('loginScreen').classList.add('hidden');
     document.getElementById('adminApp').classList.add('visible');
     loadDashboard();
+  } else {
+    handleLogout();
+  }
+});
 
+async function handleLogin() {
+  const email = document.getElementById('adminEmailInput').value.trim();
+  const password = document.getElementById('adminPasswordInput').value;
+
+  if (!email || !password) {
+    document.getElementById('loginError').textContent = 'Ingresa correo y contraseña';
+    return;
+  }
+  
+  if (email !== ADMIN_EMAIL) {
+    document.getElementById('loginError').textContent = 'No autorizado';
+    return;
+  }
+
+  const btn = document.getElementById('loginBtn');
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verificando...';
+  btn.disabled = true;
+  document.getElementById('loginError').textContent = '';
+
+  try {
+    try {
+      await signInWithEmailAndPassword(auth, email, password);
+    } catch (e) {
+      if (e.code === 'auth/invalid-credential' || e.code === 'auth/user-not-found') {
+        // Crear el admin automáticamente si no existe y las credenciales coinciden con el requerimiento del prompt
+        if (password === 'propleyer123') {
+          await createUserWithEmailAndPassword(auth, email, password);
+        } else {
+          throw e;
+        }
+      } else {
+        throw e;
+      }
+    }
   } catch (err) {
-    document.getElementById('loginError').textContent = '⚠️ Error al conectar con el servidor';
+    document.getElementById('loginError').textContent = '❌ Credenciales incorrectas';
   } finally {
-    document.getElementById('loginBtn').innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Ingresar';
-    document.getElementById('loginBtn').disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Ingresar';
+    btn.disabled = false;
   }
 }
 
 function handleLogout() {
-  adminSecret = '';
-  sessionStorage.removeItem('admin_secret');
+  adminUser = null;
+  if (auth.currentUser) {
+    signOut(auth);
+  }
   document.getElementById('loginScreen').classList.remove('hidden');
   document.getElementById('adminApp').classList.remove('visible');
-  document.getElementById('adminSecretInput').value = '';
+  document.getElementById('adminEmailInput').value = '';
+  document.getElementById('adminPasswordInput').value = '';
   document.getElementById('loginError').textContent = '';
 }
-
-// Auto-login from session
-(function autoLogin() {
-  const saved = sessionStorage.getItem('admin_secret');
-  if (saved) {
-    document.getElementById('adminSecretInput').value = saved;
-    handleLogin();
-  }
-})();
 
 // ─── API Helper ───────────────────────────────────────────
 async function adminFetch(url, options = {}) {
@@ -1313,24 +1335,37 @@ function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
 // ─── Dashboard ────────────────────────────────────────────
 async function loadDashboard() {
   try {
-    const [statsRes, wdRes] = await Promise.all([
-      adminFetch('/api/admin/stats'),
-      adminFetch('/api/admin/withdrawals')
-    ]);
+    const usersSnap = await getDocs(collection(db, 'users'));
+    const wdSnap = await getDocs(collection(db, 'withdrawals'));
+    
+    let totalUsers = 0;
+    let totalClaims = 0;
+    usersSnap.forEach(d => {
+      totalUsers++;
+      totalClaims += (d.data().total_claimed || 0);
+    });
 
-    const stats = await statsRes.json();
-    const withdrawals = await wdRes.json();
+    let pendingWithdrawals = 0;
+    let totalWithdrawn = 0;
+    const withdrawals = [];
+    wdSnap.forEach(d => {
+      const w = { id: d.id, ...d.data() };
+      withdrawals.push(w);
+      if (w.status === 'pending') pendingWithdrawals++;
+      if (w.status === 'approved') totalWithdrawn += parseFloat(w.amount || 0);
+    });
+    withdrawals.sort((a,b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
 
     // Update stat cards
-    document.getElementById('dTotalUsers').textContent = stats.totalUsers.toLocaleString();
-    document.getElementById('dTotalClaims').textContent = stats.totalClaims.toLocaleString();
-    document.getElementById('dPendingWithdrawals').textContent = stats.pendingWithdrawals.toLocaleString();
-    document.getElementById('dTotalWithdrawn').textContent = parseFloat(stats.totalWithdrawn || 0).toFixed(3);
+    document.getElementById('dTotalUsers').textContent = totalUsers.toLocaleString();
+    document.getElementById('dTotalClaims').textContent = totalClaims.toLocaleString();
+    document.getElementById('dPendingWithdrawals').textContent = pendingWithdrawals.toLocaleString();
+    document.getElementById('dTotalWithdrawn').textContent = parseFloat(totalWithdrawn).toFixed(3);
 
     // Pending badge in sidebar
     const badge = document.getElementById('pendingBadge');
-    if (stats.pendingWithdrawals > 0) {
-      badge.textContent = stats.pendingWithdrawals;
+    if (pendingWithdrawals > 0) {
+      badge.textContent = pendingWithdrawals;
       badge.style.display = 'flex';
     } else {
       badge.style.display = 'none';
@@ -1344,7 +1379,7 @@ async function loadDashboard() {
     } else {
       tbody.innerHTML = recent.map(w => `
         <tr>
-          <td class="mono">#${w.id}</td>
+          <td class="mono">#${w.id.substring(0,6)}</td>
           <td>
             <div class="user-cell">
               <div class="user-avatar">${(w.first_name || 'U').charAt(0)}</div>
@@ -1370,8 +1405,10 @@ async function loadDashboard() {
 // ─── Withdrawals ──────────────────────────────────────────
 async function loadWithdrawals() {
   try {
-    const res = await adminFetch('/api/admin/withdrawals');
-    allWithdrawals = await res.json();
+    const snap = await getDocs(collection(db, 'withdrawals'));
+    allWithdrawals = [];
+    snap.forEach(d => allWithdrawals.push({ id: d.id, ...d.data() }));
+    allWithdrawals.sort((a,b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
     renderWithdrawals();
   } catch (err) {
     console.error('Withdrawals error:', err);
@@ -1399,7 +1436,7 @@ function renderWithdrawals() {
 
   tbody.innerHTML = filtered.map(w => `
     <tr>
-      <td class="mono">#${w.id}</td>
+      <td class="mono">#${w.id.substring(0,6)}</td>
       <td>
         <div class="user-cell">
           <div class="user-avatar">${(w.first_name || 'U').charAt(0)}</div>
@@ -1417,8 +1454,8 @@ function renderWithdrawals() {
       <td>
         ${w.status === 'pending' ? `
           <div class="action-btns">
-            <button class="btn btn-approve" onclick="openWithdrawalModal(${w.id}, 'approved')"><i class="fa-solid fa-check"></i> Aprobar</button>
-            <button class="btn btn-reject" onclick="openWithdrawalModal(${w.id}, 'rejected')"><i class="fa-solid fa-xmark"></i> Rechazar</button>
+            <button class="btn btn-approve" onclick="openWithdrawalModal('${w.id}', 'approved')"><i class="fa-solid fa-check"></i> Aprobar</button>
+            <button class="btn btn-reject" onclick="openWithdrawalModal('${w.id}', 'rejected')"><i class="fa-solid fa-xmark"></i> Rechazar</button>
           </div>
         ` : `<span class="mono" style="font-size:11px;">${w.processed_at ? formatDate(w.processed_at) : '—'}</span>`}
       </td>
@@ -1431,7 +1468,7 @@ function openWithdrawalModal(id, action) {
   modalWithdrawalId = id;
   modalAction = action;
   document.getElementById('modalTitle').textContent = action === 'approved' ? '✅ Aprobar Retiro' : '❌ Rechazar Retiro';
-  document.getElementById('modalSubtitle').textContent = `Retiro #${id} — ${action === 'approved' ? 'Se marcará como aprobado' : 'Se rechazará y se devolverá el balance'}`;
+  document.getElementById('modalSubtitle').textContent = `Retiro #${id.substring(0,6)} — ${action === 'approved' ? 'Se marcará como aprobado' : 'Se rechazará y se devolverá el balance'}`;
   document.getElementById('modalNoteInput').value = '';
   document.getElementById('modalConfirmBtn').className = action === 'approved' ? 'btn btn-approve' : 'btn btn-reject';
   document.getElementById('modalConfirmBtn').innerHTML = action === 'approved'
@@ -1454,14 +1491,30 @@ async function confirmModalAction() {
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Procesando...';
 
   try {
-    const res = await adminFetch(`/api/admin/withdrawals/${modalWithdrawalId}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ status: modalAction, note })
+    const wdRef = doc(db, 'withdrawals', String(modalWithdrawalId));
+    const wdSnap = await getDoc(wdRef);
+    if(!wdSnap.exists()) throw new Error('No existe');
+    const wData = wdSnap.data();
+
+    // Actualizar estado retiro
+    await updateDoc(wdRef, {
+      status: modalAction,
+      note,
+      processed_at: new Date().toISOString()
     });
 
-    if (!res.ok) throw new Error('Error al procesar');
+    // Si se rechaza, devolver balance al usuario
+    if (modalAction === 'rejected' && wData.telegram_id) {
+      const uRef = doc(db, 'users', String(wData.telegram_id));
+      const uSnap = await getDoc(uRef);
+      if(uSnap.exists()) {
+        await updateDoc(uRef, {
+          balance: parseFloat(uSnap.data().balance || 0) + parseFloat(wData.amount)
+        });
+      }
+    }
 
-    showAdminToast(`${modalAction === 'approved' ? '✅ Retiro aprobado' : '❌ Retiro rechazado'} #${modalWithdrawalId}`, 'success');
+    showAdminToast(`${modalAction === 'approved' ? '✅ Retiro aprobado' : '❌ Retiro rechazado'}`, 'success');
     closeModal();
     loadWithdrawals();
     loadDashboard();
@@ -1476,8 +1529,9 @@ async function confirmModalAction() {
 // ─── Users ────────────────────────────────────────────────
 async function loadUsers() {
   try {
-    const res = await adminFetch('/api/admin/users');
-    allUsers = await res.json();
+    const snap = await getDocs(collection(db, 'users'));
+    allUsers = [];
+    snap.forEach(d => allUsers.push({ id: d.id, ...d.data() }));
     document.getElementById('userCountBadge').textContent = allUsers.length + ' usuarios';
     renderUsers(allUsers);
   } catch (err) {
@@ -1515,14 +1569,14 @@ function renderUsers(users) {
           </div>
         </div>
       </td>
-      <td class="mono">${escapeHtml(u.telegram_id)}</td>
+      <td class="mono">${escapeHtml(u.telegram_id || u.id)}</td>
       <td style="font-weight:700;color:var(--ton2);">${parseFloat(u.balance || 0).toFixed(3)}</td>
       <td>${u.total_claimed || 0}</td>
       <td class="mono" style="font-size:11px;">${u.referred_by || '—'}</td>
       <td><span class="badge" style="background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);color:var(--accent2);">${u.referral_code || '—'}</span></td>
-      <td class="mono">${formatDate(u.created_at)}</td>
+      <td class="mono">${formatDate(u.created_at || u.last_sync)}</td>
       <td>
-        <button class="btn" style="background:var(--card);border-color:var(--card-border);color:var(--text2);" onclick="openEditUser('${escapeHtml(u.telegram_id)}', ${parseFloat(u.balance || 0)})">
+        <button class="btn" style="background:var(--card);border-color:var(--card-border);color:var(--text2);" onclick="openEditUser('${escapeHtml(u.id)}', ${parseFloat(u.balance || 0)})">
           <i class="fa-solid fa-pen-to-square"></i> Editar
         </button>
       </td>
@@ -1531,10 +1585,10 @@ function renderUsers(users) {
 }
 
 // Edit user modal
-function openEditUser(telegramId, balance) {
-  document.getElementById('editUserId').value = telegramId;
+function openEditUser(uid, balance) {
+  document.getElementById('editUserId').value = uid;
   document.getElementById('editUserBalance').value = balance.toFixed(3);
-  document.getElementById('editUserSubtitle').textContent = `Usuario: ${telegramId}`;
+  document.getElementById('editUserSubtitle').textContent = `Usuario: ${uid}`;
   document.getElementById('editUserModal').classList.add('show');
 }
 
@@ -1543,7 +1597,7 @@ function closeEditUserModal() {
 }
 
 async function saveUserEdit() {
-  const telegramId = document.getElementById('editUserId').value;
+  const uid = document.getElementById('editUserId').value;
   const newBalance = parseFloat(document.getElementById('editUserBalance').value);
 
   if (isNaN(newBalance) || newBalance < 0) {
@@ -1552,18 +1606,11 @@ async function saveUserEdit() {
   }
 
   try {
-    const res = await adminFetch(`/api/admin/users/${telegramId}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ balance: newBalance })
-    });
-
-    if (!res.ok) throw new Error('Error al actualizar');
-
-    showAdminToast(`✅ Balance actualizado para ${telegramId}`, 'success');
+    await updateDoc(doc(db, 'users', uid), { balance: newBalance });
+    showAdminToast(`✅ Balance actualizado para ${uid}`, 'success');
     closeEditUserModal();
     loadUsers();
     loadDashboard();
-
   } catch (err) {
     showAdminToast('⚠️ Error al actualizar usuario', 'error');
   }
@@ -1572,8 +1619,8 @@ async function saveUserEdit() {
 // ─── Settings ─────────────────────────────────────────────
 async function loadSettings() {
   try {
-    const res = await adminFetch('/api/admin/settings');
-    const settings = await res.json();
+    const snap = await getDoc(doc(db, 'settings', 'global'));
+    const settings = snap.exists() ? snap.data() : {};
 
     document.getElementById('settBonusAmount').value = settings.bonus_amount || '0.5';
     document.getElementById('settBonusCooldown').value = settings.bonus_cooldown_h || '1';
@@ -1600,14 +1647,8 @@ async function saveSettings() {
   };
 
   try {
-    const res = await adminFetch('/api/admin/settings', {
-      method: 'PATCH',
-      body: JSON.stringify(data)
-    });
-
-    if (!res.ok) throw new Error('Error al guardar');
+    await setDoc(doc(db, 'settings', 'global'), data, { merge: true });
     showAdminToast('✅ Configuración guardada correctamente', 'success');
-
   } catch (err) {
     showAdminToast('⚠️ Error al guardar configuración', 'error');
   }
@@ -1649,8 +1690,9 @@ function showAdminToast(msg, type = 'info') {
 // ─── Tasks ────────────────────────────────────────────────
 async function loadTasks() {
   try {
-    const res = await adminFetch('/api/admin/tasks');
-    const tasks = await res.json();
+    const snap = await getDocs(collection(db, 'tasks'));
+    const tasks = [];
+    snap.forEach(d => tasks.push({ id: d.id, ...d.data() }));
     renderTasks(tasks);
   } catch (err) {
     console.error('Error cargando tareas:', err);
@@ -1673,7 +1715,7 @@ function renderTasks(tasks) {
 
   tbody.innerHTML = tasks.map(t => `
     <tr>
-      <td class="mono">#${t.id}</td>
+      <td class="mono">#${t.id.substring(0,6)}</td>
       <td>
         <div style="font-weight:600;color:var(--text);">${escapeHtml(t.title)}</div>
         <div style="font-size:11px;color:var(--text3);">${escapeHtml(t.description || '')}</div>
@@ -1685,10 +1727,10 @@ function renderTasks(tasks) {
       <td><span class="badge ${t.active ? 'approved' : 'rejected'}"><span class="badge-dot"></span> ${t.active ? 'Activa' : 'Inactiva'}</span></td>
       <td>
         <div class="action-btns">
-          <button class="btn" style="background:var(--card);border-color:var(--card-border);color:var(--text2);" onclick="toggleTaskStatus(${t.id}, ${t.active ? 0 : 1})">
+          <button class="btn" style="background:var(--card);border-color:var(--card-border);color:var(--text2);" onclick="toggleTaskStatus('${t.id}', ${t.active ? 0 : 1})">
             ${t.active ? '<i class="fa-solid fa-eye-slash"></i> Pausar' : '<i class="fa-solid fa-eye"></i> Activar'}
           </button>
-          <button class="btn btn-reject" onclick="deleteTask(${t.id})">
+          <button class="btn btn-reject" onclick="deleteTask('${t.id}')">
             <i class="fa-solid fa-trash"></i>
           </button>
         </div>
@@ -1710,19 +1752,14 @@ async function createNewTask() {
   }
 
   try {
-    const res = await adminFetch('/api/admin/tasks', {
-      method: 'POST',
-      body: JSON.stringify({ title, reward, type, url, description })
+    await addDoc(collection(db, 'tasks'), {
+      title, reward, type, url, description, active: 1, completion_count: 0, created_at: new Date().toISOString()
     });
-
-    if (!res.ok) throw new Error('Error al crear tarea');
-
     showAdminToast('✅ Tarea creada correctamente', 'success');
     document.getElementById('newTaskTitle').value = '';
     document.getElementById('newTaskUrl').value = '';
     document.getElementById('newTaskDesc').value = '';
     loadTasks();
-
   } catch (err) {
     showAdminToast('⚠️ Error al crear tarea', 'error');
   }
@@ -1730,12 +1767,7 @@ async function createNewTask() {
 
 async function toggleTaskStatus(id, newActiveStatus) {
   try {
-    const res = await adminFetch(`/api/admin/tasks/${id}`, {
-      method: 'PATCH',
-      body: JSON.stringify({ active: newActiveStatus })
-    });
-
-    if (!res.ok) throw new Error('Error al actualizar');
+    await updateDoc(doc(db, 'tasks', String(id)), { active: newActiveStatus });
     showAdminToast(`✅ Tarea ${newActiveStatus ? 'activada' : 'pausada'}`, 'success');
     loadTasks();
   } catch (err) {
@@ -1746,11 +1778,7 @@ async function toggleTaskStatus(id, newActiveStatus) {
 async function deleteTask(id) {
   if (!confirm('¿Estás seguro de eliminar esta tarea?')) return;
   try {
-    const res = await adminFetch(`/api/admin/tasks/${id}`, {
-      method: 'DELETE'
-    });
-
-    if (!res.ok) throw new Error('Error al eliminar');
+    await deleteDoc(doc(db, 'tasks', String(id)));
     showAdminToast('✅ Tarea eliminada', 'success');
     loadTasks();
   } catch (err) {
