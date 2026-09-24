@@ -1535,6 +1535,8 @@ async function loadUserData(uid) {
     userData.monetag_enabled     = settings.monetag_enabled;
     userData.monetag_direct_link = settings.monetag_direct_link;
     userData.monetag_script_url  = settings.monetag_script_url;
+    userData.monetag_zone_id     = settings.monetag_zone_id;
+    userData.monetag_sdk_func    = settings.monetag_sdk_func;
 
     document.getElementById('authScreen').classList.add('hidden');
     renderUserData();
@@ -1644,22 +1646,46 @@ window.handleUserLogout = async function() {
 
 // ─── Monetag SDK ──────────────────────────────────────────
 function setupMonetagSDK() {
-  if (!userData?.monetag_script_url) return;
-  const url = userData.monetag_script_url.trim();
-  if (!url || document.querySelector(`script[src="${url}"]`)) return;
-  const s = document.createElement('script');
-  s.src = url; s.async = true;
-  s.setAttribute('data-cfasync', 'false');
-  document.head.appendChild(s);
+  const url = (settings?.monetag_script_url || userData?.monetag_script_url || '').trim();
+  const zoneId = (settings?.monetag_zone_id || userData?.monetag_zone_id || '').trim();
+  const sdkFunc = (settings?.monetag_sdk_func || userData?.monetag_sdk_func || '').trim();
+
+  if (!url) return;
+
+  const scriptId = 'monetag-sdk-script';
+  if (!document.getElementById(scriptId)) {
+    const s = document.createElement('script');
+    s.id = scriptId;
+    s.src = url;
+    s.async = true;
+    s.setAttribute('data-cfasync', 'false');
+    if (zoneId) s.setAttribute('data-zone', zoneId);
+    if (sdkFunc) s.setAttribute('data-sdk', sdkFunc);
+    document.head.appendChild(s);
+  }
 }
 
 function triggerMonetagAd() {
-  if (String(userData?.monetag_enabled || '1') !== '1') return;
-  const link = (userData?.monetag_direct_link || '').trim();
+  const enabled = String(settings?.monetag_enabled || userData?.monetag_enabled || '1');
+  if (enabled !== '1') return;
+
+  // 1. Enlace Directo (Smartlink / Direct Link)
+  const link = (settings?.monetag_direct_link || userData?.monetag_direct_link || '').trim();
   if (link) {
     try { if (tg?.openLink) tg.openLink(link); else window.open(link, '_blank'); } catch(e) {}
   }
-  if (typeof window.show_monetag_ad === 'function') try { window.show_monetag_ad(); } catch(e) {}
+
+  // 2. Función de la etiqueta SDK Monetag (ej: show_11881112)
+  const sdkFunc = (settings?.monetag_sdk_func || userData?.monetag_sdk_func || '').trim();
+  if (sdkFunc && typeof window[sdkFunc] === 'function') {
+    try {
+      window[sdkFunc]().then(() => {
+        console.log('Monetag ad watched');
+      }).catch(err => console.error('Monetag ad error:', err));
+    } catch(e) { console.error(e); }
+  } else if (typeof window.show_monetag_ad === 'function') {
+    try { window.show_monetag_ad(); } catch(e) {}
+  }
 }
 
 // ─── Render User Data ─────────────────────────────────────

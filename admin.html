@@ -1061,7 +1061,7 @@
       <!-- Monetag Panel -->
       <div class="panel">
         <div class="panel-header">
-          <div class="panel-title"><i class="fa-solid fa-rectangle-ad"></i> Monetización & Publicidad (Monetag)</div>
+          <div class="panel-title"><i class="fa-solid fa-rectangle-ad"></i> Monetización & Publicidad (Monetag Telegram Mini App)</div>
         </div>
         <div class="panel-body">
           <div class="form-grid">
@@ -1073,15 +1073,25 @@
               </select>
               <span class="form-hint">Activa o desactiva la publicidad al dar Claim</span>
             </div>
+            <div class="form-group">
+              <label class="form-label"><i class="fa-solid fa-layer-group"></i> Zone ID (data-zone)</label>
+              <input type="text" class="form-control" id="settMonetagZoneId" placeholder="Ej: 11881112">
+              <span class="form-hint">ID de zona publicitaria Monetag (data-zone)</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label"><i class="fa-solid fa-terminal"></i> SDK Function Name (data-sdk)</label>
+              <input type="text" class="form-control" id="settMonetagSdkFunc" placeholder="Ej: show_11881112">
+              <span class="form-hint">Nombre de la función JS para mostrar anuncio (data-sdk)</span>
+            </div>
             <div class="form-group" style="grid-column: span 2;">
               <label class="form-label"><i class="fa-solid fa-link"></i> Monetag Direct Link URL (Smartlink / Enlace Directo)</label>
               <input type="url" class="form-control" id="settMonetagDirectLink" placeholder="https://othen.com/... o https://directlink.monetag.com/...">
               <span class="form-hint">Enlace directo de Monetag que se abrirá en nueva ventana al hacer Claim</span>
             </div>
             <div class="form-group" style="grid-column: span 2;">
-              <label class="form-label"><i class="fa-solid fa-code"></i> Monetag Script URL / SDK Tag</label>
-              <input type="text" class="form-control" id="settMonetagScriptUrl" placeholder="https://alwingulla.com/88/... (Script Tag Monetag Popunder / Push)">
-              <span class="form-hint">URL del script SDK de Monetag (opcional) que se cargará dinámicamente</span>
+              <label class="form-label"><i class="fa-solid fa-code"></i> Monetag Script URL (sdk.js Tag)</label>
+              <input type="text" class="form-control" id="settMonetagScriptUrl" placeholder="//libtl.com/sdk.js">
+              <span class="form-hint">URL del script SDK Telegram Mini App de Monetag</span>
             </div>
           </div>
           <div style="margin-top:28px;display:flex;justify-content:flex-end;">
@@ -1246,7 +1256,9 @@ onAuthStateChanged(auth, (user) => {
     document.getElementById('adminApp').classList.add('visible');
     loadDashboard();
   } else {
-    handleLogout();
+    adminUser = null;
+    document.getElementById('loginScreen').classList.remove('hidden');
+    document.getElementById('adminApp').classList.remove('visible');
   }
 });
 
@@ -1637,6 +1649,8 @@ async function loadSettings() {
     document.getElementById('settMonetagEnabled').value = settings.monetag_enabled !== undefined ? settings.monetag_enabled : '1';
     document.getElementById('settMonetagDirectLink').value = settings.monetag_direct_link || '';
     document.getElementById('settMonetagScriptUrl').value = settings.monetag_script_url || '';
+    document.getElementById('settMonetagZoneId').value = settings.monetag_zone_id || '';
+    document.getElementById('settMonetagSdkFunc').value = settings.monetag_sdk_func || '';
 
   } catch (err) {
     console.error('Settings error:', err);
@@ -1651,7 +1665,9 @@ async function saveSettings() {
     min_withdraw: document.getElementById('settMinWithdraw').value,
     monetag_enabled: document.getElementById('settMonetagEnabled').value,
     monetag_direct_link: document.getElementById('settMonetagDirectLink').value.trim(),
-    monetag_script_url: document.getElementById('settMonetagScriptUrl').value.trim()
+    monetag_script_url: document.getElementById('settMonetagScriptUrl').value.trim(),
+    monetag_zone_id: document.getElementById('settMonetagZoneId').value.trim(),
+    monetag_sdk_func: document.getElementById('settMonetagSdkFunc').value.trim()
   };
 
   try {
