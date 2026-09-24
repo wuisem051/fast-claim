@@ -17,34 +17,7 @@
   <!-- Font Awesome -->
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 
-  <!-- Firebase SDK -->
-  <script type="module">
-    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
-    import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js";
-    import { 
-      getFirestore, doc, getDoc, setDoc, updateDoc, collection, query, getDocs, where, addDoc, deleteDoc 
-    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
-    const firebaseConfig = {
-      apiKey: "AIzaSyCg2M7CdvmsPv0sw-H4bh5WwPEv5iZdbdM",
-      authDomain: "fastclaim-355ff.firebaseapp.com",
-      projectId: "fastclaim-355ff",
-      storageBucket: "fastclaim-355ff.firebasestorage.app",
-      messagingSenderId: "1058467332296",
-      appId: "1:1058467332296:web:3230a699cefec5382525fd",
-      measurementId: "G-XSZ5YG04ZX"
-    };
-
-    // Initialize Firebase
-    const app = initializeApp(firebaseConfig);
-    const analytics = getAnalytics(app);
-    const db = getFirestore(app);
-
-    window.firebaseApp = app;
-    window.firebaseAnalytics = analytics;
-    window.firebaseDB = db;
-    window.firebaseFS = { doc, getDoc, setDoc, updateDoc, collection, query, getDocs, where, addDoc, deleteDoc };
-  </script>
 
   <style>
     /* ─── Reset & Base ───────────────────────────────────── */
@@ -1356,318 +1329,392 @@
 <!-- ─── Toast ───────────────────────────────────────────── -->
 <div id="toast"></div>
 
-<script>
-// ─── Config & State ───────────────────────────────────────
-const API_BASE = window.location.origin; // mismo servidor
-let userData = null;
+<script type="module">
+// ══════════════════════════════════════════════════════════
+//  FastClaim ARPA ─ Firebase Module (Auth + Firestore)
+// ══════════════════════════════════════════════════════════
+import { initializeApp }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
+import { getAnalytics }
+  from "https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js";
+import {
+  getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
+  onAuthStateChanged, signOut
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
+import {
+  getFirestore, doc, getDoc, setDoc, updateDoc, addDoc,
+  collection, query, where, getDocs, runTransaction,
+  orderBy, limit
+} from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+
+// ─── Firebase Init ────────────────────────────────────────
+const firebaseConfig = {
+  apiKey:            "AIzaSyCg2M7CdvmsPv0sw-H4bh5WwPEv5iZdbdM",
+  authDomain:        "fastclaim-355ff.firebaseapp.com",
+  projectId:         "fastclaim-355ff",
+  storageBucket:     "fastclaim-355ff.firebasestorage.app",
+  messagingSenderId: "1058467332296",
+  appId:             "1:1058467332296:web:3230a699cefec5382525fd",
+  measurementId:     "G-XSZ5YG04ZX"
+};
+const fbApp    = initializeApp(firebaseConfig);
+const analytics = getAnalytics(fbApp);
+const auth     = getAuth(fbApp);
+const db       = getFirestore(fbApp);
+
+// ─── State ────────────────────────────────────────────────
+let userData   = null;
 let claimTimer = null;
 let claimCooldownRemaining = 0;
-const CIRCUMFERENCE = 364.4; // 2π * 58
+const CIRCUMFERENCE = 364.4;
+
+let settings = {
+  bonus_amount:       0.5,
+  bonus_cooldown_h:   1,
+  referral_reward:    1.0,
+  min_withdraw:       10,
+  monetag_enabled:    '1',
+  monetag_direct_link:'',
+  monetag_script_url: ''
+};
 
 // ─── Telegram SDK ─────────────────────────────────────────
 const tg = window.Telegram?.WebApp;
-if (tg) {
-  tg.expand();
-  tg.ready();
-}
+if (tg) { tg.expand(); tg.ready(); }
 
-function getTelegramUser() {
-  if (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) {
-    return tg.initDataUnsafe.user;
-  }
-  // Fallback para desarrollo en browser
-  return {
-    id: 'dev_' + Math.random().toString(36).substr(2, 8),
-    username: 'devuser',
-    first_name: 'Dev',
-    last_name: 'User',
-    photo_url: ''
-  };
-}
+function getTelegramUser() { return tg?.initDataUnsafe?.user || null; }
 
 function getRefCode() {
-  // Check Telegram start_param
-  if (tg && tg.initDataUnsafe && tg.initDataUnsafe.start_param) {
-    return tg.initDataUnsafe.start_param;
-  }
-  // Check URL param
-  const params = new URLSearchParams(window.location.search);
-  return params.get('ref') || null;
+  if (tg?.initDataUnsafe?.start_param) return tg.initDataUnsafe.start_param;
+  return new URLSearchParams(window.location.search).get('ref') || null;
+}
+
+// ─── Load Settings from Firestore ─────────────────────────
+async function loadSettings() {
+  try {
+    const snap = await getDoc(doc(db, 'settings', 'config'));
+    if (snap.exists()) settings = { ...settings, ...snap.data() };
+  } catch(e) { console.warn('Settings load:', e.message); }
 }
 
 // ─── Init ─────────────────────────────────────────────────
 window.addEventListener('load', async () => {
   const refCode = getRefCode();
   if (refCode) {
-    document.getElementById('regRefCode').value = refCode;
+    const el = document.getElementById('regRefCode');
+    if (el) el.value = refCode;
   }
-  await initApp();
+
+  await loadSettings();
+  const tgUser = getTelegramUser();
+
+  onAuthStateChanged(auth, async (user) => {
+    if (user) {
+      await loadUserData(user.uid);
+      hideLoading();
+    } else if (tgUser) {
+      await handleTelegramAuth(tgUser);
+    } else {
+      showAuthScreen();
+      hideLoading();
+    }
+  });
+
+  setTimeout(hideLoading, 4000); // safety fallback
 });
 
-async function initApp() {
-  const savedTelegramId = localStorage.getItem('fastclaim_telegram_id');
-  const tgUser = (tg && tg.initDataUnsafe && tg.initDataUnsafe.user) ? tg.initDataUnsafe.user : null;
-  const refCode = getRefCode();
-
-  // Si abren desde Telegram Mini App o tienen sesión guardada, intentar autologin
-  const activeId = savedTelegramId || (tgUser ? String(tgUser.id) : null);
-
-  if (activeId) {
-    try {
-      const res = await fetch(`${API_BASE}/api/user`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          telegram_id: activeId,
-          username: tgUser ? (tgUser.username || '') : '',
-          first_name: tgUser ? (tgUser.first_name || 'User') : '',
-          photo_url: tgUser ? (tgUser.photo_url || '') : '',
-          ref: refCode
-        })
-      });
-
-      if (res.ok) {
-        userData = await res.json();
-        localStorage.setItem('fastclaim_telegram_id', userData.telegram_id);
-        document.getElementById('authScreen').classList.add('hidden');
-        renderUserData();
-        setupMonetagSDK();
-        startClaimCycle();
-        loadWithdrawalHistory();
-        // Sync user to Firebase Firestore (non-blocking)
-        syncUserToFirestore(userData.telegram_id, userData);
-        setTimeout(() => {
-          document.getElementById('loadingScreen').classList.add('hidden');
-        }, 300);
-        return;
-      }
-    } catch (e) {
-      console.warn('Auto-login falló:', e);
-    }
-  }
-
-  // Si no hay sesión guardada o falló la verificación, mostrar pantalla de Auth
-  document.getElementById('authScreen').classList.remove('hidden');
+function hideLoading() {
   setTimeout(() => {
     document.getElementById('loadingScreen').classList.add('hidden');
-  }, 400);
+  }, 300);
+}
+function showAuthScreen() {
+  document.getElementById('authScreen').classList.remove('hidden');
 }
 
-// ─── Auth Handlers (Login / Registro) ─────────────────────
-function switchAuthTab(tab) {
-  document.getElementById('authTabLogin').classList.toggle('active', tab === 'login');
+// ─── Telegram Auto-Auth ───────────────────────────────────
+async function handleTelegramAuth(tgUser) {
+  const email    = `tg${tgUser.id}@fastclaim.app`;
+  const password = `tg_${tgUser.id}_fc2024`;
+  try {
+    await signInWithEmailAndPassword(auth, email, password);
+  } catch(e) {
+    if (e.code === 'auth/user-not-found' || e.code === 'auth/invalid-credential') {
+      try {
+        const cred = await createUserWithEmailAndPassword(auth, email, password);
+        await createUserDoc(cred.user.uid, {
+          username:    tgUser.username  || `tg${tgUser.id}`,
+          first_name:  tgUser.first_name || 'User',
+          photo_url:   tgUser.photo_url  || '',
+          telegram_id: String(tgUser.id)
+        }, getRefCode());
+      } catch(e2) {
+        console.error('Telegram auth failed:', e2.message);
+        showAuthScreen(); hideLoading();
+      }
+    } else {
+      showAuthScreen(); hideLoading();
+    }
+  }
+}
+
+// ─── Create User Document ─────────────────────────────────
+function genCode() {
+  return Math.random().toString(36).substring(2, 10).toUpperCase();
+}
+
+async function createUserDoc(uid, profile, refCode) {
+  const referralCode = genCode();
+  let referredBy = null;
+
+  if (refCode) {
+    try {
+      const q = query(collection(db, 'users'), where('referral_code', '==', refCode));
+      const snap = await getDocs(q);
+      if (!snap.empty) {
+        const referrer = snap.docs[0];
+        if (referrer.id !== uid) {
+          referredBy = referrer.id;
+          const rData = referrer.data();
+          await updateDoc(doc(db, 'users', referrer.id), {
+            balance:        (rData.balance        || 0) + settings.referral_reward,
+            referral_count: (rData.referral_count || 0) + 1
+          });
+        }
+      }
+    } catch(e) { console.warn('Referral error:', e.message); }
+  }
+
+  await setDoc(doc(db, 'users', uid), {
+    uid,
+    username:       profile.username    || '',
+    first_name:     profile.first_name  || 'User',
+    photo_url:      profile.photo_url   || '',
+    telegram_id:    profile.telegram_id || '',
+    balance:        0,
+    referral_code:  referralCode,
+    referred_by:    referredBy,
+    last_bonus_claim: null,
+    total_claimed:  0,
+    referral_count: 0,
+    created_at:     new Date().toISOString()
+  });
+}
+
+// ─── Load User Data ───────────────────────────────────────
+async function loadUserData(uid) {
+  try {
+    const snap = await getDoc(doc(db, 'users', uid));
+    if (!snap.exists()) {
+      await signOut(auth);
+      showAuthScreen();
+      return;
+    }
+
+    userData = { ...snap.data(), uid };
+
+    // Compute claim status
+    const cooldownMs = settings.bonus_cooldown_h * 3600 * 1000;
+    if (userData.last_bonus_claim) {
+      const diffMs = Date.now() - new Date(userData.last_bonus_claim).getTime();
+      if (diffMs < cooldownMs) {
+        userData.can_claim    = false;
+        userData.next_claim_in = Math.ceil((cooldownMs - diffMs) / 1000);
+      } else {
+        userData.can_claim    = true;
+        userData.next_claim_in = 0;
+      }
+    } else {
+      userData.can_claim    = true;
+      userData.next_claim_in = 0;
+    }
+
+    userData.bonus_amount        = settings.bonus_amount;
+    userData.referral_reward     = settings.referral_reward;
+    userData.min_withdraw        = settings.min_withdraw;
+    userData.monetag_enabled     = settings.monetag_enabled;
+    userData.monetag_direct_link = settings.monetag_direct_link;
+    userData.monetag_script_url  = settings.monetag_script_url;
+
+    document.getElementById('authScreen').classList.add('hidden');
+    renderUserData();
+    setupMonetagSDK();
+    startClaimCycle();
+    loadWithdrawalHistory();
+
+  } catch(err) {
+    console.error('loadUserData error:', err);
+    showToast('❌ Error al cargar datos', 'error');
+  }
+}
+
+// ─── Auth Handlers ────────────────────────────────────────
+window.switchAuthTab = function(tab) {
+  document.getElementById('authTabLogin').classList.toggle('active',    tab === 'login');
   document.getElementById('authTabRegister').classList.toggle('active', tab === 'register');
-  document.getElementById('loginForm').classList.toggle('active', tab === 'login');
-  document.getElementById('loginForm').classList.toggle('hidden', tab !== 'login');
+  document.getElementById('loginForm').classList.toggle('active',    tab === 'login');
+  document.getElementById('loginForm').classList.toggle('hidden',    tab !== 'login');
   document.getElementById('registerForm').classList.toggle('active', tab === 'register');
   document.getElementById('registerForm').classList.toggle('hidden', tab !== 'register');
   document.getElementById('loginErrorMsg').textContent = '';
-  document.getElementById('regErrorMsg').textContent = '';
-}
+  document.getElementById('regErrorMsg').textContent   = '';
+};
 
-async function handleAuthLogin() {
-  const usernameOrId = document.getElementById('loginUsername').value.trim();
-  const password = document.getElementById('loginPassword').value.trim();
-  const errorEl = document.getElementById('loginErrorMsg');
-  const btn = document.getElementById('loginSubmitBtn');
+window.handleAuthLogin = async function() {
+  const raw      = document.getElementById('loginUsername').value.trim().replace(/^@/, '').toLowerCase();
+  const password = document.getElementById('loginPassword').value;
+  const errorEl  = document.getElementById('loginErrorMsg');
+  const btn      = document.getElementById('loginSubmitBtn');
 
-  if (!usernameOrId || !password) {
-    errorEl.textContent = 'Ingresa tu usuario y contraseña';
-    return;
-  }
+  if (!raw || !password) { errorEl.textContent = 'Ingresa tu usuario y contraseña'; return; }
 
   btn.disabled = true;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Verificando...';
   errorEl.textContent = '';
 
   try {
-    const res = await fetch(`${API_BASE}/api/auth/login`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ username_or_id: usernameOrId, password })
-    });
-
-    const data = await res.json();
-    if (!res.ok) {
-      errorEl.textContent = '❌ ' + (data.error || 'Error al iniciar sesión');
-      return;
-    }
-
-    localStorage.setItem('fastclaim_telegram_id', data.telegram_id);
-    document.getElementById('authScreen').classList.add('hidden');
-    showToast(`👋 ¡Bienvenido de nuevo, ${data.first_name}!`, 'success');
-    await initApp();
-
-  } catch (err) {
-    errorEl.textContent = '⚠️ Error al conectar con el servidor';
+    const email = `${raw}@fastclaim.app`;
+    await signInWithEmailAndPassword(auth, email, password);
+    showToast('👋 ¡Bienvenido de nuevo!', 'success');
+  } catch(err) {
+    const codes = {
+      'auth/invalid-credential':   'Usuario o contraseña incorrectos',
+      'auth/user-not-found':       'Usuario no encontrado',
+      'auth/too-many-requests':    'Demasiados intentos. Espera un momento.',
+      'auth/network-request-failed':'Sin conexión a internet'
+    };
+    errorEl.textContent = '❌ ' + (codes[err.code] || err.message || 'Error al iniciar sesión');
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-right-to-bracket"></i> Iniciar Sesión';
   }
-}
+};
 
-async function handleAuthRegister() {
+window.handleAuthRegister = async function() {
   const firstName = document.getElementById('regFirstName').value.trim();
-  const username = document.getElementById('regUsername').value.trim();
-  const password = document.getElementById('regPassword').value.trim();
-  const refCode = document.getElementById('regRefCode').value.trim() || getRefCode();
-  const errorEl = document.getElementById('regErrorMsg');
-  const btn = document.getElementById('regSubmitBtn');
+  const username  = document.getElementById('regUsername').value.trim().replace(/^@/,'').toLowerCase();
+  const password  = document.getElementById('regPassword').value;
+  const refCode   = document.getElementById('regRefCode').value.trim() || getRefCode();
+  const errorEl   = document.getElementById('regErrorMsg');
+  const btn       = document.getElementById('regSubmitBtn');
 
-  if (!username || !password) {
-    errorEl.textContent = 'El nombre de usuario y la contraseña son obligatorios';
-    return;
-  }
+  if (!username || !password) { errorEl.textContent = 'Usuario y contraseña son obligatorios'; return; }
+  if (username.length < 3)    { errorEl.textContent = 'Usuario debe tener al menos 3 caracteres'; return; }
+  if (password.length < 4)    { errorEl.textContent = 'Contraseña debe tener al menos 4 caracteres'; return; }
 
   btn.disabled = true;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Registrando...';
   errorEl.textContent = '';
 
   try {
-    const res = await fetch(`${API_BASE}/api/auth/register`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        first_name: firstName || username,
-        username,
-        password,
-        ref: refCode
-      })
-    });
+    // Check username taken
+    const q    = query(collection(db, 'users'), where('username', '==', username));
+    const snap = await getDocs(q);
+    if (!snap.empty) { errorEl.textContent = '❌ Nombre de usuario ya en uso'; return; }
 
-    const data = await res.json();
-    if (!res.ok) {
-      errorEl.textContent = '❌ ' + (data.error || 'Error al registrar usuario');
-      return;
-    }
+    const email = `${username}@fastclaim.app`;
+    const cred  = await createUserWithEmailAndPassword(auth, email, password);
+    await createUserDoc(cred.user.uid, {
+      username,
+      first_name: firstName || username
+    }, refCode);
 
-    localStorage.setItem('fastclaim_telegram_id', data.telegram_id);
-    document.getElementById('authScreen').classList.add('hidden');
-    showToast(`🎉 ¡Cuenta creada con éxito, ${data.first_name}!`, 'success');
-    await initApp();
-
-  } catch (err) {
-    errorEl.textContent = '⚠️ Error al conectar con el servidor';
+    showToast(`🎉 ¡Cuenta creada con éxito, ${firstName || username}!`, 'success');
+  } catch(err) {
+    const codes = {
+      'auth/email-already-in-use': 'El nombre de usuario ya está en uso',
+      'auth/weak-password':        'La contraseña es muy débil (mínimo 6 caracteres)',
+      'auth/network-request-failed':'Sin conexión a internet'
+    };
+    errorEl.textContent = '❌ ' + (codes[err.code] || err.message || 'Error al registrar');
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-user-plus"></i> Crear Cuenta';
   }
-}
+};
 
-function handleUserLogout() {
+window.handleUserLogout = async function() {
   if (!confirm('¿Deseas cerrar sesión?')) return;
-  localStorage.removeItem('fastclaim_telegram_id');
+  await signOut(auth);
   userData = null;
+  if (claimTimer) { clearInterval(claimTimer); claimTimer = null; }
   document.getElementById('authScreen').classList.remove('hidden');
   showToast('ℹ️ Sesión cerrada', 'info');
-}
+};
 
-// ─── Monetag SDK Setup & Trigger ───────────────────────────
+// ─── Monetag SDK ──────────────────────────────────────────
 function setupMonetagSDK() {
-  if (!userData || !userData.monetag_script_url) return;
-  const scriptUrl = userData.monetag_script_url.trim();
-  if (!scriptUrl) return;
-
-  if (!document.querySelector(`script[src="${scriptUrl}"]`)) {
-    const script = document.createElement('script');
-    script.src = scriptUrl;
-    script.async = true;
-    script.setAttribute('data-cfasync', 'false');
-    document.head.appendChild(script);
-  }
+  if (!userData?.monetag_script_url) return;
+  const url = userData.monetag_script_url.trim();
+  if (!url || document.querySelector(`script[src="${url}"]`)) return;
+  const s = document.createElement('script');
+  s.src = url; s.async = true;
+  s.setAttribute('data-cfasync', 'false');
+  document.head.appendChild(s);
 }
 
 function triggerMonetagAd() {
-  if (!userData) return;
-  const isEnabled = String(userData.monetag_enabled || '1') === '1';
-  if (!isEnabled) return;
-
-  const directLink = (userData.monetag_direct_link || '').trim();
-  if (directLink) {
-    try {
-      if (tg && typeof tg.openLink === 'function') {
-        tg.openLink(directLink);
-      } else {
-        window.open(directLink, '_blank');
-      }
-    } catch (e) {
-      console.warn('Error abriendo enlace Monetag:', e);
-    }
+  if (String(userData?.monetag_enabled || '1') !== '1') return;
+  const link = (userData?.monetag_direct_link || '').trim();
+  if (link) {
+    try { if (tg?.openLink) tg.openLink(link); else window.open(link, '_blank'); } catch(e) {}
   }
-
-  if (typeof window.show_monetag_ad === 'function') {
-    try { window.show_monetag_ad(); } catch(e){}
-  }
+  if (typeof window.show_monetag_ad === 'function') try { window.show_monetag_ad(); } catch(e) {}
 }
 
 // ─── Render User Data ─────────────────────────────────────
 function renderUserData() {
   if (!userData) return;
 
-  // Avatar
   const avatarEl = document.getElementById('userAvatar');
-  const avatarInitial = document.getElementById('avatarInitial');
+  const avatarI  = document.getElementById('avatarInitial');
   if (userData.photo_url) {
     avatarEl.innerHTML = `<img src="${userData.photo_url}" alt="Avatar">`;
   } else {
-    avatarInitial.textContent = (userData.first_name || 'U').charAt(0).toUpperCase();
+    if (avatarI) avatarI.textContent = (userData.first_name || 'U').charAt(0).toUpperCase();
   }
 
-  // Profile info
-  document.getElementById('profileName').textContent = userData.first_name || 'Usuario';
-  document.getElementById('profileUsername').textContent = userData.username ? '@' + userData.username : 'Sin @username';
-  document.getElementById('profileJoined').textContent = 'Miembro desde ' + formatDate(userData.created_at);
+  document.getElementById('profileName').textContent     = userData.first_name || 'Usuario';
+  document.getElementById('profileUsername').textContent  = userData.username ? '@' + userData.username : 'Sin usuario';
+  document.getElementById('profileJoined').textContent    = 'Miembro desde ' + formatDate(userData.created_at);
 
-  // Balances
-  const balance = parseFloat(userData.balance || 0);
+  const balance    = parseFloat(userData.balance || 0);
+  const bonusAmt   = settings.bonus_amount;
+  const refReward  = settings.referral_reward;
+  const refCount   = userData.referral_count || 0;
+
   animateNumber('profileBalance', balance, 3);
-  animateNumber('bigBalance', balance, 3);
-  animateNumber('qsBalance', balance, 3);
+  animateNumber('bigBalance',     balance, 3);
+  animateNumber('qsBalance',      balance, 3);
 
-  // Stats
-  const bonusAmt = userData.bonus_amount || '0.5';
-  const refReward = userData.referral_reward || '1.0';
-  document.getElementById('statClaims').textContent = userData.total_claimed || 0;
-  document.getElementById('statRefs').textContent = userData.referral_count || 0;
-  document.getElementById('statBonus').textContent = bonusAmt;
-  document.getElementById('qsClaims').textContent = userData.total_claimed || 0;
-  document.getElementById('qsRefs').textContent = userData.referral_count || 0;
+  document.getElementById('statClaims').textContent     = userData.total_claimed || 0;
+  document.getElementById('statRefs').textContent       = refCount;
+  document.getElementById('statBonus').textContent      = bonusAmt;
+  document.getElementById('qsClaims').textContent       = userData.total_claimed || 0;
+  document.getElementById('qsRefs').textContent         = refCount;
+  document.getElementById('claimBtnAmount').textContent  = '+' + bonusAmt + ' ARPA';
 
-  // Claim button amount
-  document.getElementById('claimBtnAmount').textContent = '+' + bonusAmt + ' ARPA';
+  const botUsername = tg?.initDataUnsafe?.via_bot_username || 'FastClaimARPA_bot';
+  document.getElementById('refLinkInput').value = `https://t.me/${botUsername}?start=${userData.referral_code}`;
 
-  // Referral link
-  const botUsername = tg?.initDataUnsafe?.via_bot_username || 'YourBot';
-  const refLink = `https://t.me/${botUsername}?start=${userData.referral_code}`;
-  document.getElementById('refLinkInput').value = refLink;
-
-  // Referral stats
-  const refCount = userData.referral_count || 0;
   const refEarned = (refCount * parseFloat(refReward)).toFixed(2);
-  
-  document.getElementById('refCountBig').textContent = refCount;
-  document.getElementById('refEarnedBig').textContent = refEarned;
-  document.getElementById('refStatCount').textContent = refCount;
-  document.getElementById('refStatEarned').textContent = refEarned;
-  document.getElementById('refRewardVal').textContent = refReward;
+  document.getElementById('refCountBig').textContent    = refCount;
+  document.getElementById('refEarnedBig').textContent   = refEarned;
+  document.getElementById('refStatCount').textContent   = refCount;
+  document.getElementById('refStatEarned').textContent  = refEarned;
+  document.getElementById('refRewardVal').textContent   = refReward;
 
-  // Withdraw page
-  const minWD = userData.min_withdraw || 10;
-  document.getElementById('minWithdrawInfo').textContent = minWD + ' ARPA';
-  document.getElementById('withdrawBalanceInfo').textContent = balance.toFixed(3) + ' ARPA';
-  document.getElementById('withdrawAvail').textContent = balance.toFixed(3);
+  const minWD = settings.min_withdraw;
+  document.getElementById('minWithdrawInfo').textContent      = minWD + ' ARPA';
+  document.getElementById('withdrawBalanceInfo').textContent  = balance.toFixed(3) + ' ARPA';
+  document.getElementById('withdrawAvail').textContent        = balance.toFixed(3);
   document.getElementById('amountInput').min = minWD;
 }
 
 // ─── Claim System ─────────────────────────────────────────
 function startClaimCycle() {
   if (!userData) return;
-
-  if (claimTimer) {
-    clearInterval(claimTimer);
-    claimTimer = null;
-  }
-
+  if (claimTimer) { clearInterval(claimTimer); claimTimer = null; }
   if (userData.can_claim) {
     setClaimReady();
   } else {
@@ -1676,12 +1723,8 @@ function startClaimCycle() {
     claimTimer = setInterval(() => {
       claimCooldownRemaining--;
       if (claimCooldownRemaining <= 0) {
-        clearInterval(claimTimer);
-        claimTimer = null;
-        setClaimReady();
-      } else {
-        updateClaimTimer();
-      }
+        clearInterval(claimTimer); claimTimer = null; setClaimReady();
+      } else { updateClaimTimer(); }
     }, 1000);
   }
 }
@@ -1691,7 +1734,7 @@ function setClaimReady() {
   btn.className = 'claim-btn active';
   btn.innerHTML = `
     <i class="fa-solid fa-bolt claim-icon"></i>
-    <span class="claim-amount">+${userData?.bonus_amount || '0.5'} ARPA</span>
+    <span class="claim-amount">+${settings.bonus_amount} ARPA</span>
     <span class="claim-label">¡RECLAMAR!</span>
   `;
   document.getElementById('ringFill').style.strokeDashoffset = '0';
@@ -1699,364 +1742,256 @@ function setClaimReady() {
 }
 
 function setClaimCooldown() {
-  const btn = document.getElementById('claimBtn');
-  btn.className = 'claim-btn cooldown';
+  document.getElementById('claimBtn').className = 'claim-btn cooldown';
   updateClaimTimer();
 }
 
 function updateClaimTimer() {
-  const totalSecs = (userData?.next_claim_in || 3600);
-  const btn = document.getElementById('claimBtn');
-  const timeStr = formatSeconds(claimCooldownRemaining);
+  const totalSecs = settings.bonus_cooldown_h * 3600;
+  const timeStr   = formatSeconds(claimCooldownRemaining);
+  const btn       = document.getElementById('claimBtn');
   btn.innerHTML = `
     <i class="fa-solid fa-clock claim-icon" style="color:var(--text3)"></i>
     <span class="claim-timer">${timeStr}</span>
     <span class="claim-label" style="color:var(--text3)">próximo bonus</span>
   `;
-
-  // Update ring
-  const progress = claimCooldownRemaining / totalSecs;
-  const offset = CIRCUMFERENCE * progress;
-  document.getElementById('ringFill').style.strokeDashoffset = offset;
+  document.getElementById('ringFill').style.strokeDashoffset = CIRCUMFERENCE * (claimCooldownRemaining / totalSecs);
   document.getElementById('claimHint').textContent = `Próximo bonus disponible en ${timeStr}`;
 }
 
-async function handleClaim() {
+window.handleClaim = async function() {
   const btn = document.getElementById('claimBtn');
-  if (!btn.classList.contains('active')) return;
-  if (!userData) return;
-
+  if (!btn.classList.contains('active') || !userData) return;
   btn.style.pointerEvents = 'none';
 
-  // Abrir la publicidad de Monetag antes/durante el claim
   triggerMonetagAd();
 
   try {
-    const res = await fetch(`${API_BASE}/api/claim`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ telegram_id: userData.telegram_id })
+    const uid        = userData.uid;
+    const userRef    = doc(db, 'users', uid);
+    const bonus      = settings.bonus_amount;
+    const cooldownMs = settings.bonus_cooldown_h * 3600 * 1000;
+    const now        = new Date();
+    let newBalance, newTotalClaimed;
+
+    await runTransaction(db, async (tx) => {
+      const snap = await tx.get(userRef);
+      if (!snap.exists()) throw new Error('USER_NOT_FOUND');
+      const data = snap.data();
+
+      if (data.last_bonus_claim) {
+        const diffMs = now.getTime() - new Date(data.last_bonus_claim).getTime();
+        if (diffMs < cooldownMs) throw new Error('COOLDOWN');
+      }
+
+      newBalance      = (data.balance      || 0) + bonus;
+      newTotalClaimed = (data.total_claimed || 0) + 1;
+
+      tx.update(userRef, {
+        balance:          newBalance,
+        total_claimed:    newTotalClaimed,
+        last_bonus_claim: now.toISOString()
+      });
     });
 
-    const data = await res.json();
+    // Log claim event
+    addDoc(collection(db, 'claim_events'), {
+      uid,
+      bonus_amount: bonus,
+      new_balance:  newBalance,
+      timestamp:    now.toISOString()
+    }).catch(() => {});
 
-    if (!res.ok) {
-      if (data.next_claim_in) {
-        userData.can_claim = false;
-        userData.next_claim_in = data.next_claim_in;
-        claimCooldownRemaining = data.next_claim_in;
-        setClaimCooldown();
-        startClaimCycle();
-      }
-      showToast('⏳ ' + (data.error || 'Cooldown activo'), 'info');
-      return;
-    }
+    // Update local state
+    userData.balance         = newBalance;
+    userData.total_claimed   = newTotalClaimed;
+    userData.last_bonus_claim = now.toISOString();
+    userData.can_claim       = false;
+    claimCooldownRemaining   = Math.ceil(settings.bonus_cooldown_h * 3600);
 
-    // Success
     btn.classList.add('flash');
-    setTimeout(() => { btn.classList.remove('flash'); }, 500);
-
-    // Haptic
+    setTimeout(() => btn.classList.remove('flash'), 500);
     tg?.HapticFeedback?.notificationOccurred('success');
 
-    // Update state
-    userData.balance = data.new_balance;
-    userData.total_claimed = data.total_claimed;
-    userData.can_claim = false;
-    userData.next_claim_in = data.next_claim_in;
-    claimCooldownRemaining = data.next_claim_in;
+    animateNumber('bigBalance',     newBalance, 3);
+    animateNumber('profileBalance', newBalance, 3);
+    animateNumber('qsBalance',      newBalance, 3);
+    document.getElementById('statClaims').textContent             = newTotalClaimed;
+    document.getElementById('qsClaims').textContent               = newTotalClaimed;
+    document.getElementById('withdrawBalanceInfo').textContent     = newBalance.toFixed(3) + ' ARPA';
+    document.getElementById('withdrawAvail').textContent          = newBalance.toFixed(3);
 
-    // Animate balance
-    animateNumber('bigBalance', data.new_balance, 3);
-    animateNumber('profileBalance', data.new_balance, 3);
-    animateNumber('qsBalance', data.new_balance, 3);
-    document.getElementById('statClaims').textContent = data.total_claimed;
-    document.getElementById('qsClaims').textContent = data.total_claimed;
-    document.getElementById('withdrawBalanceInfo').textContent = data.new_balance.toFixed(3) + ' ARPA';
-    document.getElementById('withdrawAvail').textContent = data.new_balance.toFixed(3);
+    showToast(`⚡ +${bonus} ARPA reclamado!`, 'success');
 
-    showToast(`⚡ +${data.bonus_amount} ARPA reclamado!`, 'success');
-
-    // Firebase Firestore sync (non-blocking)
-    syncClaimToFirestore(userData.telegram_id, data.bonus_amount, data.new_balance);
-
-    // Start cooldown
     setClaimCooldown();
     claimTimer = setInterval(() => {
       claimCooldownRemaining--;
       if (claimCooldownRemaining <= 0) {
-        clearInterval(claimTimer);
-        claimTimer = null;
-        setClaimReady();
-      } else {
-        updateClaimTimer();
-      }
+        clearInterval(claimTimer); claimTimer = null; setClaimReady();
+      } else { updateClaimTimer(); }
     }, 1000);
 
-  } catch (err) {
-    console.error(err);
-    showToast('❌ Error al reclamar. Intenta de nuevo.', 'error');
+  } catch(err) {
+    if (err.message === 'COOLDOWN') {
+      showToast('⏳ Cooldown activo. Espera un momento.', 'info');
+      setClaimCooldown();
+    } else {
+      console.error('Claim error:', err);
+      showToast('❌ Error al reclamar. Intenta de nuevo.', 'error');
+    }
   } finally {
     btn.style.pointerEvents = '';
   }
-}
+};
 
 // ─── Withdrawal ───────────────────────────────────────────
-async function handleWithdraw() {
+window.handleWithdraw = async function() {
   const wallet = document.getElementById('walletInput').value.trim();
   const amount = parseFloat(document.getElementById('amountInput').value);
-  const btn = document.getElementById('withdrawBtn');
+  const btn    = document.getElementById('withdrawBtn');
 
-  if (!wallet) return showToast('⚠️ Ingresa tu dirección de wallet', 'error');
-  if (wallet.length < 6) {
-    return showToast('⚠️ Dirección de wallet inválida', 'error');
-  }
-  if (isNaN(amount) || amount <= 0) return showToast('⚠️ Ingresa un monto válido', 'error');
-  if (amount < (userData?.min_withdraw || 10)) {
-    return showToast(`⚠️ Mínimo ${userData?.min_withdraw || 10} ARPA`, 'error');
-  }
-  if (amount > (userData?.balance || 0)) {
-    return showToast('❌ Balance insuficiente', 'error');
-  }
+  if (!wallet || wallet.length < 6) return showToast('⚠️ Dirección de wallet inválida', 'error');
+  if (isNaN(amount) || amount <= 0)  return showToast('⚠️ Ingresa un monto válido', 'error');
+  if (amount < settings.min_withdraw) return showToast(`⚠️ Mínimo ${settings.min_withdraw} ARPA`, 'error');
+  if (amount > (userData?.balance || 0)) return showToast('❌ Balance insuficiente', 'error');
 
   btn.disabled = true;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Procesando...';
 
   try {
-    const res = await fetch(`${API_BASE}/api/withdraw`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        telegram_id: userData.telegram_id,
-        amount,
-        wallet_address: wallet
-      })
+    const userRef = doc(db, 'users', userData.uid);
+    let newBalance;
+
+    await runTransaction(db, async (tx) => {
+      const snap = await tx.get(userRef);
+      const bal  = snap.data().balance || 0;
+      if (bal < amount) throw new Error('Balance insuficiente');
+      newBalance = bal - amount;
+      tx.update(userRef, { balance: newBalance });
     });
 
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.error || 'Error en retiro');
+    await addDoc(collection(db, 'withdrawals'), {
+      uid:           userData.uid,
+      telegram_id:   userData.telegram_id || userData.uid,
+      username:      userData.username,
+      first_name:    userData.first_name,
+      amount,
+      wallet_address: wallet,
+      status:        'pending',
+      note:          '',
+      created_at:    new Date().toISOString(),
+      processed_at:  null
+    });
 
-    userData.balance = data.new_balance;
-    animateNumber('bigBalance', data.new_balance, 3);
-    animateNumber('profileBalance', data.new_balance, 3);
-    document.getElementById('withdrawAvail').textContent = data.new_balance.toFixed(3);
-    document.getElementById('withdrawBalanceInfo').textContent = data.new_balance.toFixed(3) + ' ARPA';
-    document.getElementById('qsBalance').textContent = data.new_balance.toFixed(3);
-
+    userData.balance = newBalance;
+    animateNumber('bigBalance',     newBalance, 3);
+    animateNumber('profileBalance', newBalance, 3);
+    document.getElementById('withdrawAvail').textContent         = newBalance.toFixed(3);
+    document.getElementById('withdrawBalanceInfo').textContent   = newBalance.toFixed(3) + ' ARPA';
+    document.getElementById('qsBalance').textContent             = newBalance.toFixed(3);
     document.getElementById('walletInput').value = '';
-    document.getElementById('amountInput').value = '';
+    document.getElementById('amountInput').value  = '';
 
     tg?.HapticFeedback?.notificationOccurred('success');
     showToast('✅ Retiro solicitado. Procesamos en 24-48h.', 'success');
     loadWithdrawalHistory();
 
-  } catch (err) {
-    showToast('❌ ' + err.message, 'error');
+  } catch(err) {
+    showToast('❌ ' + (err.message || 'Error en retiro'), 'error');
   } finally {
     btn.disabled = false;
     btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Solicitar Retiro';
   }
-}
+};
 
 async function loadWithdrawalHistory() {
   if (!userData) return;
   const container = document.getElementById('withdrawHistory');
-
   try {
-    const res = await fetch(`${API_BASE}/api/withdrawals/${userData.telegram_id}`);
-    const data = await res.json();
+    const q    = query(
+      collection(db, 'withdrawals'),
+      where('uid', '==', userData.uid),
+      orderBy('created_at', 'desc'),
+      limit(20)
+    );
+    const snap = await getDocs(q);
 
-    if (!data || data.length === 0) {
+    if (snap.empty) {
       container.innerHTML = `<div class="card"><div class="empty-state"><i class="fa-regular fa-clock"></i><p>No tienes retiros aún</p></div></div>`;
       return;
     }
-
-    container.innerHTML = data.map(w => `
-      <div class="card withdrawal-item">
-        <div class="wi-status-dot ${w.status}"></div>
-        <div class="wi-info">
-          <div class="wi-amount">${parseFloat(w.amount).toFixed(3)} ARPA</div>
-          <div class="wi-wallet">${w.wallet_address}</div>
-          <div class="wi-date">${formatDate(w.created_at)}</div>
-        </div>
-        <div class="wi-badge ${w.status}">${statusLabel(w.status)}</div>
-      </div>
-    `).join('');
-
-  } catch (err) {
-    console.error('Error historial:', err);
-  }
+    container.innerHTML = snap.docs.map(d => {
+      const w = d.data();
+      return `
+        <div class="card withdrawal-item">
+          <div class="wi-status-dot ${w.status}"></div>
+          <div class="wi-info">
+            <div class="wi-amount">${parseFloat(w.amount).toFixed(3)} ARPA</div>
+            <div class="wi-wallet">${escapeHtml(w.wallet_address)}</div>
+            <div class="wi-date">${formatDate(w.created_at)}</div>
+          </div>
+          <div class="wi-badge ${w.status}">${statusLabel(w.status)}</div>
+        </div>`;
+    }).join('');
+  } catch(err) { console.error('Historial error:', err); }
 }
 
-function statusLabel(s) {
-  return { pending: 'Pendiente', approved: 'Aprobado', rejected: 'Rechazado' }[s] || s;
-}
-
-function setMaxWithdraw() {
-  const balance = userData?.balance || 0;
-  document.getElementById('amountInput').value = balance.toFixed(3);
-}
-
-// ─── Referral ─────────────────────────────────────────────
-async function copyRefLink() {
-  const link = document.getElementById('refLinkInput').value;
-  try {
-    await navigator.clipboard.writeText(link);
-    const btn = document.getElementById('copyRefBtn');
-    btn.classList.add('copied');
-    btn.innerHTML = '<i class="fa-solid fa-check"></i>';
-    showToast('✅ Enlace copiado al portapapeles', 'success');
-    setTimeout(() => {
-      btn.classList.remove('copied');
-      btn.innerHTML = '<i class="fa-regular fa-copy"></i>';
-    }, 2000);
-  } catch {
-    showToast('⚠️ No se pudo copiar', 'error');
-  }
-}
-
-function shareRefLink() {
-  const link = document.getElementById('refLinkInput').value;
-  const text = `🚀 Gana ARPA USDT gratis con FastClaim!\n\n⚡ Reclama bonus cada hora\n💰 Gana más invitando amigos\n\nÚnete con mi enlace: ${link}`;
-  if (tg) {
-    tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent('🚀 Gana ARPA USDT gratis con FastClaim! ⚡ Reclama bonus cada hora. Únete con mi enlace:')}`);
-  } else if (navigator.share) {
-    navigator.share({ title: 'FastClaim ARPA USDT', text, url: link });
-  } else {
-    copyRefLink();
-  }
-}
-
-// ─── Page Navigation ──────────────────────────────────────
-function switchPage(page) {
-  ['Home', 'Tasks', 'Referrals', 'Withdraw'].forEach(p => {
-    const pageEl = document.getElementById('page' + p);
-    const navEl = document.getElementById('nav' + p);
-    if (pageEl) pageEl.classList.remove('active');
-    if (navEl) navEl.classList.remove('active');
-  });
-
-  const targetPage = document.getElementById('page' + page);
-  const targetNav = document.getElementById('nav' + page);
-  if (targetPage) targetPage.classList.add('active');
-  if (targetNav) targetNav.classList.add('active');
-
-  document.querySelector('.content').scrollTop = 0;
-
-  if (page === 'Tasks') loadUserTasks();
-}
-
-// ─── Utilities ────────────────────────────────────────────
-function formatSeconds(secs) {
-  if (secs <= 0) return '00:00';
-  const h = Math.floor(secs / 3600);
-  const m = Math.floor((secs % 3600) / 60);
-  const s = secs % 60;
-  if (h > 0) return `${pad(h)}:${pad(m)}:${pad(s)}`;
-  return `${pad(m)}:${pad(s)}`;
-}
-
-function pad(n) { return String(n).padStart(2, '0'); }
-
-function formatDate(dateStr) {
-  if (!dateStr) return '—';
-  try {
-    const d = new Date(dateStr);
-    return d.toLocaleDateString('es-ES', { day: '2-digit', month: 'short', year: 'numeric' });
-  } catch { return dateStr; }
-}
-
-function animateNumber(elId, target, decimals = 0) {
-  const el = document.getElementById(elId);
-  if (!el) return;
-  const start = parseFloat(el.textContent) || 0;
-  const diff = target - start;
-  const duration = 600;
-  const startTime = performance.now();
-
-  function step(now) {
-    const elapsed = now - startTime;
-    const progress = Math.min(elapsed / duration, 1);
-    const eased = 1 - Math.pow(1 - progress, 3);
-    const current = start + diff * eased;
-    el.textContent = current.toFixed(decimals);
-    if (progress < 1) requestAnimationFrame(step);
-  }
-  requestAnimationFrame(step);
-}
-
-let toastTimeout;
-function showToast(msg, type = 'info') {
-  const toast = document.getElementById('toast');
-  const icons = { success: '✅', error: '❌', info: 'ℹ️' };
-  toast.textContent = msg;
-  toast.className = 'show ' + type;
-  if (toastTimeout) clearTimeout(toastTimeout);
-  toastTimeout = setTimeout(() => { toast.className = ''; }, 3000);
-}
-
-// ─── User Tasks System ────────────────────────────────────
+// ─── Tasks ────────────────────────────────────────────────
 let allUserTasks = [];
 let currentTaskFilter = 'all';
 
-async function loadUserTasks() {
+window.loadUserTasks = async function() {
   if (!userData) return;
   const container = document.getElementById('userTasksList');
+  container.innerHTML = '<div class="card" style="padding:24px;text-align:center;"><i class="fa-solid fa-spinner fa-spin" style="font-size:24px;color:var(--ton2);"></i><p style="font-size:13px;color:var(--text3);margin-top:8px;">Cargando tareas...</p></div>';
+
   try {
-    const res = await fetch(`${API_BASE}/api/tasks/${userData.telegram_id}`);
-    allUserTasks = await res.json();
+    const tasksSnap    = await getDocs(query(collection(db, 'tasks'), where('active', '==', true)));
+    const completedSnap = await getDocs(query(
+      collection(db, 'user_tasks'),
+      where('uid', '==', userData.uid)
+    ));
+    const doneIds = new Set(completedSnap.docs.map(d => d.data().task_id));
+
+    allUserTasks = tasksSnap.docs.map(d => ({
+      id: d.id, ...d.data(), completed: doneIds.has(d.id)
+    }));
     renderUserTasksList();
-  } catch (err) {
-    console.error('Error al cargar tareas:', err);
+  } catch(err) {
+    console.error('Tasks error:', err);
     container.innerHTML = '<div class="card" style="padding:20px;text-align:center;color:var(--red);">⚠️ Error al cargar las tareas</div>';
   }
-}
+};
 
-function filterUserTasks(filter) {
+window.filterUserTasks = function(filter) {
   currentTaskFilter = filter;
   document.querySelectorAll('#taskFilterBar .filter-chip').forEach(c => c.classList.remove('active'));
-  const activeChip = document.querySelector(`#taskFilterBar .filter-chip[data-tfilter="${filter}"]`);
-  if (activeChip) activeChip.classList.add('active');
+  const chip = document.querySelector(`#taskFilterBar .filter-chip[data-tfilter="${filter}"]`);
+  if (chip) chip.classList.add('active');
   renderUserTasksList();
-}
+};
 
 function renderUserTasksList() {
   const container = document.getElementById('userTasksList');
-  if (!allUserTasks || allUserTasks.length === 0) {
-    container.innerHTML = '<div class="card"><div class="empty-state"><i class="fa-solid fa-clipboard-check"></i><p>No hay tareas disponibles por ahora</p></div></div>';
+  if (!allUserTasks.length) {
+    container.innerHTML = '<div class="card"><div class="empty-state"><i class="fa-solid fa-clipboard-check"></i><p>No hay tareas disponibles</p></div></div>';
     return;
   }
-
   let filtered = allUserTasks;
-  if (currentTaskFilter === 'telegram') {
-    filtered = allUserTasks.filter(t => t.type === 'telegram_join' || t.type === 'telegram_react');
-  } else if (currentTaskFilter === 'ad') {
-    filtered = allUserTasks.filter(t => t.type === 'ad');
-  } else if (currentTaskFilter === 'link') {
-    filtered = allUserTasks.filter(t => t.type === 'link');
-  }
+  if (currentTaskFilter === 'telegram') filtered = allUserTasks.filter(t => t.type === 'telegram_join' || t.type === 'telegram_react');
+  else if (currentTaskFilter === 'ad')   filtered = allUserTasks.filter(t => t.type === 'ad');
+  else if (currentTaskFilter === 'link') filtered = allUserTasks.filter(t => t.type === 'link');
 
-  if (filtered.length === 0) {
+  if (!filtered.length) {
     container.innerHTML = '<div class="card"><div class="empty-state"><i class="fa-solid fa-filter"></i><p>No hay tareas para esta categoría</p></div></div>';
     return;
   }
 
-  const taskIcons = {
-    telegram_join: 'fa-brands fa-telegram',
-    telegram_react: 'fa-solid fa-heart',
-    ad: 'fa-solid fa-rectangle-ad',
-    link: 'fa-solid fa-arrow-up-right-from-square'
-  };
-
-  const typeLabels = {
-    telegram_join: 'Seguir Canal',
-    telegram_react: 'Reaccionar',
-    ad: 'Publicidad',
-    link: 'Abrir Enlace'
-  };
+  const taskIcons  = { telegram_join:'fa-brands fa-telegram', telegram_react:'fa-solid fa-heart', ad:'fa-solid fa-rectangle-ad', link:'fa-solid fa-arrow-up-right-from-square' };
+  const typeLabels = { telegram_join:'Seguir Canal', telegram_react:'Reaccionar', ad:'Publicidad', link:'Abrir Enlace' };
 
   container.innerHTML = filtered.map(t => `
-    <div class="card" style="padding:16px;display:flex;flex-direction:column;gap:12px;position:relative;">
+    <div class="card" style="padding:16px;display:flex;flex-direction:column;gap:12px;">
       <div style="display:flex;align-items:flex-start;justify-content:space-between;gap:10px;">
         <div style="display:flex;gap:12px;align-items:center;">
           <div style="width:40px;height:40px;border-radius:12px;background:rgba(139,92,246,0.15);border:1px solid rgba(139,92,246,0.3);display:flex;align-items:center;justify-content:center;font-size:18px;color:var(--ton2);flex-shrink:0;">
@@ -2071,132 +2006,144 @@ function renderUserTasksList() {
           +${parseFloat(t.reward).toFixed(2)} ARPA
         </div>
       </div>
-
       <div style="display:flex;justify-content:flex-end;">
-        ${t.completed ? `
-          <button class="btn-primary" disabled style="background:rgba(0,230,118,0.15);border:1px solid rgba(0,230,118,0.3);color:var(--green);box-shadow:none;padding:10px 16px;font-size:12px;">
-            <i class="fa-solid fa-circle-check"></i> Completada
-          </button>
-        ` : `
-          <button class="btn-primary" onclick="executeTask(${t.id}, '${escapeHtml(t.url)}', '${t.type}')" style="padding:10px 18px;font-size:12px;width:auto;">
-            <i class="fa-solid fa-bolt"></i> Realizar Tarea
-          </button>
-        `}
+        ${t.completed
+          ? `<button class="btn-primary" disabled style="background:rgba(0,230,118,0.15);border:1px solid rgba(0,230,118,0.3);color:var(--green);box-shadow:none;padding:10px 16px;font-size:12px;"><i class="fa-solid fa-circle-check"></i> Completada</button>`
+          : `<button class="btn-primary" onclick="executeTask('${t.id}','${escapeHtml(t.url)}','${t.type}')" style="padding:10px 18px;font-size:12px;width:auto;"><i class="fa-solid fa-bolt"></i> Realizar Tarea</button>`
+        }
       </div>
-    </div>
-  `).join('');
+    </div>`).join('');
 }
 
-async function executeTask(taskId, targetUrl, taskType) {
+window.executeTask = async function(taskId, targetUrl, taskType) {
   if (!userData) return;
-
-  // 1. Abrir la acción/link de la tarea
   try {
-    if (tg && typeof tg.openTelegramLink === 'function' && targetUrl.includes('t.me')) {
-      tg.openTelegramLink(targetUrl);
-    } else if (tg && typeof tg.openLink === 'function') {
-      tg.openLink(targetUrl);
-    } else {
-      window.open(targetUrl, '_blank');
-    }
-  } catch (e) {
-    console.warn('Error al abrir link:', e);
-  }
+    if (tg?.openTelegramLink && targetUrl.includes('t.me')) tg.openTelegramLink(targetUrl);
+    else if (tg?.openLink) tg.openLink(targetUrl);
+    else window.open(targetUrl, '_blank');
+  } catch(e) {}
 
-  // 2. Notificar al backend la realización de la tarea
   try {
-    const res = await fetch(`${API_BASE}/api/tasks/complete`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ telegram_id: userData.telegram_id, task_id: taskId })
+    const existingQ = query(collection(db, 'user_tasks'), where('uid', '==', userData.uid), where('task_id', '==', taskId));
+    if (!(await getDocs(existingQ)).empty) { showToast('ℹ️ Tarea ya completada', 'info'); return; }
+
+    const taskSnap = await getDoc(doc(db, 'tasks', taskId));
+    if (!taskSnap.exists()) { showToast('⚠️ Tarea no encontrada', 'error'); return; }
+    const reward = taskSnap.data().reward || 0.5;
+
+    const userRef = doc(db, 'users', userData.uid);
+    let newBalance;
+    await runTransaction(db, async (tx) => {
+      const s = await tx.get(userRef);
+      newBalance = (s.data().balance || 0) + reward;
+      tx.update(userRef, { balance: newBalance });
     });
 
-    const data = await res.json();
-    if (!res.ok) {
-      showToast('⚠️ ' + (data.error || 'No se pudo completar la tarea'), 'error');
-      return;
-    }
+    await addDoc(collection(db, 'user_tasks'), {
+      uid: userData.uid, task_id: taskId,
+      telegram_id: userData.telegram_id || userData.uid,
+      completed_at: new Date().toISOString()
+    });
 
-    // Actualizar balance local
-    userData.balance = data.new_balance;
-    animateNumber('bigBalance', data.new_balance, 3);
-    animateNumber('profileBalance', data.new_balance, 3);
-    animateNumber('qsBalance', data.new_balance, 3);
-    document.getElementById('withdrawAvail').textContent = data.new_balance.toFixed(3);
-    document.getElementById('withdrawBalanceInfo').textContent = data.new_balance.toFixed(3) + ' ARPA';
+    userData.balance = newBalance;
+    animateNumber('bigBalance',     newBalance, 3);
+    animateNumber('profileBalance', newBalance, 3);
+    animateNumber('qsBalance',      newBalance, 3);
+    document.getElementById('withdrawAvail').textContent       = newBalance.toFixed(3);
+    document.getElementById('withdrawBalanceInfo').textContent = newBalance.toFixed(3) + ' ARPA';
 
     tg?.HapticFeedback?.notificationOccurred('success');
-    showToast(`🎉 ¡+${data.reward} ARPA ganados por completar la tarea!`, 'success');
-
-    // Recargar tareas
-    loadUserTasks();
-
-  } catch (err) {
-    console.error('Error ejecutando tarea:', err);
+    showToast(`🎉 ¡+${reward} ARPA ganados!`, 'success');
+    window.loadUserTasks();
+  } catch(err) {
+    console.error('Task error:', err);
     showToast('❌ Error al acreditar la tarea', 'error');
   }
-}
+};
 
-// ─── Utility: escapeHtml ──────────────────────────────────
+// ─── Page Navigation ──────────────────────────────────────
+window.switchPage = function(page) {
+  ['Home','Tasks','Referrals','Withdraw'].forEach(p => {
+    document.getElementById('page'+p)?.classList.remove('active');
+    document.getElementById('nav'+p)?.classList.remove('active');
+  });
+  document.getElementById('page'+page)?.classList.add('active');
+  document.getElementById('nav'+page)?.classList.add('active');
+  document.querySelector('.content').scrollTop = 0;
+  if (page === 'Tasks') window.loadUserTasks();
+};
+
+// ─── Referral ─────────────────────────────────────────────
+window.copyRefLink = async function() {
+  const link = document.getElementById('refLinkInput').value;
+  try {
+    await navigator.clipboard.writeText(link);
+    const btn = document.getElementById('copyRefBtn');
+    btn.classList.add('copied');
+    btn.innerHTML = '<i class="fa-solid fa-check"></i>';
+    showToast('✅ Enlace copiado', 'success');
+    setTimeout(() => { btn.classList.remove('copied'); btn.innerHTML = '<i class="fa-regular fa-copy"></i>'; }, 2000);
+  } catch { showToast('⚠️ No se pudo copiar', 'error'); }
+};
+
+window.shareRefLink = function() {
+  const link = document.getElementById('refLinkInput').value;
+  if (tg) tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent('🚀 Gana ARPA USDT gratis con FastClaim! Únete:')}`);
+  else if (navigator.share) navigator.share({ title:'FastClaim ARPA', url: link });
+  else window.copyRefLink();
+};
+
+window.setMaxWithdraw = function() {
+  document.getElementById('amountInput').value = (userData?.balance || 0).toFixed(3);
+};
+
+// ─── Utilities ────────────────────────────────────────────
 function escapeHtml(str) {
   if (!str) return '';
   return String(str)
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&#39;');
+    .replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;')
+    .replace(/"/g,'&quot;').replace(/'/g,'&#39;');
 }
 
-// ─── Firebase Firestore Sync ──────────────────────────────
-async function syncUserToFirestore(uid, data) {
-  try {
-    const fsDb = window.firebaseDB;
-    const { doc, setDoc } = window.firebaseFS || {};
-    if (!fsDb || !doc || !setDoc) return;
+function formatSeconds(secs) {
+  if (secs <= 0) return '00:00';
+  const h = Math.floor(secs / 3600), m = Math.floor((secs % 3600) / 60), s = secs % 60;
+  return h > 0 ? `${pad(h)}:${pad(m)}:${pad(s)}` : `${pad(m)}:${pad(s)}`;
+}
+function pad(n) { return String(n).padStart(2, '0'); }
 
-    await setDoc(doc(fsDb, 'users', String(uid)), {
-      telegram_id:    data.telegram_id,
-      username:       data.username       || '',
-      first_name:     data.first_name     || '',
-      balance:        data.balance        || 0,
-      total_claimed:  data.total_claimed  || 0,
-      referral_code:  data.referral_code  || '',
-      referral_count: data.referral_count || 0,
-      last_sync:      new Date().toISOString()
-    }, { merge: true });
-
-    console.log('[Firebase] Usuario sincronizado:', uid);
-  } catch (err) {
-    console.warn('[Firebase] Error al sincronizar usuario:', err.message);
-  }
+function formatDate(dateStr) {
+  if (!dateStr) return '—';
+  try { return new Date(dateStr).toLocaleDateString('es-ES', { day:'2-digit', month:'short', year:'numeric' }); }
+  catch { return dateStr; }
 }
 
-async function syncClaimToFirestore(uid, bonus, newBalance) {
-  try {
-    const fsDb = window.firebaseDB;
-    const { doc, addDoc, collection, updateDoc } = window.firebaseFS || {};
-    if (!fsDb || !addDoc || !collection || !doc || !updateDoc) return;
+function animateNumber(elId, target, decimals = 0) {
+  const el = document.getElementById(elId);
+  if (!el) return;
+  const start = parseFloat(el.textContent) || 0;
+  const diff  = target - start;
+  const t0    = performance.now();
+  (function step(now) {
+    const p = Math.min((now - t0) / 600, 1);
+    el.textContent = (start + diff * (1 - Math.pow(1-p, 3))).toFixed(decimals);
+    if (p < 1) requestAnimationFrame(step);
+  })(t0);
+}
 
-    // Registrar el evento de claim
-    await addDoc(collection(fsDb, 'claim_events'), {
-      telegram_id:  String(uid),
-      bonus_amount: bonus,
-      new_balance:  newBalance,
-      timestamp:    new Date().toISOString()
-    });
+function statusLabel(s) {
+  return { pending:'Pendiente', approved:'Aprobado', rejected:'Rechazado' }[s] || s;
+}
 
-    // Actualizar balance en el documento del usuario
-    await updateDoc(doc(fsDb, 'users', String(uid)), {
-      balance:    newBalance,
-      last_claim: new Date().toISOString()
-    });
-
-    console.log('[Firebase] Claim sincronizado:', bonus, 'ARPA');
-  } catch (err) {
-    console.warn('[Firebase] Error al sincronizar claim:', err.message);
-  }
+let toastTimeout;
+function showToast(msg, type = 'info') {
+  const toast = document.getElementById('toast');
+  toast.textContent = msg;
+  toast.className   = 'show ' + type;
+  if (toastTimeout) clearTimeout(toastTimeout);
+  toastTimeout = setTimeout(() => { toast.className = ''; }, 3500);
 }
 </script>
+
 </body>
 </html>
