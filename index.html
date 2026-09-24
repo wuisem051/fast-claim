@@ -21,6 +21,9 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js";
+    import { 
+      getFirestore, doc, getDoc, setDoc, updateDoc, collection, query, getDocs, where, addDoc, deleteDoc 
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCg2M7CdvmsPv0sw-H4bh5WwPEv5iZdbdM",
@@ -35,8 +38,12 @@
     // Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const analytics = getAnalytics(app);
+    const db = getFirestore(app);
+
     window.firebaseApp = app;
     window.firebaseAnalytics = analytics;
+    window.firebaseDB = db;
+    window.firebaseFS = { doc, getDoc, setDoc, updateDoc, collection, query, getDocs, where, addDoc, deleteDoc };
   </script>
 
   <style>
@@ -896,6 +903,63 @@
     .empty-state i { font-size: 36px; margin-bottom: 10px; display: block; }
     .empty-state p { font-size: 13px; }
 
+    /* ─── Filter Chips ───────────────────────────────────── */
+    .filter-bar { scrollbar-width: none; }
+    .filter-bar::-webkit-scrollbar { display: none; }
+    .filter-chip {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      padding: 7px 16px;
+      border-radius: 20px;
+      border: 1px solid var(--card-border);
+      background: var(--card);
+      color: var(--text2);
+      font-size: 12px;
+      font-weight: 600;
+      font-family: 'Inter', sans-serif;
+      cursor: pointer;
+      white-space: nowrap;
+      transition: all var(--transition);
+    }
+    .filter-chip:hover {
+      border-color: rgba(139,92,246,0.4);
+      color: var(--ton2);
+    }
+    .filter-chip.active {
+      background: linear-gradient(135deg, var(--ton), var(--ton2));
+      border-color: transparent;
+      color: white;
+      box-shadow: 0 4px 14px var(--ton-glow);
+    }
+
+    /* ─── ARPA Token Logo ────────────────────────────────── */
+    .arpa-logo {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 100%;
+      height: 100%;
+      font-size: inherit;
+      font-weight: 900;
+      letter-spacing: -1px;
+      color: white;
+      text-shadow: 0 2px 8px rgba(0,0,0,0.4);
+    }
+
+    /* ─── Firebase sync indicator ────────────────────────── */
+    .sync-dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      background: var(--green);
+      animation: blink 2s ease-in-out infinite;
+      display: inline-block;
+      margin-left: 4px;
+    }
+    .sync-dot.syncing { background: var(--amber); }
+    .sync-dot.error { background: var(--red); animation: none; }
+
     /* ─── Number counter animation ───────────────────────── */
     @keyframes count-up {
       from { transform: translateY(10px); opacity: 0; }
@@ -908,7 +972,13 @@
 
 <!-- ─── Loading Screen ─────────────────────────────────── -->
 <div id="loadingScreen">
-  <div class="loader-logo">⚡</div>
+  <div class="loader-logo" style="overflow:hidden;">
+    <svg width="40" height="40" viewBox="0 0 40 40" fill="none" xmlns="http://www.w3.org/2000/svg">
+      <path d="M20 4L36 32H4L20 4Z" fill="white" fill-opacity="0.9"/>
+      <path d="M20 12L30 32H10L20 12Z" fill="rgba(0,0,0,0.3)"/>
+      <rect x="12" y="24" width="16" height="3" rx="1.5" fill="white" fill-opacity="0.6"/>
+    </svg>
+  </div>
   <div style="text-align:center">
     <div style="font-size:20px;font-weight:800;background:linear-gradient(135deg,#fff,var(--ton2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;">FastClaim</div>
     <div style="font-size:12px;color:var(--text3);margin-top:4px;">Cargando tu billetera ARPA...</div>
@@ -922,7 +992,20 @@
   <div class="header">
     <div class="header-top">
       <div class="app-brand">
-        <div class="brand-icon">⚡</div>
+        <div class="brand-icon" style="overflow:hidden;padding:0;">
+          <svg width="36" height="36" viewBox="0 0 36 36" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <rect width="36" height="36" rx="10" fill="url(#brandGrad)"/>
+            <path d="M18 6L30 28H6L18 6Z" fill="white" fill-opacity="0.95"/>
+            <path d="M18 13L25 28H11L18 13Z" fill="rgba(0,0,0,0.25)"/>
+            <rect x="10" y="22" width="16" height="2.5" rx="1.25" fill="white" fill-opacity="0.7"/>
+            <defs>
+              <linearGradient id="brandGrad" x1="0" y1="0" x2="36" y2="36" gradientUnits="userSpaceOnUse">
+                <stop offset="0%" stop-color="#8b5cf6"/>
+                <stop offset="100%" stop-color="#c084fc"/>
+              </linearGradient>
+            </defs>
+          </svg>
+        </div>
         <span class="brand-name">FastClaim</span>
       </div>
       <div style="display:flex;align-items:center;gap:8px;">
@@ -1204,7 +1287,20 @@
 <!-- ─── Auth Screen (Login & Registro) ───────────────────── -->
 <div id="authScreen" class="auth-overlay hidden">
   <div class="auth-card">
-    <div class="auth-logo">⚡</div>
+    <div class="auth-logo" style="overflow:hidden;padding:0;">
+      <svg width="64" height="64" viewBox="0 0 64 64" fill="none" xmlns="http://www.w3.org/2000/svg">
+        <rect width="64" height="64" rx="18" fill="url(#authLogoGrad)"/>
+        <path d="M32 10L54 50H10L32 10Z" fill="white" fill-opacity="0.95"/>
+        <path d="M32 22L46 50H18L32 22Z" fill="rgba(0,0,0,0.25)"/>
+        <rect x="18" y="40" width="28" height="4" rx="2" fill="white" fill-opacity="0.6"/>
+        <defs>
+          <linearGradient id="authLogoGrad" x1="0" y1="0" x2="64" y2="64" gradientUnits="userSpaceOnUse">
+            <stop offset="0%" stop-color="#8b5cf6"/>
+            <stop offset="100%" stop-color="#c084fc"/>
+          </linearGradient>
+        </defs>
+      </svg>
+    </div>
     <h2 class="auth-title">FastClaim ARPA</h2>
     <p class="auth-subtitle">Inicia sesión o regístrate para ganar ARPA</p>
 
@@ -1338,6 +1434,8 @@ async function initApp() {
         setupMonetagSDK();
         startClaimCycle();
         loadWithdrawalHistory();
+        // Sync user to Firebase Firestore (non-blocking)
+        syncUserToFirestore(userData.telegram_id, userData);
         setTimeout(() => {
           document.getElementById('loadingScreen').classList.add('hidden');
         }, 300);
@@ -1678,6 +1776,9 @@ async function handleClaim() {
     document.getElementById('withdrawAvail').textContent = data.new_balance.toFixed(3);
 
     showToast(`⚡ +${data.bonus_amount} ARPA reclamado!`, 'success');
+
+    // Firebase Firestore sync (non-blocking)
+    syncClaimToFirestore(userData.telegram_id, data.bonus_amount, data.new_balance);
 
     // Start cooldown
     setClaimCooldown();
@@ -2033,6 +2134,67 @@ async function executeTask(taskId, targetUrl, taskType) {
   } catch (err) {
     console.error('Error ejecutando tarea:', err);
     showToast('❌ Error al acreditar la tarea', 'error');
+  }
+}
+
+// ─── Utility: escapeHtml ──────────────────────────────────
+function escapeHtml(str) {
+  if (!str) return '';
+  return String(str)
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;')
+    .replace(/'/g, '&#39;');
+}
+
+// ─── Firebase Firestore Sync ──────────────────────────────
+async function syncUserToFirestore(uid, data) {
+  try {
+    const fsDb = window.firebaseDB;
+    const { doc, setDoc } = window.firebaseFS || {};
+    if (!fsDb || !doc || !setDoc) return;
+
+    await setDoc(doc(fsDb, 'users', String(uid)), {
+      telegram_id:    data.telegram_id,
+      username:       data.username       || '',
+      first_name:     data.first_name     || '',
+      balance:        data.balance        || 0,
+      total_claimed:  data.total_claimed  || 0,
+      referral_code:  data.referral_code  || '',
+      referral_count: data.referral_count || 0,
+      last_sync:      new Date().toISOString()
+    }, { merge: true });
+
+    console.log('[Firebase] Usuario sincronizado:', uid);
+  } catch (err) {
+    console.warn('[Firebase] Error al sincronizar usuario:', err.message);
+  }
+}
+
+async function syncClaimToFirestore(uid, bonus, newBalance) {
+  try {
+    const fsDb = window.firebaseDB;
+    const { doc, addDoc, collection, updateDoc } = window.firebaseFS || {};
+    if (!fsDb || !addDoc || !collection || !doc || !updateDoc) return;
+
+    // Registrar el evento de claim
+    await addDoc(collection(fsDb, 'claim_events'), {
+      telegram_id:  String(uid),
+      bonus_amount: bonus,
+      new_balance:  newBalance,
+      timestamp:    new Date().toISOString()
+    });
+
+    // Actualizar balance en el documento del usuario
+    await updateDoc(doc(fsDb, 'users', String(uid)), {
+      balance:    newBalance,
+      last_claim: new Date().toISOString()
+    });
+
+    console.log('[Firebase] Claim sincronizado:', bonus, 'ARPA');
+  } catch (err) {
+    console.warn('[Firebase] Error al sincronizar claim:', err.message);
   }
 }
 </script>

@@ -18,6 +18,9 @@
   <script type="module">
     import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-app.js";
     import { getAnalytics } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js";
+    import { 
+      getFirestore, doc, getDoc, setDoc, updateDoc, collection, query, getDocs, where, addDoc, deleteDoc 
+    } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 
     const firebaseConfig = {
       apiKey: "AIzaSyCg2M7CdvmsPv0sw-H4bh5WwPEv5iZdbdM",
@@ -32,8 +35,12 @@
     // Initialize Firebase
     const app = initializeApp(firebaseConfig);
     const analytics = getAnalytics(app);
+    const db = getFirestore(app);
+
     window.firebaseApp = app;
     window.firebaseAnalytics = analytics;
+    window.firebaseDB = db;
+    window.firebaseFS = { doc, getDoc, setDoc, updateDoc, collection, query, getDocs, where, addDoc, deleteDoc };
   </script>
 
   <style>
