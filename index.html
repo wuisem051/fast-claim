@@ -1514,7 +1514,7 @@ async function loadUserData(uid) {
     userData = { ...snap.data(), uid };
 
     // Compute claim status
-    const cooldownMs = settings.bonus_cooldown_h * 3600 * 1000;
+    const cooldownMs = getCooldownMs();
     if (userData.last_bonus_claim) {
       const diffMs = Date.now() - new Date(userData.last_bonus_claim).getTime();
       if (diffMs < cooldownMs) {
@@ -1785,13 +1785,25 @@ function setClaimReady() {
   document.getElementById('claimHint').textContent = 'Tu bonus de ARPA está listo. ¡Toca para reclamar!';
 }
 
+function getCooldownMs() {
+  if (settings?.bonus_cooldown_unit === 'min') {
+    return parseFloat(settings?.bonus_cooldown || 15) * 60 * 1000;
+  }
+  const hours = parseFloat(settings?.bonus_cooldown_h || settings?.bonus_cooldown || 1);
+  return hours * 3600 * 1000;
+}
+
+function getCooldownSecs() {
+  return Math.max(1, Math.ceil(getCooldownMs() / 1000));
+}
+
 function setClaimCooldown() {
   document.getElementById('claimBtn').className = 'claim-btn cooldown';
   updateClaimTimer();
 }
 
 function updateClaimTimer() {
-  const totalSecs = settings.bonus_cooldown_h * 3600;
+  const totalSecs = getCooldownSecs();
   const timeStr   = formatSeconds(claimCooldownRemaining);
   const btn       = document.getElementById('claimBtn');
   btn.innerHTML = `
@@ -1814,7 +1826,7 @@ window.handleClaim = async function() {
     const uid        = userData.uid;
     const userRef    = doc(db, 'users', uid);
     const bonus      = settings.bonus_amount;
-    const cooldownMs = settings.bonus_cooldown_h * 3600 * 1000;
+    const cooldownMs = getCooldownMs();
     const now        = new Date();
     let newBalance, newTotalClaimed;
 
@@ -1851,7 +1863,7 @@ window.handleClaim = async function() {
     userData.total_claimed   = newTotalClaimed;
     userData.last_bonus_claim = now.toISOString();
     userData.can_claim       = false;
-    claimCooldownRemaining   = Math.ceil(settings.bonus_cooldown_h * 3600);
+    claimCooldownRemaining   = getCooldownSecs();
 
     btn.classList.add('flash');
     setTimeout(() => btn.classList.remove('flash'), 500);
