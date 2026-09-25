@@ -2096,13 +2096,15 @@ function renderUserData() {
     if (profilePageInit) profilePageInit.textContent = init;
   }
 
-  document.getElementById('profileName').textContent     = userData.first_name || 'Usuario';
-  document.getElementById('profileUsername').textContent  = userData.username ? '@' + userData.username : 'Sin usuario';
-  document.getElementById('profileJoined').textContent    = 'Miembro desde ' + formatDate(userData.created_at);
+  const setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
 
-  document.getElementById('profilePageName').textContent     = userData.first_name || 'Usuario';
-  document.getElementById('profilePageUsername').textContent  = userData.username ? '@' + userData.username : 'Sin usuario';
-  document.getElementById('profilePageJoined').textContent    = 'Miembro desde ' + formatDate(userData.created_at);
+  setTxt('profileName', userData.first_name || 'Usuario');
+  setTxt('profileUsername', userData.username ? '@' + userData.username : 'Sin usuario');
+  setTxt('profileJoined', 'Miembro desde ' + formatDate(userData.created_at));
+
+  setTxt('profilePageName', userData.first_name || 'Usuario');
+  setTxt('profilePageUsername', userData.username ? '@' + userData.username : 'Sin usuario');
+  setTxt('profilePageJoined', 'Miembro desde ' + formatDate(userData.created_at));
 
   const balance    = parseFloat(userData.balance || 0);
   const bonusAmt   = settings.bonus_amount;
@@ -2113,27 +2115,28 @@ function renderUserData() {
   animateNumber('bigBalance',     balance, 3);
   animateNumber('qsBalance',      balance, 3);
 
-  document.getElementById('statClaims').textContent     = userData.total_claimed || 0;
-  document.getElementById('statRefs').textContent       = refCount;
-  document.getElementById('statBonus').textContent      = bonusAmt;
-  document.getElementById('qsClaims').textContent       = userData.total_claimed || 0;
-  document.getElementById('qsRefs').textContent         = refCount;
-  document.getElementById('claimBtnAmount').textContent  = '+' + bonusAmt + ' ARPA';
+  setTxt('statClaims', userData.total_claimed || 0);
+  setTxt('statRefs', refCount);
+  setTxt('statBonus', bonusAmt);
+  setTxt('qsClaims', userData.total_claimed || 0);
+  setTxt('qsRefs', refCount);
+  setTxt('claimBtnAmount', '+' + bonusAmt + ' ARPA');
 
   const botUsername = tg?.initDataUnsafe?.via_bot_username || 'FastClaimARPA_bot';
-  document.getElementById('refLinkInput').value = `https://t.me/${botUsername}?start=${userData.referral_code}`;
+  const refInput = document.getElementById('refLinkInput');
+  if (refInput) refInput.value = `https://t.me/${botUsername}?start=${userData.referral_code}`;
 
   const refEarned = (refCount * parseFloat(refReward)).toFixed(2);
-  document.getElementById('refCountBig').textContent    = refCount;
-  document.getElementById('refEarnedBig').textContent   = refEarned;
-  document.getElementById('refStatCount').textContent   = refCount;
-  document.getElementById('refStatEarned').textContent  = refEarned;
-  document.getElementById('refRewardVal').textContent   = refReward;
+  setTxt('refCountBig', refCount);
+  setTxt('refEarnedBig', refEarned);
+  setTxt('refStatCount', refCount);
+  setTxt('refStatEarned', refEarned);
+  setTxt('refRewardVal', refReward);
 
   const minWD = settings.min_withdraw;
-  document.getElementById('minWithdrawInfo').textContent      = minWD + ' ARPA';
-  document.getElementById('withdrawBalanceInfo').textContent  = balance.toFixed(3) + ' ARPA';
-  document.getElementById('withdrawAvail').textContent        = balance.toFixed(3);
+  setTxt('minWithdrawInfo', minWD + ' ARPA');
+  setTxt('withdrawBalanceInfo', balance.toFixed(3) + ' ARPA');
+  setTxt('withdrawAvail', balance.toFixed(3));
   document.getElementById('amountInput').min = minWD;
 }
 
@@ -2552,7 +2555,8 @@ window.switchPage = function(page) {
     document.getElementById('profilePageUsername').textContent = uname;
     document.getElementById('profilePageJoined').textContent   = joined;
     const initial = (userData.first_name || userData.username || '?')[0].toUpperCase();
-    document.getElementById('profilePageInitial').textContent  = initial;
+    const initialEl = document.getElementById('profilePageInitial');
+    if (initialEl) initialEl.textContent = initial;
   }
 };
 
