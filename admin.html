@@ -985,18 +985,42 @@
     <div id="pageUsers" class="admin-page">
       <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
         <div>
-          <h1 class="page-title">Usuarios</h1>
-          <p class="page-subtitle">Todos los usuarios registrados en la plataforma</p>
+          <h1 class="page-title">Usuarios & Estadísticas Avanzadas</h1>
+          <p class="page-subtitle">Estado de conexión en vivo, IP de origen, geolocalización por país e historial de reclamos</p>
         </div>
         <div class="search-wrap">
           <i class="fa-solid fa-search"></i>
-          <input type="text" class="search-input" id="userSearch" placeholder="Buscar usuario..." oninput="filterUsers()">
+          <input type="text" class="search-input" id="userSearch" placeholder="Buscar por nombre, username, IP o país..." oninput="filterUsers()">
+        </div>
+      </div>
+
+      <!-- Quick Stats Grid -->
+      <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); margin-bottom: 24px;">
+        <div class="stat-card">
+          <div class="stat-card-title"><i class="fa-solid fa-wifi" style="color:var(--green)"></i> En Línea Ahora</div>
+          <div class="stat-card-value" id="statOnlineUsers" style="color:var(--green)">0</div>
+          <div class="stat-card-sub">Conectados últimos 5 min</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-title"><i class="fa-solid fa-users" style="color:var(--accent2)"></i> Total Usuarios</div>
+          <div class="stat-card-value" id="statTotalUsers">0</div>
+          <div class="stat-card-sub">Registrados en la plataforma</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-title"><i class="fa-solid fa-bolt" style="color:var(--ton2)"></i> Claims Acumulados</div>
+          <div class="stat-card-value" id="statTotalClaims" style="color:var(--ton2)">0</div>
+          <div class="stat-card-sub">Reclamos realizados por usuarios</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-card-title"><i class="fa-solid fa-earth-americas" style="color:#3B82F6"></i> Países Detectados</div>
+          <div class="stat-card-value" id="statUniqueCountries" style="color:#3B82F6">0</div>
+          <div class="stat-card-sub">Orígenes IP únicos</div>
         </div>
       </div>
 
       <div class="panel">
         <div class="panel-header">
-          <div class="panel-title"><i class="fa-solid fa-user-group"></i> Lista de Usuarios</div>
+          <div class="panel-title"><i class="fa-solid fa-user-group"></i> Lista de Usuarios & Sesiones</div>
           <span class="badge pending" id="userCountBadge" style="font-size:12px;">0 usuarios</span>
         </div>
         <div class="table-container">
@@ -1004,19 +1028,52 @@
             <thead>
               <tr>
                 <th>Usuario</th>
-                <th>Telegram ID</th>
-                <th>Balance (ARPA)</th>
+                <th>Estado Conexión</th>
+                <th>IP & Ubicación</th>
                 <th>Claims</th>
-                <th>Referidos por</th>
-                <th>Código Referido</th>
-                <th>Registrado</th>
+                <th>Balance (ARPA)</th>
+                <th>Última Conexión</th>
                 <th>Acciones</th>
               </tr>
             </thead>
             <tbody id="usersTableBody">
-              <tr><td colspan="8" class="empty-row"><i class="fa-regular fa-folder-open"></i><p>Cargando...</p></td></tr>
+              <tr><td colspan="7" class="empty-row"><i class="fa-regular fa-folder-open"></i><p>Cargando usuarios y estadísticas...</p></td></tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- Sessions Log Panel -->
+      <div class="panel" style="margin-top:24px;">
+        <div class="panel-header">
+          <div class="panel-title"><i class="fa-solid fa-clock-rotate-left"></i> Historial de Sesiones de Hoy</div>
+          <span class="badge pending" id="sessionCountBadge" style="font-size:12px;">— sesiones</span>
+        </div>
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Usuario</th>
+                <th>IP</th>
+                <th>País & Ciudad</th>
+                <th>Hora de Conexión</th>
+                <th>User Agent</th>
+              </tr>
+            </thead>
+            <tbody id="sessionsTableBody">
+              <tr><td colspan="5" class="empty-row"><i class="fa-regular fa-folder-open"></i><p>Cargando sesiones...</p></td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <!-- Country Distribution Panel -->
+      <div class="panel" style="margin-top:24px;">
+        <div class="panel-header">
+          <div class="panel-title"><i class="fa-solid fa-earth-americas"></i> Distribución por País</div>
+        </div>
+        <div class="panel-body" id="countryDistPanel" style="display:flex;flex-wrap:wrap;gap:10px;">
+          <span style="color:var(--text3);font-size:13px;">Cargando...</span>
         </div>
       </div>
     </div>
@@ -1341,6 +1398,8 @@ async function adminFetch(url, options = {}) {
 }
 
 // ─── Page Navigation ──────────────────────────────────────
+let usersRefreshInterval = null;
+
 function switchAdminPage(page) {
   document.querySelectorAll('.admin-page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.sidebar-nav-item').forEach(b => b.classList.remove('active'));
@@ -1348,12 +1407,19 @@ function switchAdminPage(page) {
   document.getElementById('page' + capitalize(page)).classList.add('active');
   document.querySelector(`.sidebar-nav-item[data-page="${page}"]`).classList.add('active');
 
+  // Clear previous auto-refresh
+  if (usersRefreshInterval) { clearInterval(usersRefreshInterval); usersRefreshInterval = null; }
+
   // Load data for the page
-  if (page === 'dashboard') loadDashboard();
+  if (page === 'dashboard')   loadDashboard();
   if (page === 'withdrawals') loadWithdrawals();
-  if (page === 'users') loadUsers();
+  if (page === 'users') {
+    loadUsers();
+    // Auto-refresh Users page every 30 seconds to keep "En Línea" status live
+    usersRefreshInterval = setInterval(() => loadUsers(), 30000);
+  }
   if (page === 'settings') loadSettings();
-  if (page === 'tasks') loadTasks();
+  if (page === 'tasks')    loadTasks();
 }
 
 function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
@@ -1552,14 +1618,58 @@ async function confirmModalAction() {
   }
 }
 
-// ─── Users ────────────────────────────────────────────────
+// ─── Users & Advanced Stats ───────────────────────────────
+function isOnline(lastSeen) {
+  if (!lastSeen) return false;
+  return (Date.now() - new Date(lastSeen).getTime()) < 5 * 60 * 1000; // 5 min
+}
+
+function timeAgo(isoStr) {
+  if (!isoStr) return '—';
+  const diff = Date.now() - new Date(isoStr).getTime();
+  if (diff < 60000) return 'Ahora mismo';
+  if (diff < 3600000) return `Hace ${Math.floor(diff / 60000)} min`;
+  if (diff < 86400000) return `Hace ${Math.floor(diff / 3600000)} h`;
+  return `Hace ${Math.floor(diff / 86400000)} días`;
+}
+
+function countryFlag(code) {
+  if (!code || code.length !== 2) return '🌐';
+  return code.toUpperCase().replace(/./g, c => String.fromCodePoint(127397 + c.charCodeAt()));
+}
+
 async function loadUsers() {
   try {
     const snap = await getDocs(collection(db, 'users'));
     allUsers = [];
     snap.forEach(d => allUsers.push({ id: d.id, ...d.data() }));
+
+    // Compute stats
+    const onlineCount   = allUsers.filter(u => isOnline(u.last_seen)).length;
+    const totalClaims   = allUsers.reduce((s, u) => s + (u.total_claimed || 0), 0);
+    const countries     = new Set(allUsers.map(u => u.last_country).filter(Boolean));
+
+    const elOnline   = document.getElementById('statOnlineUsers');
+    const elTotal    = document.getElementById('statTotalUsers');
+    const elClaims   = document.getElementById('statTotalClaims');
+    const elCountry  = document.getElementById('statUniqueCountries');
+    if (elOnline)  elOnline.textContent  = onlineCount;
+    if (elTotal)   elTotal.textContent   = allUsers.length;
+    if (elClaims)  elClaims.textContent  = totalClaims;
+    if (elCountry) elCountry.textContent = countries.size;
+
     document.getElementById('userCountBadge').textContent = allUsers.length + ' usuarios';
+
+    // Sort: online first, then by last_seen
+    allUsers.sort((a, b) => {
+      const aOn = isOnline(a.last_seen) ? 1 : 0;
+      const bOn = isOnline(b.last_seen) ? 1 : 0;
+      if (aOn !== bOn) return bOn - aOn;
+      return new Date(b.last_seen || 0) - new Date(a.last_seen || 0);
+    });
+
     renderUsers(allUsers);
+    loadSessions();
   } catch (err) {
     console.error('Users error:', err);
   }
@@ -1569,9 +1679,12 @@ function filterUsers() {
   const q = document.getElementById('userSearch').value.trim().toLowerCase();
   if (!q) return renderUsers(allUsers);
   const filtered = allUsers.filter(u =>
-    (u.first_name || '').toLowerCase().includes(q) ||
-    (u.username || '').toLowerCase().includes(q) ||
-    (u.telegram_id || '').toLowerCase().includes(q) ||
+    (u.first_name    || '').toLowerCase().includes(q) ||
+    (u.username      || '').toLowerCase().includes(q) ||
+    (u.telegram_id   || '').toLowerCase().includes(q) ||
+    (u.last_ip       || '').toLowerCase().includes(q) ||
+    (u.last_country  || '').toLowerCase().includes(q) ||
+    (u.last_city     || '').toLowerCase().includes(q) ||
     (u.referral_code || '').toLowerCase().includes(q)
   );
   renderUsers(filtered);
@@ -1580,34 +1693,141 @@ function filterUsers() {
 function renderUsers(users) {
   const tbody = document.getElementById('usersTableBody');
   if (!users || users.length === 0) {
-    tbody.innerHTML = '<tr><td colspan="8" class="empty-row"><i class="fa-regular fa-user"></i><p>No se encontraron usuarios</p></td></tr>';
+    tbody.innerHTML = '<tr><td colspan="7" class="empty-row"><i class="fa-regular fa-user"></i><p>No se encontraron usuarios</p></td></tr>';
     return;
   }
 
-  tbody.innerHTML = users.map(u => `
+  tbody.innerHTML = users.map(u => {
+    const online = isOnline(u.last_seen);
+    const flag   = countryFlag(u.last_country_code || '');
+    const city   = u.last_city ? `, ${u.last_city}` : '';
+    const country = u.last_country || 'Desconocido';
+    const ip     = u.last_ip || '—';
+    const ago    = timeAgo(u.last_seen);
+
+    return `
     <tr>
       <td>
         <div class="user-cell">
-          <div class="user-avatar">${(u.first_name || 'U').charAt(0)}</div>
+          <div class="user-avatar" style="position:relative;">
+            ${(u.first_name || 'U').charAt(0)}
+            ${online ? '<span style="position:absolute;bottom:-2px;right:-2px;width:10px;height:10px;border-radius:50%;background:var(--green);border:2px solid var(--bg);"></span>' : ''}
+          </div>
           <div>
             <div class="user-name">${escapeHtml(u.first_name || 'Sin nombre')}</div>
-            <div class="user-username">${u.username ? '@' + escapeHtml(u.username) : '—'}</div>
+            <div class="user-username" style="font-size:11px;color:var(--text3);">${u.username ? '@' + escapeHtml(u.username) : escapeHtml(u.telegram_id || u.id)}</div>
           </div>
         </div>
       </td>
-      <td class="mono">${escapeHtml(u.telegram_id || u.id)}</td>
-      <td style="font-weight:700;color:var(--ton2);">${parseFloat(u.balance || 0).toFixed(3)}</td>
-      <td>${u.total_claimed || 0}</td>
-      <td class="mono" style="font-size:11px;">${u.referred_by || '—'}</td>
-      <td><span class="badge" style="background:rgba(99,102,241,0.1);border:1px solid rgba(99,102,241,0.25);color:var(--accent2);">${u.referral_code || '—'}</span></td>
-      <td class="mono">${formatDate(u.created_at || u.last_sync)}</td>
       <td>
-        <button class="btn" style="background:var(--card);border-color:var(--card-border);color:var(--text2);" onclick="openEditUser('${escapeHtml(u.id)}', ${parseFloat(u.balance || 0)})">
+        <span class="badge ${online ? 'approved' : 'rejected'}" style="font-size:11px;">
+          <span class="badge-dot"></span>${online ? 'En línea' : 'Desconectado'}
+        </span>
+      </td>
+      <td>
+        <div style="font-size:12px;font-weight:600;color:var(--text);font-family:monospace;">${escapeHtml(ip)}</div>
+        <div style="font-size:11px;color:var(--text3);margin-top:2px;">${flag} ${escapeHtml(country)}${escapeHtml(city)}</div>
+      </td>
+      <td style="font-weight:700;color:var(--ton2);text-align:center;">
+        <div style="font-size:15px;">${u.total_claimed || 0}</div>
+        <div style="font-size:10px;color:var(--text3);">claims</div>
+      </td>
+      <td style="font-weight:700;color:var(--green);">${parseFloat(u.balance || 0).toFixed(3)} ARPA</td>
+      <td>
+        <div style="font-size:12px;color:var(--text2);">${escapeHtml(ago)}</div>
+        <div style="font-size:10px;color:var(--text3);margin-top:2px;">${u.last_seen ? new Date(u.last_seen).toLocaleTimeString('es-ES', {hour:'2-digit',minute:'2-digit'}) : '—'}</div>
+      </td>
+      <td>
+        <button class="btn" style="background:var(--card);border-color:var(--card-border);color:var(--text2);font-size:12px;padding:6px 12px;" onclick="openEditUser('${escapeHtml(u.id)}', ${parseFloat(u.balance || 0)})">
           <i class="fa-solid fa-pen-to-square"></i> Editar
         </button>
       </td>
-    </tr>
-  `).join('');
+    </tr>`;
+  }).join('');
+}
+
+// ─── Session History ──────────────────────────────────────
+async function loadSessions() {
+  try {
+    const today = new Date().toISOString().split('T')[0];
+    const sessSnap = await getDocs(
+      query(collection(db, 'user_sessions'),
+        where('date', '==', today)
+      )
+    );
+    const sessions = [];
+    sessSnap.forEach(d => sessions.push({ id: d.id, ...d.data() }));
+    sessions.sort((a, b) => new Date(b.timestamp) - new Date(a.timestamp));
+
+    const badge = document.getElementById('sessionCountBadge');
+    if (badge) badge.textContent = sessions.length + ' sesiones hoy';
+
+    const tbody = document.getElementById('sessionsTableBody');
+    if (!tbody) return;
+
+    if (!sessions.length) {
+      tbody.innerHTML = '<tr><td colspan="5" class="empty-row"><i class="fa-regular fa-calendar-xmark"></i><p>Sin sesiones registradas hoy</p></td></tr>';
+      return;
+    }
+
+    tbody.innerHTML = sessions.map(s => {
+      const flag = countryFlag(s.country_code || '');
+      const city = s.city ? `, ${s.city}` : '';
+      const timeStr = s.timestamp ? new Date(s.timestamp).toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '—';
+      const ua = (s.user_agent || '').substring(0, 60) + ((s.user_agent || '').length > 60 ? '…' : '');
+      const name = s.first_name || s.username || s.uid || '?';
+      return `<tr>
+        <td>
+          <div style="font-weight:600;color:var(--text);">${escapeHtml(name)}</div>
+          <div style="font-size:11px;color:var(--text3);">${s.username ? '@' + escapeHtml(s.username) : escapeHtml(s.uid || '')}</div>
+        </td>
+        <td class="mono" style="font-size:12px;">${escapeHtml(s.ip || '—')}</td>
+        <td>${flag} ${escapeHtml(s.country || 'Desconocido')}${escapeHtml(city)}</td>
+        <td class="mono" style="font-size:12px;">${timeStr}</td>
+        <td style="font-size:11px;color:var(--text3);max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;" title="${escapeHtml(s.user_agent || '')}">${escapeHtml(ua)}</td>
+      </tr>`;
+    }).join('');
+
+    // Country distribution
+    loadCountryDistribution(sessions);
+  } catch(err) {
+    console.error('Sessions error:', err);
+  }
+}
+
+function loadCountryDistribution(sessions) {
+  const panel = document.getElementById('countryDistPanel');
+  if (!panel) return;
+
+  // Merge sessions with allUsers for country info
+  const countryMap = {};
+  allUsers.forEach(u => {
+    const country = u.last_country || 'Desconocido';
+    const code    = u.last_country_code || '';
+    if (!countryMap[country]) countryMap[country] = { code, count: 0 };
+    countryMap[country].count++;
+  });
+
+  const sorted = Object.entries(countryMap).sort((a, b) => b[1].count - a[1].count);
+  if (!sorted.length) {
+    panel.innerHTML = '<span style="color:var(--text3);font-size:13px;">Sin datos de países aún. Los países se registran cuando los usuarios se conectan.</span>';
+    return;
+  }
+
+  const total = allUsers.length || 1;
+  panel.innerHTML = sorted.map(([country, { code, count }]) => {
+    const pct = Math.round((count / total) * 100);
+    const flag = countryFlag(code);
+    return `
+      <div style="background:rgba(139,92,246,0.08);border:1px solid rgba(139,92,246,0.2);border-radius:12px;padding:12px 16px;min-width:160px;flex:1;">
+        <div style="font-size:22px;margin-bottom:4px;">${flag}</div>
+        <div style="font-weight:700;color:var(--text);font-size:14px;">${escapeHtml(country)}</div>
+        <div style="font-size:12px;color:var(--text3);margin-top:2px;">${count} usuario${count !== 1 ? 's' : ''} · ${pct}%</div>
+        <div style="margin-top:8px;height:4px;background:rgba(255,255,255,0.07);border-radius:4px;overflow:hidden;">
+          <div style="height:100%;width:${pct}%;background:linear-gradient(90deg,var(--accent),var(--ton2));border-radius:4px;transition:width 0.5s;"></div>
+        </div>
+      </div>`;
+  }).join('');
 }
 
 // Edit user modal

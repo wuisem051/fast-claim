@@ -1549,12 +1549,95 @@ async function loadUserData(uid) {
     document.getElementById('authScreen').classList.add('hidden');
     renderUserData();
     setupMonetagSDK();
+    trackUserSession(uid);
     startClaimCycle();
     loadWithdrawalHistory();
 
   } catch(err) {
     console.error('loadUserData error:', err);
     showToast('❌ Error al cargar datos', 'error');
+  }
+}
+
+// ─── IP & Session Tracking ─────────────────────────────────
+async function fetchIpAndLocation() {
+  try {
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 4000);
+    const res = await fetch('https://ipapi.co/json/', { signal: controller.signal });
+    clearTimeout(timer);
+    if (res.ok) {
+      const d = await res.json();
+      if (d && d.ip) {
+        return {
+          ip: d.ip,
+          country: d.country_name || d.country || 'Desconocido',
+          country_code: d.country_code || 'UN',
+          city: d.city || ''
+        };
+      }
+    }
+  } catch(e) {}
+
+  try {
+    const res2 = await fetch('https://api.ipify.org?format=json');
+    if (res2.ok) {
+      const d2 = await res2.json();
+      return { ip: d2.ip, country: 'Desconocido', country_code: 'UN', city: '' };
+    }
+  } catch(e) {}
+
+  return { ip: 'Desconocida', country: 'Desconocido', country_code: 'UN', city: '' };
+}
+
+let sessionRecorded = false;
+let heartbeatInterval = null;
+
+async function trackUserSession(uid) {
+  if (!uid || sessionRecorded) return;
+  sessionRecorded = true;
+
+  try {
+    const loc = await fetchIpAndLocation();
+    const nowIso = new Date().toISOString();
+
+    const updateData = {
+      last_seen: nowIso,
+      last_ip: loc.ip,
+      last_country: loc.country,
+      last_country_code: loc.country_code,
+      last_city: loc.city
+    };
+
+    await updateDoc(doc(db, 'users', uid), updateData).catch(async () => {
+      await setDoc(doc(db, 'users', uid), updateData, { merge: true });
+    });
+
+    await addDoc(collection(db, 'user_sessions'), {
+      uid,
+      telegram_id: userData?.telegram_id || uid,
+      first_name: userData?.first_name || 'Usuario',
+      username: userData?.username || '',
+      ip: loc.ip,
+      country: loc.country,
+      country_code: loc.country_code,
+      city: loc.city,
+      timestamp: nowIso,
+      date: nowIso.split('T')[0],
+      user_agent: navigator.userAgent || ''
+    }).catch(e => console.warn('Session log:', e));
+
+    if (heartbeatInterval) clearInterval(heartbeatInterval);
+    heartbeatInterval = setInterval(() => {
+      if (userData && userData.uid) {
+        updateDoc(doc(db, 'users', userData.uid), {
+          last_seen: new Date().toISOString()
+        }).catch(() => {});
+      }
+    }, 60000);
+
+  } catch(err) {
+    console.warn('trackUserSession error:', err);
   }
 }
 
@@ -1884,7 +1967,8 @@ window.handleClaim = async function() {
       tx.update(userRef, {
         balance:          newBalance,
         total_claimed:    newTotalClaimed,
-        last_bonus_claim: now.toISOString()
+        last_bonus_claim: now.toISOString(),
+        last_seen:        now.toISOString()
       });
     });
 
