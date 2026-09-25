@@ -1619,11 +1619,13 @@ async function createUserDoc(uid, profile, refCode) {
     } catch(e) { console.warn('Referral error:', e.message); }
   }
 
+  const defaultAvatar = profile.photo_url || `https://api.dicebear.com/8.x/adventurer/svg?seed=${profile.username || uid}&backgroundColor=c0aede,d1d4f9,b6e3f4,ffdfbf`;
+
   await setDoc(doc(db, 'users', uid), {
     uid,
     username:       profile.username    || '',
     first_name:     profile.first_name  || 'User',
-    photo_url:      profile.photo_url   || '',
+    photo_url:      defaultAvatar,
     telegram_id:    profile.telegram_id || '',
     balance:        0,
     referral_code:  referralCode,
@@ -1646,6 +1648,12 @@ async function loadUserData(uid) {
     }
 
     userData = { ...snap.data(), uid };
+
+    // Asignar avatar por defecto si no tiene
+    if (!userData.photo_url) {
+      userData.photo_url = 'https://api.dicebear.com/8.x/adventurer/svg?seed=' + (userData.username || uid) + '&backgroundColor=c0aede,d1d4f9,b6e3f4,ffdfbf';
+      updateDoc(doc(db, 'users', uid), { photo_url: userData.photo_url }).catch(() => {});
+    }
 
     // Banned account — sign out and show message
     if (userData.banned) {
@@ -2631,11 +2639,13 @@ window.selectAvatar = async function(url) {
   if (!userData) return;
   document.getElementById('avatarModal').style.display = 'none';
   try {
-    await updateDoc(doc(db, 'users', userData.uid), { photo_url: url });
+    const userRef = doc(db, 'users', userData.uid);
+    await updateDoc(userRef, { photo_url: url });
     userData.photo_url = url;
     renderUserData();
     showToast('✅ Avatar actualizado', 'success');
   } catch(err) {
+    console.error('Error changing avatar:', err);
     showToast('❌ Error al cambiar avatar', 'error');
   }
 };
