@@ -2639,14 +2639,17 @@ window.selectAvatar = async function(url) {
   if (!userData) return;
   document.getElementById('avatarModal').style.display = 'none';
   try {
-    const userRef = doc(db, 'users', userData.uid);
+    const user = auth.currentUser;
+    if (!user) throw new Error('No has iniciado sesión');
+    
+    const userRef = doc(db, 'users', user.uid);
     await updateDoc(userRef, { photo_url: url });
     userData.photo_url = url;
     renderUserData();
     showToast('✅ Avatar actualizado', 'success');
   } catch(err) {
     console.error('Error changing avatar:', err);
-    showToast('❌ Error al cambiar avatar', 'error');
+    showToast('❌ ' + (err.message || 'Error al cambiar avatar'), 'error');
   }
 };
 
