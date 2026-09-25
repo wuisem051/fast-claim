@@ -1259,6 +1259,20 @@
         <div class="auth-error" id="settingsErrorMsg" style="margin-top:10px;"></div>
       </div>
 
+      <!-- Recuperar Contraseña -->
+      <p class="section-title" style="margin-top:16px;"><i class="fa-solid fa-key" style="color:var(--accent)"></i> Recuperar Contraseña</p>
+      <div class="card" style="padding:20px;">
+        <p style="font-size:12px;color:var(--text3);margin-bottom:14px;">Si olvidaste tu clave, ingresa tu usuario o Telegram ID y te enviaremos un mensaje privado con tu contraseña actual.</p>
+        <div class="form-group">
+          <label class="form-label"><i class="fa-solid fa-user"></i> Usuario o Telegram ID</label>
+          <input type="text" id="recoverUsername" class="form-input" placeholder="Ej: @usuario o ID">
+        </div>
+        <button class="btn-primary" id="recoverSubmitBtn" onclick="handleRecoverPassword()" style="margin-top:8px;background:linear-gradient(135deg,#0098ea,#00d4ff);">
+          <i class="fa-solid fa-paper-plane"></i> Enviar a Telegram
+        </button>
+        <div class="auth-error" id="recoverErrorMsg" style="margin-top:10px;"></div>
+      </div>
+
       <!-- Cerrar Sesión -->
       <div style="margin-top:20px;padding-bottom:24px;">
         <button onclick="handleUserLogout()" style="width:100%;padding:14px;border-radius:14px;border:1px solid rgba(255,82,82,0.3);background:rgba(255,82,82,0.08);color:#ff5252;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;">
@@ -1382,28 +1396,8 @@
 </div>
 
 
-<!-- ─── Recover Password Modal ───────────────────────────── -->
-<div class="auth-screen hidden" id="recoverModal" style="z-index:9000; align-items:center; justify-content:center;">
-  <div class="auth-box">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-      <h2 style="font-size:18px;font-weight:700;"><i class="fa-solid fa-key" style="color:var(--accent);margin-right:8px;"></i> Recuperar Contraseña</h2>
-      <button class="icon-btn" onclick="closeRecoverModal()" style="background:transparent;border:none;color:var(--text3);font-size:20px;">&times;</button>
-    </div>
-    
-    <p style="font-size:13px;color:var(--text2);margin-bottom:16px;">
-      Ingresa tu usuario o Telegram ID. Si tienes un bot de Telegram enlazado, te enviaremos un mensaje privado con tu contraseña actual.
-    </p>
 
-    <div class="form-group">
-      <label class="form-label"><i class="fa-solid fa-user"></i> Usuario o Telegram ID</label>
-      <input type="text" id="recoverUsername" class="form-input" placeholder="Ej: @usuario o ID">
-    </div>
-    <button class="btn-primary" id="recoverSubmitBtn" onclick="handleRecoverPassword()" style="margin-top:16px;">
-      <i class="fa-solid fa-paper-plane"></i> Enviar a Telegram
-    </button>
-    <div class="auth-error" id="recoverErrorMsg" style="margin-top:12px;"></div>
-  </div>
-</div>
+
 
 <!-- ─── Toast ───────────────────────────────────────────── -->
 <div id="toast"></div>
@@ -1836,15 +1830,18 @@ window.closeUserSettings = function() {
 
 // ─── Recover Password ─────────────────────────────────────
 window.openRecoverModal = function() {
-  document.getElementById('recoverUsername').value = '';
-  document.getElementById('recoverErrorMsg').textContent = '';
-  document.getElementById('recoverModal').classList.remove('hidden');
-  document.getElementById('recoverModal').style.display = 'flex';
+  // Now part of Profile page — just navigate there
+  switchPage('Profile');
+  setTimeout(() => {
+    const el = document.getElementById('recoverUsername');
+    if (el) { el.value = ''; el.focus(); }
+    const err = document.getElementById('recoverErrorMsg');
+    if (err) err.textContent = '';
+  }, 100);
 };
 
 window.closeRecoverModal = function() {
-  document.getElementById('recoverModal').classList.add('hidden');
-  document.getElementById('recoverModal').style.display = 'none';
+  switchPage('Home');
 };
 
 window.handleRecoverPassword = async function() {
