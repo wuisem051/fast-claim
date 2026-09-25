@@ -2345,9 +2345,7 @@ async function loadWithdrawalHistory() {
   try {
     const q    = query(
       collection(db, 'withdrawals'),
-      where('uid', '==', userData.uid),
-      orderBy('created_at', 'desc'),
-      limit(20)
+      where('uid', '==', userData.uid)
     );
     const snap = await getDocs(q);
 
@@ -2355,8 +2353,12 @@ async function loadWithdrawalHistory() {
       container.innerHTML = `<div class="card"><div class="empty-state"><i class="fa-regular fa-clock"></i><p>No tienes retiros aún</p></div></div>`;
       return;
     }
-    container.innerHTML = snap.docs.map(d => {
-      const w = d.data();
+
+    const docs = snap.docs.map(d => d.data());
+    docs.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+    const topDocs = docs.slice(0, 20);
+
+    container.innerHTML = topDocs.map(w => {
       return `
         <div class="card withdrawal-item">
           <div class="wi-status-dot ${w.status}"></div>
