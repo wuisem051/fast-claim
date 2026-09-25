@@ -1645,7 +1645,10 @@ async function saveUserEdit() {
 // ─── Settings ─────────────────────────────────────────────
 async function loadSettings() {
   try {
-    const snap = await getDoc(doc(db, 'settings', 'global'));
+    let snap = await getDoc(doc(db, 'settings', 'global'));
+    if (!snap.exists()) {
+      snap = await getDoc(doc(db, 'settings', 'config'));
+    }
     const settings = snap.exists() ? snap.data() : {};
 
     const el = (id) => document.getElementById(id);
@@ -1660,9 +1663,9 @@ async function loadSettings() {
     if (el('settMinWithdraw')) el('settMinWithdraw').value = settings.min_withdraw || '10.0';
     if (el('settMonetagEnabled')) el('settMonetagEnabled').value = settings.monetag_enabled !== undefined ? settings.monetag_enabled : '1';
     if (el('settMonetagDirectLink')) el('settMonetagDirectLink').value = settings.monetag_direct_link || '';
-    if (el('settMonetagScriptUrl')) el('settMonetagScriptUrl').value = settings.monetag_script_url || '';
-    if (el('settMonetagZoneId')) el('settMonetagZoneId').value = settings.monetag_zone_id || '';
-    if (el('settMonetagSdkFunc')) el('settMonetagSdkFunc').value = settings.monetag_sdk_func || '';
+    if (el('settMonetagScriptUrl')) el('settMonetagScriptUrl').value = settings.monetag_script_url || '//libtl.com/sdk.js';
+    if (el('settMonetagZoneId')) el('settMonetagZoneId').value = settings.monetag_zone_id || '11881112';
+    if (el('settMonetagSdkFunc')) el('settMonetagSdkFunc').value = settings.monetag_sdk_func || 'show_11881112';
 
   } catch (err) {
     console.error('Settings error:', err);
@@ -1714,6 +1717,7 @@ async function saveSettings() {
 
   try {
     await setDoc(doc(db, 'settings', 'global'), data, { merge: true });
+    await setDoc(doc(db, 'settings', 'config'), data, { merge: true });
     showAdminToast('✅ Configuración guardada correctamente', 'success');
   } catch (err) {
     console.error('saveSettings error:', err);

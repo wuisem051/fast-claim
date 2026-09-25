@@ -110,7 +110,9 @@ insertSetting.run('referral_reward',    String(REFERRAL_REWARD));
 insertSetting.run('min_withdraw',       String(MIN_WITHDRAW));
 insertSetting.run('monetag_enabled',    '1');
 insertSetting.run('monetag_direct_link','');
-insertSetting.run('monetag_script_url', '');
+insertSetting.run('monetag_script_url', '//libtl.com/sdk.js');
+insertSetting.run('monetag_zone_id',    '11881112');
+insertSetting.run('monetag_sdk_func',   'show_11881112');
 
 // ─── Helpers ──────────────────────────────────────────────
 function getSetting(key) {
@@ -351,6 +353,8 @@ app.post('/api/user', (req, res) => {
       monetag_enabled:    getSettingRaw('monetag_enabled') || '1',
       monetag_direct_link:getSettingRaw('monetag_direct_link') || '',
       monetag_script_url: getSettingRaw('monetag_script_url') || '',
+      monetag_zone_id:    getSettingRaw('monetag_zone_id') || '',
+      monetag_sdk_func:   getSettingRaw('monetag_sdk_func') || '',
       created_at:     user.created_at
     });
   } catch (err) {
@@ -512,7 +516,9 @@ app.patch('/api/admin/settings', (req, res) => {
     'min_withdraw',
     'monetag_enabled',
     'monetag_direct_link',
-    'monetag_script_url'
+    'monetag_script_url',
+    'monetag_zone_id',
+    'monetag_sdk_func'
   ];
   const stmt = db.prepare('INSERT INTO settings (key, value) VALUES (?, ?) ON CONFLICT(key) DO UPDATE SET value = excluded.value');
   Object.entries(req.body).forEach(([k, v]) => {

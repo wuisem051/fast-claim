@@ -1375,7 +1375,9 @@ let settings = {
   min_withdraw:       10,
   monetag_enabled:    '1',
   monetag_direct_link:'',
-  monetag_script_url: ''
+  monetag_script_url: '//libtl.com/sdk.js',
+  monetag_zone_id:    '11881112',
+  monetag_sdk_func:   'show_11881112'
 };
 
 // ─── Telegram SDK ─────────────────────────────────────────
@@ -1392,8 +1394,14 @@ function getRefCode() {
 // ─── Load Settings from Firestore ─────────────────────────
 async function loadSettings() {
   try {
-    const snap = await getDoc(doc(db, 'settings', 'config'));
-    if (snap.exists()) settings = { ...settings, ...snap.data() };
+    let snap = await getDoc(doc(db, 'settings', 'global'));
+    if (!snap.exists()) {
+      snap = await getDoc(doc(db, 'settings', 'config'));
+    }
+    if (snap.exists()) {
+      settings = { ...settings, ...snap.data() };
+    }
+    setupMonetagSDK();
   } catch(e) { console.warn('Settings load:', e.message); }
 }
 
@@ -1650,7 +1658,7 @@ function setupMonetagSDK() {
   let zoneId = (settings?.monetag_zone_id || userData?.monetag_zone_id || '').trim();
   let sdkFunc = (settings?.monetag_sdk_func || userData?.monetag_sdk_func || '').trim();
 
-  if (url.includes('src=') || url.includes('data-zone') || url.includes('data-sdk')) {
+  if (url.includes('src=') || url.includes('data-zone') || url.includes('data-sdk') || url.includes('show_')) {
     const srcMatch = url.match(/src=['"]([^'"]+)['"]/i);
     const zoneMatch = url.match(/data-zone=['"]([^'"]+)['"]/i);
     const sdkMatch = url.match(/data-sdk=['"]([^'"]+)['"]/i);
@@ -1663,23 +1671,34 @@ function setupMonetagSDK() {
   }
 
   if (!url) url = '//libtl.com/sdk.js';
+  if (!zoneId) zoneId = '11881112';
+  if (!sdkFunc) sdkFunc = 'show_11881112';
+  if (url.startsWith('//')) url = 'https:' + url;
 
   const scriptId = 'monetag-sdk-script';
-  if (!document.getElementById(scriptId)) {
-    const s = document.createElement('script');
+  let s = document.getElementById(scriptId);
+  if (!s) {
+    s = document.createElement('script');
     s.id = scriptId;
     s.src = url;
     s.async = true;
     s.setAttribute('data-cfasync', 'false');
-    if (zoneId) s.setAttribute('data-zone', zoneId);
-    if (sdkFunc) s.setAttribute('data-sdk', sdkFunc);
+    s.setAttribute('data-zone', zoneId);
+    s.setAttribute('data-sdk', sdkFunc);
     document.head.appendChild(s);
+    console.log('Monetag SDK script loaded:', url, '| Zone:', zoneId, '| SDK Func:', sdkFunc);
+  } else {
+    if (zoneId && s.getAttribute('data-zone') !== zoneId) s.setAttribute('data-zone', zoneId);
+    if (sdkFunc && s.getAttribute('data-sdk') !== sdkFunc) s.setAttribute('data-sdk', sdkFunc);
   }
 }
 
 function triggerMonetagAd() {
   const enabled = String(settings?.monetag_enabled || userData?.monetag_enabled || '1');
-  if (enabled !== '1') return;
+  if (enabled !== '1') {
+    console.log('Monetag ads disabled');
+    return;
+  }
 
   // 1. Enlace Directo (Smartlink / Direct Link)
   const link = (settings?.monetag_direct_link || userData?.monetag_direct_link || '').trim();
@@ -1687,22 +1706,41 @@ function triggerMonetagAd() {
     try { if (tg?.openLink) tg.openLink(link); else window.open(link, '_blank'); } catch(e) {}
   }
 
-  // 2. Función de la etiqueta SDK Monetag (ej: show_11881112)
+  // 2. Función SDK Monetag (ej: show_11881112)
   let sdkFunc = (settings?.monetag_sdk_func || userData?.monetag_sdk_func || '').trim();
+  let zoneId  = (settings?.monetag_zone_id || userData?.monetag_zone_id || '').trim();
+
   if (!sdkFunc) {
     const rawUrl = (settings?.monetag_script_url || userData?.monetag_script_url || '');
     const match = rawUrl.match(/(show_\d+)/i);
     if (match) sdkFunc = match[1];
   }
+  if (!sdkFunc && zoneId) sdkFunc = 'show_' + zoneId;
+  if (!sdkFunc) sdkFunc = 'show_11881112';
+
+  console.log('triggerMonetagAd invoked. Looking for function:', sdkFunc);
 
   if (sdkFunc && typeof window[sdkFunc] === 'function') {
     try {
       window[sdkFunc]().then(() => {
-        console.log('Monetag ad watched');
-      }).catch(err => console.error('Monetag ad error:', err));
-    } catch(e) { console.error(e); }
-  } else if (typeof window.show_monetag_ad === 'function') {
-    try { window.show_monetag_ad(); } catch(e) {}
+        console.log('Monetag ad watched successfully');
+      }).catch(err => console.error('Monetag ad promise error:', err));
+    } catch(e) { console.error('Monetag ad execution exception:', e); }
+  } else {
+    // Dynamic search for any show_XXXXX function created by Monetag on window
+    const dynamicFuncKey = Object.keys(window).find(k => /^show_\d+$/.test(k) && typeof window[k] === 'function');
+    if (dynamicFuncKey) {
+      console.log('Found dynamic Monetag function on window:', dynamicFuncKey);
+      try {
+        window[dynamicFuncKey]().then(() => {
+          console.log('Monetag ad watched via dynamic function');
+        }).catch(err => console.error('Monetag ad error:', err));
+      } catch(e) { console.error(e); }
+    } else if (typeof window.show_monetag_ad === 'function') {
+      try { window.show_monetag_ad(); } catch(e) {}
+    } else {
+      console.warn('Monetag SDK function not found on window. Target was:', sdkFunc);
+    }
   }
 }
 
