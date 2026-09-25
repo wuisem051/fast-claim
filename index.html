@@ -982,12 +982,6 @@
         <span class="brand-name">FastClaim</span>
       </div>
       <div style="display:flex;align-items:center;gap:8px;">
-        <button class="icon-btn" onclick="openUserSettings()" title="Ajustes y Contraseña" style="width:34px;height:34px;font-size:14px;background:rgba(255,255,255,0.05);border-color:var(--card-border);color:var(--text2);">
-          <i class="fa-solid fa-gear"></i>
-        </button>
-        <button class="icon-btn" onclick="handleUserLogout()" title="Cerrar sesión" style="width:34px;height:34px;font-size:14px;background:rgba(255,255,255,0.05);border-color:var(--card-border);color:var(--text2);">
-          <i class="fa-solid fa-arrow-right-from-bracket"></i>
-        </button>
         <div class="online-badge">
           <span class="online-dot"></span>
           En línea
@@ -1236,6 +1230,44 @@
 
     </div><!-- end pageTasks -->
 
+    <!-- ═══ PAGE: PERFIL ═══════════════════════════════════ -->
+    <div id="pageProfile" class="page">
+
+      <!-- Avatar grande -->
+      <div class="card profile-card" style="flex-direction:column;text-align:center;padding:28px 20px;">
+        <div class="avatar-wrap" style="margin:0 auto 14px;">
+          <div class="avatar" id="profilePageAvatar" style="width:80px;height:80px;font-size:32px;">
+            <span id="profilePageInitial">?</span>
+          </div>
+          <div class="avatar-ring"></div>
+        </div>
+        <div class="profile-name" id="profilePageName" style="font-size:20px;font-weight:800;">---</div>
+        <div class="profile-username" id="profilePageUsername" style="margin-top:4px;">@---</div>
+        <div class="profile-joined" id="profilePageJoined" style="margin-top:6px;">Miembro desde ---</div>
+      </div>
+
+      <!-- Cambiar Contraseña -->
+      <p class="section-title" style="margin-top:20px;"><i class="fa-solid fa-lock" style="color:var(--accent)"></i> Seguridad</p>
+      <div class="card" style="padding:20px;">
+        <div class="form-group">
+          <label class="form-label"><i class="fa-solid fa-lock"></i> Nueva Contraseña</label>
+          <input type="password" id="settingsNewPassword" class="form-input" placeholder="Escribe tu nueva contraseña">
+        </div>
+        <button class="btn-primary" id="settingsSaveBtn" onclick="handlePasswordChange()" style="margin-top:8px;">
+          <i class="fa-solid fa-save"></i> Guardar Contraseña
+        </button>
+        <div class="auth-error" id="settingsErrorMsg" style="margin-top:10px;"></div>
+      </div>
+
+      <!-- Cerrar Sesión -->
+      <div style="margin-top:20px;padding-bottom:24px;">
+        <button onclick="handleUserLogout()" style="width:100%;padding:14px;border-radius:14px;border:1px solid rgba(255,82,82,0.3);background:rgba(255,82,82,0.08);color:#ff5252;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;">
+          <i class="fa-solid fa-arrow-right-from-bracket"></i> Cerrar Sesión
+        </button>
+      </div>
+
+    </div><!-- end pageProfile -->
+
   </div><!-- end content -->
 
   <!-- ─── Bottom Nav ──────────────────────────────────────── -->
@@ -1256,9 +1288,26 @@
       <i class="fa-solid fa-wallet"></i>
       <span>Retirar</span>
     </button>
+    <button class="nav-btn" id="navProfile" onclick="switchPage('Profile')">
+      <i class="fa-solid fa-user-circle"></i>
+      <span>Perfil</span>
+    </button>
   </nav>
 
 </div><!-- end app -->
+
+<!-- ─── Custom Confirm Modal (sin dominio) ───────────────── -->
+<div id="confirmModal" style="display:none;position:fixed;inset:0;z-index:99999;background:rgba(0,0,0,0.7);backdrop-filter:blur(6px);align-items:center;justify-content:center;">
+  <div style="background:var(--card);border:1px solid var(--card-border);border-radius:20px;padding:28px 24px;max-width:300px;width:90%;margin:auto;">
+    <div style="font-size:28px;text-align:center;margin-bottom:12px;">🚪</div>
+    <div style="font-size:16px;font-weight:700;text-align:center;margin-bottom:8px;color:var(--text);">¿Cerrar sesión?</div>
+    <div style="font-size:13px;color:var(--text3);text-align:center;margin-bottom:24px;">Tu sesión actual se cerrará.</div>
+    <div style="display:flex;gap:12px;">
+      <button onclick="document.getElementById('confirmModal').style.display='none'" style="flex:1;padding:12px;border-radius:12px;border:1px solid var(--card-border);background:transparent;color:var(--text2);font-size:14px;font-weight:600;cursor:pointer;">Cancelar</button>
+      <button id="confirmLogoutBtn" style="flex:1;padding:12px;border-radius:12px;border:none;background:linear-gradient(135deg,#ff5252,#c62828);color:white;font-size:14px;font-weight:700;cursor:pointer;">Salir</button>
+    </div>
+  </div>
+</div>
 
 <!-- ─── Auth Screen (Login & Registro) ───────────────────── -->
 <div id="authScreen" class="auth-overlay hidden">
@@ -1332,24 +1381,6 @@
   </div>
 </div>
 
-<!-- ─── User Settings Modal ──────────────────────────────── -->
-<div class="auth-screen hidden" id="userSettingsModal" style="z-index:9000; align-items:center; justify-content:center;">
-  <div class="auth-box">
-    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
-      <h2 style="font-size:18px;font-weight:700;"><i class="fa-solid fa-gear" style="color:var(--accent);margin-right:8px;"></i> Ajustes de Cuenta</h2>
-      <button class="icon-btn" onclick="closeUserSettings()" style="background:transparent;border:none;color:var(--text3);font-size:20px;">&times;</button>
-    </div>
-    
-    <div class="form-group">
-      <label class="form-label"><i class="fa-solid fa-lock"></i> Nueva Contraseña</label>
-      <input type="password" id="settingsNewPassword" class="form-input" placeholder="Escribe tu nueva contraseña">
-    </div>
-    <button class="btn-primary" id="settingsSaveBtn" onclick="handlePasswordChange()" style="margin-top:16px;">
-      <i class="fa-solid fa-save"></i> Guardar Cambios
-    </button>
-    <div class="auth-error" id="settingsErrorMsg" style="margin-top:12px;"></div>
-  </div>
-</div>
 
 <!-- ─── Recover Password Modal ───────────────────────────── -->
 <div class="auth-screen hidden" id="recoverModal" style="z-index:9000; align-items:center; justify-content:center;">
@@ -1414,6 +1445,7 @@ const db       = getFirestore(fbApp);
 let userData   = null;
 let claimTimer = null;
 let claimCooldownRemaining = 0;
+let isLoggingOut = false; // prevent Telegram re-auth after logout
 const CIRCUMFERENCE = 364.4;
 
 let settings = {
@@ -1468,7 +1500,7 @@ window.addEventListener('load', async () => {
     if (user) {
       await loadUserData(user.uid);
       hideLoading();
-    } else if (tgUser) {
+    } else if (tgUser && !isLoggingOut) {
       await handleTelegramAuth(tgUser);
     } else {
       showAuthScreen();
@@ -1777,26 +1809,29 @@ window.handleAuthRegister = async function() {
   }
 };
 
-window.handleUserLogout = async function() {
-  if (!confirm('¿Deseas cerrar sesión?')) return;
-  await signOut(auth);
-  userData = null;
-  if (claimTimer) { clearInterval(claimTimer); claimTimer = null; }
-  document.getElementById('authScreen').classList.remove('hidden');
-  showToast('ℹ️ Sesión cerrada', 'info');
+window.handleUserLogout = function() {
+  const modal = document.getElementById('confirmModal');
+  modal.style.display = 'flex';
+  document.getElementById('confirmLogoutBtn').onclick = async function() {
+    modal.style.display = 'none';
+    isLoggingOut = true;
+    await signOut(auth);
+    userData = null;
+    if (claimTimer) { clearInterval(claimTimer); claimTimer = null; }
+    document.getElementById('authScreen').classList.remove('hidden');
+    switchPage('Home'); // reset nav
+    showToast('ℹ️ Sesión cerrada', 'info');
+    setTimeout(() => { isLoggingOut = false; }, 3000); // allow re-login after 3s
+  };
 };
 
 // ─── User Settings / Password Change ──────────────────────
 window.openUserSettings = function() {
-  document.getElementById('settingsNewPassword').value = '';
-  document.getElementById('settingsErrorMsg').textContent = '';
-  document.getElementById('userSettingsModal').classList.remove('hidden');
-  document.getElementById('userSettingsModal').style.display = 'flex';
+  switchPage('Profile');
 };
 
 window.closeUserSettings = function() {
-  document.getElementById('userSettingsModal').classList.add('hidden');
-  document.getElementById('userSettingsModal').style.display = 'none';
+  switchPage('Home');
 };
 
 // ─── Recover Password ─────────────────────────────────────
@@ -1869,7 +1904,7 @@ window.handlePasswordChange = async function() {
     await updateDoc(doc(db, 'users', user.uid), { password: newPass });
 
     showToast('✅ Contraseña actualizada correctamente', 'success');
-    closeUserSettings();
+    document.getElementById('settingsNewPassword').value = '';
   } catch (err) {
     console.error('Password change error:', err);
     if (err.code === 'auth/requires-recent-login') {
@@ -2389,7 +2424,7 @@ window.executeTask = async function(taskId, targetUrl, taskType) {
 
 // ─── Page Navigation ──────────────────────────────────────
 window.switchPage = function(page) {
-  ['Home','Tasks','Referrals','Withdraw'].forEach(p => {
+  ['Home','Tasks','Referrals','Withdraw','Profile'].forEach(p => {
     document.getElementById('page'+p)?.classList.remove('active');
     document.getElementById('nav'+p)?.classList.remove('active');
   });
@@ -2397,6 +2432,16 @@ window.switchPage = function(page) {
   document.getElementById('nav'+page)?.classList.add('active');
   document.querySelector('.content').scrollTop = 0;
   if (page === 'Tasks') window.loadUserTasks();
+  if (page === 'Profile' && userData) {
+    const name = userData.first_name || userData.username || '—';
+    const uname = '@' + (userData.username || '—');
+    const joined = userData.joined_at ? 'Miembro desde ' + new Date(userData.joined_at).toLocaleDateString('es-ES', {day:'numeric',month:'short',year:'numeric'}) : '';
+    document.getElementById('profilePageName').textContent  = name;
+    document.getElementById('profilePageUsername').textContent = uname;
+    document.getElementById('profilePageJoined').textContent   = joined;
+    const initial = (userData.first_name || userData.username || '?')[0].toUpperCase();
+    document.getElementById('profilePageInitial').textContent  = initial;
+  }
 };
 
 // ─── Referral ─────────────────────────────────────────────
