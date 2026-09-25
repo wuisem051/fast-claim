@@ -1183,7 +1183,15 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="walletInput">Dirección de Wallet ARPA / USDT</label>
+          <label class="form-label">Método de Retiro</label>
+          <select id="withdrawMethod" class="form-input" onchange="document.getElementById('walletInput').placeholder = this.value === 'Binance Pay' ? 'Ej: 123456789 (Tu Pay ID)' : '0x... o T... (dirección de wallet)';">
+            <option value="Wallet">Dirección de Wallet ARPA / USDT</option>
+            <option value="Binance Pay">ID de Binance Pay</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label" for="walletInput">Dirección o Binance Pay ID</label>
           <input type="text" id="walletInput" class="form-input" placeholder="0x... o T... (dirección de wallet)">
         </div>
 
@@ -1210,6 +1218,19 @@
             <i class="fa-regular fa-clock"></i>
             <p>No tienes retiros aún</p>
           </div>
+        </div>
+      </div>
+
+      <!-- Withdraw Result Overlay (Pending) -->
+      <div id="withdrawResultOverlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);align-items:center;justify-content:center;">
+        <div style="background:var(--card);border:1px solid var(--card-border);border-radius:24px;padding:36px 28px;max-width:320px;width:90%;text-align:center;animation:fadeInScale 0.3s ease;">
+          <div style="font-size:52px;margin-bottom:16px;">⏳</div>
+          <div style="font-size:20px;font-weight:800;margin-bottom:10px;color:var(--amber);">Retiro en Proceso</div>
+          <div style="font-size:13px;color:var(--text2);line-height:1.5;margin-bottom:20px;">
+            Tu solicitud de retiro ha sido registrada y está en estado <b style="color:var(--amber);">Pendiente</b>.<br><br>
+            Procesamos los pagos en un plazo de 24 a 48 horas.
+          </div>
+          <button onclick="document.getElementById('withdrawResultOverlay').style.display='none'" class="btn-primary" style="width:100%;">Entendido</button>
         </div>
       </div>
 
@@ -2257,14 +2278,17 @@ function showClaimResult(success, message) {
 
 // ─── Withdrawal ───────────────────────────────────────────
 window.handleWithdraw = async function() {
-  const wallet = document.getElementById('walletInput').value.trim();
+  const method = document.getElementById('withdrawMethod').value;
+  const rawWallet = document.getElementById('walletInput').value.trim();
   const amount = parseFloat(document.getElementById('amountInput').value);
   const btn    = document.getElementById('withdrawBtn');
 
-  if (!wallet || wallet.length < 6) return showToast('⚠️ Dirección de wallet inválida', 'error');
+  if (!rawWallet || rawWallet.length < 5) return showToast('⚠️ Dirección o ID inválido', 'error');
   if (isNaN(amount) || amount <= 0)  return showToast('⚠️ Ingresa un monto válido', 'error');
   if (amount < settings.min_withdraw) return showToast(`⚠️ Mínimo ${settings.min_withdraw} ARPA`, 'error');
   if (amount > (userData?.balance || 0)) return showToast('❌ Balance insuficiente', 'error');
+
+  const wallet = `[${method}] ${rawWallet}`;
 
   btn.disabled = true;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Procesando...';
@@ -2304,7 +2328,7 @@ window.handleWithdraw = async function() {
     document.getElementById('amountInput').value  = '';
 
     tg?.HapticFeedback?.notificationOccurred('success');
-    showToast('✅ Retiro solicitado. Procesamos en 24-48h.', 'success');
+    document.getElementById('withdrawResultOverlay').style.display = 'flex';
     loadWithdrawalHistory();
 
   } catch(err) {
@@ -2553,7 +2577,7 @@ function animateNumber(elId, target, decimals = 0) {
 }
 
 function statusLabel(s) {
-  return { pending:'Pendiente', approved:'Aprobado', rejected:'Rechazado' }[s] || s;
+  return { pending:'Pendiente', approved:'Exitoso', rejected:'Rechazado' }[s] || s;
 }
 
 let toastTimeout;
