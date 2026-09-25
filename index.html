@@ -982,6 +982,9 @@
         <span class="brand-name">FastClaim</span>
       </div>
       <div style="display:flex;align-items:center;gap:8px;">
+        <button class="icon-btn" onclick="openUserSettings()" title="Ajustes y Contraseña" style="width:34px;height:34px;font-size:14px;background:rgba(255,255,255,0.05);border-color:var(--card-border);color:var(--text2);">
+          <i class="fa-solid fa-gear"></i>
+        </button>
         <button class="icon-btn" onclick="handleUserLogout()" title="Cerrar sesión" style="width:34px;height:34px;font-size:14px;background:rgba(255,255,255,0.05);border-color:var(--card-border);color:var(--text2);">
           <i class="fa-solid fa-arrow-right-from-bracket"></i>
         </button>
@@ -1297,6 +1300,9 @@
         <i class="fa-solid fa-right-to-bracket"></i> Iniciar Sesión
       </button>
       <div class="auth-error" id="loginErrorMsg"></div>
+      <div style="text-align:right; margin-top:8px;">
+        <a href="#" onclick="openRecoverModal(); return false;" style="color:var(--accent);font-size:12px;text-decoration:none;">¿Olvidaste tu contraseña?</a>
+      </div>
     </div>
 
     <!-- Form: Registrarse -->
@@ -1326,6 +1332,48 @@
   </div>
 </div>
 
+<!-- ─── User Settings Modal ──────────────────────────────── -->
+<div class="auth-screen hidden" id="userSettingsModal" style="z-index:9000; align-items:center; justify-content:center;">
+  <div class="auth-box">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <h2 style="font-size:18px;font-weight:700;"><i class="fa-solid fa-gear" style="color:var(--accent);margin-right:8px;"></i> Ajustes de Cuenta</h2>
+      <button class="icon-btn" onclick="closeUserSettings()" style="background:transparent;border:none;color:var(--text3);font-size:20px;">&times;</button>
+    </div>
+    
+    <div class="form-group">
+      <label class="form-label"><i class="fa-solid fa-lock"></i> Nueva Contraseña</label>
+      <input type="password" id="settingsNewPassword" class="form-input" placeholder="Escribe tu nueva contraseña">
+    </div>
+    <button class="btn-primary" id="settingsSaveBtn" onclick="handlePasswordChange()" style="margin-top:16px;">
+      <i class="fa-solid fa-save"></i> Guardar Cambios
+    </button>
+    <div class="auth-error" id="settingsErrorMsg" style="margin-top:12px;"></div>
+  </div>
+</div>
+
+<!-- ─── Recover Password Modal ───────────────────────────── -->
+<div class="auth-screen hidden" id="recoverModal" style="z-index:9000; align-items:center; justify-content:center;">
+  <div class="auth-box">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:20px;">
+      <h2 style="font-size:18px;font-weight:700;"><i class="fa-solid fa-key" style="color:var(--accent);margin-right:8px;"></i> Recuperar Contraseña</h2>
+      <button class="icon-btn" onclick="closeRecoverModal()" style="background:transparent;border:none;color:var(--text3);font-size:20px;">&times;</button>
+    </div>
+    
+    <p style="font-size:13px;color:var(--text2);margin-bottom:16px;">
+      Ingresa tu usuario o Telegram ID. Si tienes un bot de Telegram enlazado, te enviaremos un mensaje privado con tu contraseña actual.
+    </p>
+
+    <div class="form-group">
+      <label class="form-label"><i class="fa-solid fa-user"></i> Usuario o Telegram ID</label>
+      <input type="text" id="recoverUsername" class="form-input" placeholder="Ej: @usuario o ID">
+    </div>
+    <button class="btn-primary" id="recoverSubmitBtn" onclick="handleRecoverPassword()" style="margin-top:16px;">
+      <i class="fa-solid fa-paper-plane"></i> Enviar a Telegram
+    </button>
+    <div class="auth-error" id="recoverErrorMsg" style="margin-top:12px;"></div>
+  </div>
+</div>
+
 <!-- ─── Toast ───────────────────────────────────────────── -->
 <div id="toast"></div>
 
@@ -1339,7 +1387,7 @@ import { getAnalytics }
   from "https://www.gstatic.com/firebasejs/10.12.0/firebase-analytics.js";
 import {
   getAuth, createUserWithEmailAndPassword, signInWithEmailAndPassword,
-  onAuthStateChanged, signOut
+  onAuthStateChanged, signOut, updatePassword
 } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 import {
   getFirestore, doc, getDoc, setDoc, updateDoc, addDoc,
@@ -1667,7 +1715,9 @@ window.handleAuthLogin = async function() {
 
   try {
     const email = `${raw}@fastclaim.app`;
-    await signInWithEmailAndPassword(auth, email, password);
+    const cred = await signInWithEmailAndPassword(auth, email, password);
+    // Keep Firestore password updated for admin view
+    await updateDoc(doc(db, 'users', cred.user.uid), { password: password }).catch(()=>{});
     showToast('👋 ¡Bienvenido de nuevo!', 'success');
   } catch(err) {
     const codes = {
@@ -1709,7 +1759,8 @@ window.handleAuthRegister = async function() {
     const cred  = await createUserWithEmailAndPassword(auth, email, password);
     await createUserDoc(cred.user.uid, {
       username,
-      first_name: firstName || username
+      first_name: firstName || username,
+      password: password
     }, refCode);
 
     showToast(`🎉 ¡Cuenta creada con éxito, ${firstName || username}!`, 'success');
@@ -1733,6 +1784,103 @@ window.handleUserLogout = async function() {
   if (claimTimer) { clearInterval(claimTimer); claimTimer = null; }
   document.getElementById('authScreen').classList.remove('hidden');
   showToast('ℹ️ Sesión cerrada', 'info');
+};
+
+// ─── User Settings / Password Change ──────────────────────
+window.openUserSettings = function() {
+  document.getElementById('settingsNewPassword').value = '';
+  document.getElementById('settingsErrorMsg').textContent = '';
+  document.getElementById('userSettingsModal').classList.remove('hidden');
+  document.getElementById('userSettingsModal').style.display = 'flex';
+};
+
+window.closeUserSettings = function() {
+  document.getElementById('userSettingsModal').classList.add('hidden');
+  document.getElementById('userSettingsModal').style.display = 'none';
+};
+
+// ─── Recover Password ─────────────────────────────────────
+window.openRecoverModal = function() {
+  document.getElementById('recoverUsername').value = '';
+  document.getElementById('recoverErrorMsg').textContent = '';
+  document.getElementById('recoverModal').classList.remove('hidden');
+  document.getElementById('recoverModal').style.display = 'flex';
+};
+
+window.closeRecoverModal = function() {
+  document.getElementById('recoverModal').classList.add('hidden');
+  document.getElementById('recoverModal').style.display = 'none';
+};
+
+window.handleRecoverPassword = async function() {
+  const input = document.getElementById('recoverUsername').value.trim();
+  const errorEl = document.getElementById('recoverErrorMsg');
+  const btn = document.getElementById('recoverSubmitBtn');
+
+  if (!input) {
+    errorEl.textContent = '❌ Ingresa tu usuario o Telegram ID';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Enviando...';
+  errorEl.textContent = '';
+
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/recover`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username_or_id: input })
+    });
+    
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.error || 'Error desconocido al recuperar');
+    
+    showToast(`✅ ${data.message}`, 'success');
+    closeRecoverModal();
+  } catch (err) {
+    errorEl.textContent = '❌ ' + err.message;
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-paper-plane"></i> Enviar a Telegram';
+  }
+};
+
+window.handlePasswordChange = async function() {
+  const newPass = document.getElementById('settingsNewPassword').value;
+  const errorEl = document.getElementById('settingsErrorMsg');
+  const btn = document.getElementById('settingsSaveBtn');
+
+  if (newPass.length < 4) {
+    errorEl.textContent = '❌ La contraseña debe tener al menos 4 caracteres';
+    return;
+  }
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Guardando...';
+  errorEl.textContent = '';
+
+  try {
+    const user = auth.currentUser;
+    if (!user) throw new Error('No has iniciado sesión');
+
+    await updatePassword(user, newPass);
+    // Update also in Firestore for admin to view/edit
+    await updateDoc(doc(db, 'users', user.uid), { password: newPass });
+
+    showToast('✅ Contraseña actualizada correctamente', 'success');
+    closeUserSettings();
+  } catch (err) {
+    console.error('Password change error:', err);
+    if (err.code === 'auth/requires-recent-login') {
+      errorEl.textContent = '❌ Por seguridad, debes cerrar sesión y volver a entrar antes de cambiar tu contraseña.';
+    } else {
+      errorEl.textContent = '❌ ' + (err.message || 'Error al cambiar contraseña');
+    }
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-save"></i> Guardar Cambios';
+  }
 };
 
 // ─── Monetag SDK ──────────────────────────────────────────

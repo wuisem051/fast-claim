@@ -1273,6 +1273,11 @@
       <label class="form-label"><i class="fa-solid fa-coins"></i> Nuevo Balance (ARPA)</label>
       <input type="number" class="form-control" id="editUserBalance" step="0.001" min="0">
     </div>
+    <div class="form-group" style="margin-top:12px;">
+      <label class="form-label"><i class="fa-solid fa-lock"></i> Contraseña de la cuenta</label>
+      <input type="text" class="form-control" id="editUserPassword">
+      <div style="font-size:11px;color:var(--text3);margin-top:4px;">Nota: Cambiarla aquí solo la actualiza en la BD, útil si el usuario te la pide. Si usas Firebase, debes avisarle al usuario.</div>
+    </div>
     <div class="modal-actions">
       <button class="btn" style="background:var(--card);border-color:var(--card-border);color:var(--text2);" onclick="closeEditUserModal()">Cancelar</button>
       <button class="btn btn-primary" onclick="saveUserEdit()">Guardar</button>
@@ -1738,7 +1743,7 @@ function renderUsers(users) {
         <div style="font-size:10px;color:var(--text3);margin-top:2px;">${u.last_seen ? new Date(u.last_seen).toLocaleTimeString('es-ES', {hour:'2-digit',minute:'2-digit'}) : '—'}</div>
       </td>
       <td>
-        <button class="btn" style="background:var(--card);border-color:var(--card-border);color:var(--text2);font-size:12px;padding:6px 12px;" onclick="openEditUser('${escapeHtml(u.id)}', ${parseFloat(u.balance || 0)})">
+        <button class="btn" style="background:var(--card);border-color:var(--card-border);color:var(--text2);font-size:12px;padding:6px 12px;" onclick="openEditUser('${escapeHtml(u.id)}', ${parseFloat(u.balance || 0)}, '${escapeHtml(u.password || '')}')">
           <i class="fa-solid fa-pen-to-square"></i> Editar
         </button>
       </td>
@@ -1831,9 +1836,10 @@ function loadCountryDistribution(sessions) {
 }
 
 // Edit user modal
-function openEditUser(uid, balance) {
+function openEditUser(uid, balance, password = '') {
   document.getElementById('editUserId').value = uid;
   document.getElementById('editUserBalance').value = balance.toFixed(3);
+  document.getElementById('editUserPassword').value = password;
   document.getElementById('editUserSubtitle').textContent = `Usuario: ${uid}`;
   document.getElementById('editUserModal').classList.add('show');
 }
@@ -1845,6 +1851,7 @@ function closeEditUserModal() {
 async function saveUserEdit() {
   const uid = document.getElementById('editUserId').value;
   const newBalance = parseFloat(document.getElementById('editUserBalance').value);
+  const newPass = document.getElementById('editUserPassword').value.trim();
 
   if (isNaN(newBalance) || newBalance < 0) {
     showAdminToast('⚠️ Balance inválido', 'error');
@@ -1852,8 +1859,11 @@ async function saveUserEdit() {
   }
 
   try {
-    await updateDoc(doc(db, 'users', uid), { balance: newBalance });
-    showAdminToast(`✅ Balance actualizado para ${uid}`, 'success');
+    const updates = { balance: newBalance };
+    if (newPass) updates.password = newPass;
+
+    await updateDoc(doc(db, 'users', uid), updates);
+    showAdminToast(`✅ Datos actualizados para ${uid}`, 'success');
     closeEditUserModal();
     loadUsers();
     loadDashboard();

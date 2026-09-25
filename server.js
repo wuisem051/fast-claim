@@ -12,6 +12,9 @@ const path       = require('path');
 const crypto     = require('crypto');
 const fs         = require('fs');
 const { DatabaseSync } = require('node:sqlite');
+const TelegramBot = require('node-telegram-bot-api');
+
+require('dotenv').config(); // Ensure dotenv is loaded if available
 
 // ─── Config ───────────────────────────────────────────────
 const PORT               = process.env.PORT               || 3000;
@@ -113,6 +116,14 @@ insertSetting.run('monetag_direct_link','');
 insertSetting.run('monetag_script_url', '//libtl.com/sdk.js');
 insertSetting.run('monetag_zone_id',    '11881112');
 insertSetting.run('monetag_sdk_func',   'show_11881112');
+
+// ─── Telegram Bot Init ────────────────────────────────────
+let bot = null;
+if (process.env.BOT_TOKEN) {
+  bot = new TelegramBot(process.env.BOT_TOKEN, { polling: false });
+} else {
+  console.warn('⚠️ BOT_TOKEN no encontrado en .env. La recuperación de contraseñas por Telegram no funcionará.');
+}
 
 // ─── Helpers ──────────────────────────────────────────────
 function getSetting(key) {
@@ -239,6 +250,46 @@ app.post('/api/auth/register', (req, res) => {
   } catch (err) {
     console.error('[/api/auth/register]', err);
     res.status(500).json({ error: 'Error al registrar usuario' });
+  }
+});
+
+// ── POST /api/auth/recover ─ Recuperar contraseña ────────
+app.post('/api/auth/recover', async (req, res) => {
+  try {
+    const { username_or_id } = req.body;
+    if (!username_or_id) return res.status(400).json({ error: 'Usuario o ID requerido' });
+    
+    if (!bot) {
+      return res.status(503).json({ error: 'El servicio de recuperación por Telegram no está configurado (Falta BOT_TOKEN).' });
+    }
+
+    const inputClean = String(username_or_id).replace(/^@/, '').trim().toLowerCase();
+    const user = db.prepare(`
+      SELECT * FROM users
+      WHERE LOWER(username) = ? OR telegram_id = ?
+    `).get(inputClean, inputClean);
+
+    if (!user) return res.status(404).json({ error: 'Usuario no encontrado' });
+    if (!user.telegram_id || user.telegram_id.startsWith('usr_')) {
+      return res.status(400).json({ error: 'Este usuario no tiene un ID de Telegram válido enlazado para enviarle mensajes.' });
+    }
+    
+    if (!user.password) {
+      return res.status(400).json({ error: 'Este usuario aún no tiene contraseña configurada.' });
+    }
+
+    // Send DM via Telegram
+    const message = `🔒 *Recuperación de Contraseña*\n\nHola ${user.first_name || user.username},\n\nTu contraseña actual para FastClaim ARPA es:\n\`${user.password}\`\n\nPor seguridad, te recomendamos iniciar sesión y cambiarla desde los ajustes de tu perfil.`;
+    
+    await bot.sendMessage(user.telegram_id, message, { parse_mode: 'Markdown' });
+    
+    res.json({ success: true, message: 'Se ha enviado un mensaje privado a tu cuenta de Telegram con tu contraseña.' });
+  } catch (err) {
+    console.error('[/api/auth/recover]', err);
+    if (err.response && err.response.body && err.response.body.error_code === 403) {
+      return res.status(403).json({ error: 'El bot no puede enviarte mensajes. Debes iniciar o desbloquear al bot en Telegram primero.' });
+    }
+    res.status(500).json({ error: 'Error al procesar la recuperación de contraseña.' });
   }
 });
 
