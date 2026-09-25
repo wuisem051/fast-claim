@@ -2011,9 +2011,15 @@ function triggerMonetagAd() {
       .map(k => window[k])[0];
 
     if (typeof fn === 'function') {
-      fn().then(() => {
-        console.log('Monetag ad watched — resolving claim');
-        resolve();
+      fn().then((res) => {
+        console.log('Monetag ad watched — response:', res);
+        // Validar si el anuncio realmente se monetizó y se vio completo
+        if (res && res.reward_event_type === 'non_valued') {
+          console.warn('Monetag ad returned non_valued');
+          reject(new Error('AD_NON_VALUED'));
+        } else {
+          resolve();
+        }
       }).catch(err => {
         console.warn('Monetag ad not completed:', err);
         reject(new Error('AD_NOT_COMPLETED'));
@@ -2220,6 +2226,8 @@ window.handleClaim = async function() {
     btn.style.pointerEvents = '';
     if (err.message === 'AD_NOT_COMPLETED') {
       showClaimResult(false, 'No completaste el anuncio. Mira el anuncio completo para recibir tu recompensa.');
+    } else if (err.message === 'AD_NON_VALUED') {
+      showClaimResult(false, 'No se verificó correctamente el anuncio (omitido o bloqueado). No hay recompensa.');
     } else if (err.message === 'COOLDOWN') {
       showToast('⏳ Cooldown activo. Espera un momento.', 'info');
       setClaimCooldown();
