@@ -2040,16 +2040,16 @@ window.loadUserTasks = async function() {
   container.innerHTML = '<div class="card" style="padding:24px;text-align:center;"><i class="fa-solid fa-spinner fa-spin" style="font-size:24px;color:var(--ton2);"></i><p style="font-size:13px;color:var(--text3);margin-top:8px;">Cargando tareas...</p></div>';
 
   try {
-    const tasksSnap    = await getDocs(query(collection(db, 'tasks'), where('active', '==', true)));
+    const tasksSnap = await getDocs(collection(db, 'tasks'));
     const completedSnap = await getDocs(query(
       collection(db, 'user_tasks'),
       where('uid', '==', userData.uid)
     ));
     const doneIds = new Set(completedSnap.docs.map(d => d.data().task_id));
 
-    allUserTasks = tasksSnap.docs.map(d => ({
-      id: d.id, ...d.data(), completed: doneIds.has(d.id)
-    }));
+    allUserTasks = tasksSnap.docs
+      .map(d => ({ id: d.id, ...d.data(), completed: doneIds.has(d.id) }))
+      .filter(t => t.active === true || t.active === 1 || t.active === '1' || String(t.active) === '1' || t.active === undefined);
     renderUserTasksList();
   } catch(err) {
     console.error('Tasks error:', err);

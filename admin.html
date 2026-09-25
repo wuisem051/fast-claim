@@ -1785,7 +1785,9 @@ function renderTasks(tasks) {
     ad: '🎯 Publicidad'
   };
 
-  tbody.innerHTML = tasks.map(t => `
+  tbody.innerHTML = tasks.map(t => {
+    const isActive = (t.active === true || t.active === 1 || t.active === '1' || t.active === undefined);
+    return `
     <tr>
       <td class="mono">#${t.id.substring(0,6)}</td>
       <td>
@@ -1796,24 +1798,24 @@ function renderTasks(tasks) {
       <td style="font-weight:700;color:var(--green);">+${parseFloat(t.reward).toFixed(2)} ARPA</td>
       <td class="mono" title="${escapeHtml(t.url)}"><a href="${escapeHtml(t.url)}" target="_blank" style="color:var(--accent2);text-decoration:none;">${truncateWallet(t.url)}</a></td>
       <td class="mono" style="font-weight:700;">${t.completion_count || 0} usuarios</td>
-      <td><span class="badge ${t.active ? 'approved' : 'rejected'}"><span class="badge-dot"></span> ${t.active ? 'Activa' : 'Inactiva'}</span></td>
+      <td><span class="badge ${isActive ? 'approved' : 'rejected'}"><span class="badge-dot"></span> ${isActive ? 'Activa' : 'Inactiva'}</span></td>
       <td>
         <div class="action-btns">
-          <button class="btn" style="background:var(--card);border-color:var(--card-border);color:var(--text2);" onclick="toggleTaskStatus('${t.id}', ${t.active ? 0 : 1})">
-            ${t.active ? '<i class="fa-solid fa-eye-slash"></i> Pausar' : '<i class="fa-solid fa-eye"></i> Activar'}
+          <button class="btn" style="background:var(--card);border-color:var(--card-border);color:var(--text2);" onclick="toggleTaskStatus('${t.id}', ${isActive ? 0 : 1})">
+            ${isActive ? '<i class="fa-solid fa-eye-slash"></i> Pausar' : '<i class="fa-solid fa-eye"></i> Activar'}
           </button>
           <button class="btn btn-reject" onclick="deleteTask('${t.id}')">
             <i class="fa-solid fa-trash"></i>
           </button>
         </div>
       </td>
-    </tr>
-  `).join('');
+    </tr>`;
+  }).join('');
 }
 
 async function createNewTask() {
   const title = document.getElementById('newTaskTitle').value.trim();
-  const reward = parseFloat(document.getElementById('newTaskReward').value);
+  const reward = parseFloat(document.getElementById('newTaskReward').value || '0.5');
   const type = document.getElementById('newTaskType').value;
   const url = document.getElementById('newTaskUrl').value.trim();
   const description = document.getElementById('newTaskDesc').value.trim();
@@ -1833,7 +1835,7 @@ async function createNewTask() {
     document.getElementById('newTaskDesc').value = '';
     loadTasks();
   } catch (err) {
-    showAdminToast('⚠️ Error al crear tarea', 'error');
+    showAdminToast('⚠️ Error al crear tarea: ' + (err.message || err), 'error');
   }
 }
 
@@ -1843,7 +1845,7 @@ async function toggleTaskStatus(id, newActiveStatus) {
     showAdminToast(`✅ Tarea ${newActiveStatus ? 'activada' : 'pausada'}`, 'success');
     loadTasks();
   } catch (err) {
-    showAdminToast('⚠️ Error al cambiar estado', 'error');
+    showAdminToast('⚠️ Error al cambiar estado: ' + (err.message || err), 'error');
   }
 }
 
