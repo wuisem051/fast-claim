@@ -939,6 +939,11 @@
       to { transform: translateY(0); opacity: 1; }
     }
     .count-anim { animation: count-up 0.4s ease forwards; }
+
+    @keyframes fadeInScale {
+      from { transform: scale(0.85); opacity: 0; }
+      to   { transform: scale(1);    opacity: 1; }
+    }
   </style>
 </head>
 <body>
@@ -1054,6 +1059,15 @@
           </button>
         </div>
         <p class="claim-hint" id="claimHint">Reclama tu bonus de ARPA cada hora. ¡Sin límite de veces!</p>
+      </div>
+
+      <!-- Claim Result Overlay -->
+      <div id="claimResultOverlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);align-items:center;justify-content:center;">
+        <div style="background:var(--card);border:1px solid var(--card-border);border-radius:24px;padding:36px 28px;max-width:280px;width:90%;text-align:center;animation:fadeInScale 0.3s ease;">
+          <div class="cr-icon" style="font-size:52px;margin-bottom:16px;">⚡</div>
+          <div class="cr-title" style="font-size:20px;font-weight:800;margin-bottom:10px;">¡Claim Exitoso!</div>
+          <div class="cr-msg" style="font-size:13px;color:var(--text2);line-height:1.5;"></div>
+        </div>
       </div>
 
       <!-- Quick Stats -->
@@ -1595,6 +1609,14 @@ async function loadUserData(uid) {
 
     userData = { ...snap.data(), uid };
 
+    // Banned account — sign out and show message
+    if (userData.banned) {
+      await signOut(auth);
+      showAuthScreen();
+      setTimeout(() => showToast('🚫 Tu cuenta ha sido suspendida. Contacta al soporte.', 'error'), 500);
+      return;
+    }
+
     // Compute claim status
     const cooldownMs = getCooldownMs();
     if (userData.last_bonus_claim) {
@@ -1956,55 +1978,51 @@ function setupMonetagSDK() {
   }
 }
 
+// Returns a Promise that resolves when ad is fully watched, rejects if skipped/closed
 function triggerMonetagAd() {
-  const enabled = String(settings?.monetag_enabled || userData?.monetag_enabled || '1');
-  if (enabled !== '1') {
-    console.log('Monetag ads disabled');
-    return;
-  }
-
-  // 1. Enlace Directo (Smartlink / Direct Link)
-  const link = (settings?.monetag_direct_link || userData?.monetag_direct_link || '').trim();
-  if (link) {
-    try { if (tg?.openLink) tg.openLink(link); else window.open(link, '_blank'); } catch(e) {}
-  }
-
-  // 2. Función SDK Monetag (ej: show_11881112)
-  let sdkFunc = (settings?.monetag_sdk_func || userData?.monetag_sdk_func || '').trim();
-  let zoneId  = (settings?.monetag_zone_id || userData?.monetag_zone_id || '').trim();
-
-  if (!sdkFunc) {
-    const rawUrl = (settings?.monetag_script_url || userData?.monetag_script_url || '');
-    const match = rawUrl.match(/(show_\d+)/i);
-    if (match) sdkFunc = match[1];
-  }
-  if (!sdkFunc && zoneId) sdkFunc = 'show_' + zoneId;
-  if (!sdkFunc) sdkFunc = 'show_11881112';
-
-  console.log('triggerMonetagAd invoked. Looking for function:', sdkFunc);
-
-  if (sdkFunc && typeof window[sdkFunc] === 'function') {
-    try {
-      window[sdkFunc]().then(() => {
-        console.log('Monetag ad watched successfully');
-      }).catch(err => console.error('Monetag ad promise error:', err));
-    } catch(e) { console.error('Monetag ad execution exception:', e); }
-  } else {
-    // Dynamic search for any show_XXXXX function created by Monetag on window
-    const dynamicFuncKey = Object.keys(window).find(k => /^show_\d+$/.test(k) && typeof window[k] === 'function');
-    if (dynamicFuncKey) {
-      console.log('Found dynamic Monetag function on window:', dynamicFuncKey);
-      try {
-        window[dynamicFuncKey]().then(() => {
-          console.log('Monetag ad watched via dynamic function');
-        }).catch(err => console.error('Monetag ad error:', err));
-      } catch(e) { console.error(e); }
-    } else if (typeof window.show_monetag_ad === 'function') {
-      try { window.show_monetag_ad(); } catch(e) {}
-    } else {
-      console.warn('Monetag SDK function not found on window. Target was:', sdkFunc);
+  return new Promise((resolve, reject) => {
+    const enabled = String(settings?.monetag_enabled || userData?.monetag_enabled || '1');
+    if (enabled !== '1') {
+      // Ads disabled — resolve immediately so claim proceeds
+      resolve();
+      return;
     }
-  }
+
+    // Direct link (Smartlink) — open in background, resolve after delay
+    const link = (settings?.monetag_direct_link || userData?.monetag_direct_link || '').trim();
+    if (link) {
+      try { if (tg?.openLink) tg.openLink(link); else window.open(link, '_blank'); } catch(e) {}
+    }
+
+    // SDK function (rewarded interstitial) — waits for user to complete ad
+    let sdkFunc = (settings?.monetag_sdk_func || userData?.monetag_sdk_func || '').trim();
+    const zoneId = (settings?.monetag_zone_id || userData?.monetag_zone_id || '').trim();
+
+    if (!sdkFunc) {
+      const rawUrl = (settings?.monetag_script_url || userData?.monetag_script_url || '');
+      const match = rawUrl.match(/(show_\d+)/i);
+      if (match) sdkFunc = match[1];
+    }
+    if (!sdkFunc && zoneId) sdkFunc = 'show_' + zoneId;
+    if (!sdkFunc) sdkFunc = 'show_11881112';
+
+    const fn = window[sdkFunc] || Object.keys(window)
+      .filter(k => /^show_\d+$/.test(k) && typeof window[k] === 'function')
+      .map(k => window[k])[0];
+
+    if (typeof fn === 'function') {
+      fn().then(() => {
+        console.log('Monetag ad watched — resolving claim');
+        resolve();
+      }).catch(err => {
+        console.warn('Monetag ad not completed:', err);
+        reject(new Error('AD_NOT_COMPLETED'));
+      });
+    } else {
+      console.warn('Monetag SDK not found — resolving claim anyway (dev mode)');
+      resolve(); // no SDK in dev — allow claim
+    }
+  });
 }
 
 // ─── Render User Data ─────────────────────────────────────
@@ -2119,11 +2137,21 @@ function updateClaimTimer() {
 window.handleClaim = async function() {
   const btn = document.getElementById('claimBtn');
   if (!btn.classList.contains('active') || !userData) return;
-  btn.style.pointerEvents = 'none';
 
-  triggerMonetagAd();
+  // — Banned check —
+  if (userData.banned) {
+    showClaimResult(false, '🚫 Tu cuenta ha sido suspendida. Contacta al soporte.');
+    return;
+  }
+
+  btn.style.pointerEvents = 'none';
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin claim-icon"></i><span class="claim-label">Cargando anuncio...</span>';
 
   try {
+    // STEP 1: Show ad and wait for completion
+    await triggerMonetagAd();
+
+    // STEP 2: Ad watched — credit the reward
     const uid        = userData.uid;
     const userRef    = doc(db, 'users', uid);
     const bonus      = settings.bonus_amount;
@@ -2135,6 +2163,8 @@ window.handleClaim = async function() {
       const snap = await tx.get(userRef);
       if (!snap.exists()) throw new Error('USER_NOT_FOUND');
       const data = snap.data();
+
+      if (data.banned) throw new Error('BANNED');
 
       if (data.last_bonus_claim) {
         const diffMs = now.getTime() - new Date(data.last_bonus_claim).getTime();
@@ -2167,10 +2197,7 @@ window.handleClaim = async function() {
     userData.can_claim       = false;
     claimCooldownRemaining   = getCooldownSecs();
 
-    btn.classList.add('flash');
-    setTimeout(() => btn.classList.remove('flash'), 500);
     tg?.HapticFeedback?.notificationOccurred('success');
-
     animateNumber('bigBalance',     newBalance, 3);
     animateNumber('profileBalance', newBalance, 3);
     animateNumber('qsBalance',      newBalance, 3);
@@ -2179,7 +2206,7 @@ window.handleClaim = async function() {
     document.getElementById('withdrawBalanceInfo').textContent     = newBalance.toFixed(3) + ' ARPA';
     document.getElementById('withdrawAvail').textContent          = newBalance.toFixed(3);
 
-    showToast(`⚡ +${bonus} ARPA reclamado!`, 'success');
+    showClaimResult(true, `+${bonus} ARPA acreditado`);
 
     setClaimCooldown();
     claimTimer = setInterval(() => {
@@ -2190,17 +2217,35 @@ window.handleClaim = async function() {
     }, 1000);
 
   } catch(err) {
-    if (err.message === 'COOLDOWN') {
+    btn.style.pointerEvents = '';
+    if (err.message === 'AD_NOT_COMPLETED') {
+      showClaimResult(false, 'No completaste el anuncio. Mira el anuncio completo para recibir tu recompensa.');
+    } else if (err.message === 'COOLDOWN') {
       showToast('⏳ Cooldown activo. Espera un momento.', 'info');
       setClaimCooldown();
+    } else if (err.message === 'BANNED') {
+      showClaimResult(false, '🚫 Cuenta suspendida. Contacta al soporte.');
     } else {
       console.error('Claim error:', err);
-      showToast('❌ Error al reclamar. Intenta de nuevo.', 'error');
+      showClaimResult(false, 'Error al procesar el claim. Intenta de nuevo.');
     }
   } finally {
     btn.style.pointerEvents = '';
+    btn.innerHTML = '<i class="fa-solid fa-bolt claim-icon"></i><span class="claim-amount" id="claimBtnAmount">+' + settings.bonus_amount + ' ARPA</span><span class="claim-label" id="claimBtnLabel">¡RECLAMAR!</span>';
   }
 };
+
+// ─── Claim Result Overlay ────────────────────────────────
+function showClaimResult(success, message) {
+  const el = document.getElementById('claimResultOverlay');
+  if (!el) return;
+  el.querySelector('.cr-icon').textContent  = success ? '⚡' : '❌';
+  el.querySelector('.cr-title').textContent = success ? '¡Claim Exitoso!' : 'Claim No Válido';
+  el.querySelector('.cr-msg').textContent   = message;
+  el.querySelector('.cr-icon').style.color  = success ? 'var(--green)' : '#ff5252';
+  el.style.display = 'flex';
+  setTimeout(() => { el.style.display = 'none'; }, success ? 3000 : 4000);
+}
 
 // ─── Withdrawal ───────────────────────────────────────────
 window.handleWithdraw = async function() {

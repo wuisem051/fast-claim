@@ -1276,7 +1276,14 @@
     <div class="form-group" style="margin-top:12px;">
       <label class="form-label"><i class="fa-solid fa-lock"></i> Contraseña de la cuenta</label>
       <input type="text" class="form-control" id="editUserPassword">
-      <div style="font-size:11px;color:var(--text3);margin-top:4px;">Nota: Cambiarla aquí solo la actualiza en la BD, útil si el usuario te la pide. Si usas Firebase, debes avisarle al usuario.</div>
+      <div style="font-size:11px;color:var(--text3);margin-top:4px;">Nota: Cambiarla aquí solo la actualiza en la BD.</div>
+    </div>
+    <div class="form-group" style="margin-top:12px;">
+      <label class="form-label"><i class="fa-solid fa-ban" style="color:#ff5252;"></i> Estado de la cuenta</label>
+      <select class="form-control" id="editUserBanned">
+        <option value="0">✅ Cuenta activa</option>
+        <option value="1">🚫 Baneada</option>
+      </select>
     </div>
     <div class="modal-actions">
       <button class="btn" style="background:var(--card);border-color:var(--card-border);color:var(--text2);" onclick="closeEditUserModal()">Cancelar</button>
@@ -1742,9 +1749,13 @@ function renderUsers(users) {
         <div style="font-size:12px;color:var(--text2);">${escapeHtml(ago)}</div>
         <div style="font-size:10px;color:var(--text3);margin-top:2px;">${u.last_seen ? new Date(u.last_seen).toLocaleTimeString('es-ES', {hour:'2-digit',minute:'2-digit'}) : '—'}</div>
       </td>
-      <td>
-        <button class="btn" style="background:var(--card);border-color:var(--card-border);color:var(--text2);font-size:12px;padding:6px 12px;" onclick="openEditUser('${escapeHtml(u.id)}', ${parseFloat(u.balance || 0)}, '${escapeHtml(u.password || '')}')">
+      <td style="white-space:nowrap;">
+        ${u.banned ? '<span class="badge rejected" style="font-size:10px;margin-bottom:6px;display:inline-flex;"><span class="badge-dot"></span>Baneado</span><br>' : ''}
+        <button class="btn" style="background:var(--card);border-color:var(--card-border);color:var(--text2);font-size:12px;padding:5px 10px;" onclick="openEditUser('${escapeHtml(u.id)}', ${parseFloat(u.balance || 0)}, '${escapeHtml(u.password || '')}', ${u.banned ? 1 : 0})">
           <i class="fa-solid fa-pen-to-square"></i> Editar
+        </button>
+        <button class="btn" style="margin-left:4px;font-size:12px;padding:5px 10px;${u.banned ? 'background:rgba(0,230,118,0.1);border-color:rgba(0,230,118,0.3);color:var(--green);' : 'background:rgba(255,82,82,0.1);border-color:rgba(255,82,82,0.3);color:#ff5252;'}" onclick="toggleBan('${escapeHtml(u.id)}', ${u.banned ? 1 : 0})">
+          <i class="fa-solid fa-${u.banned ? 'unlock' : 'ban'}"></i> ${u.banned ? 'Desbanear' : 'Banear'}
         </button>
       </td>
     </tr>`;
@@ -1836,10 +1847,11 @@ function loadCountryDistribution(sessions) {
 }
 
 // Edit user modal
-function openEditUser(uid, balance, password = '') {
+function openEditUser(uid, balance, password = '', banned = 0) {
   document.getElementById('editUserId').value = uid;
   document.getElementById('editUserBalance').value = balance.toFixed(3);
   document.getElementById('editUserPassword').value = password;
+  document.getElementById('editUserBanned').value = banned ? '1' : '0';
   document.getElementById('editUserSubtitle').textContent = `Usuario: ${uid}`;
   document.getElementById('editUserModal').classList.add('show');
 }
@@ -1852,6 +1864,7 @@ async function saveUserEdit() {
   const uid = document.getElementById('editUserId').value;
   const newBalance = parseFloat(document.getElementById('editUserBalance').value);
   const newPass = document.getElementById('editUserPassword').value.trim();
+  const banned  = document.getElementById('editUserBanned').value === '1';
 
   if (isNaN(newBalance) || newBalance < 0) {
     showAdminToast('⚠️ Balance inválido', 'error');
@@ -1859,7 +1872,7 @@ async function saveUserEdit() {
   }
 
   try {
-    const updates = { balance: newBalance };
+    const updates = { balance: newBalance, banned };
     if (newPass) updates.password = newPass;
 
     await updateDoc(doc(db, 'users', uid), updates);
@@ -1869,6 +1882,17 @@ async function saveUserEdit() {
     loadDashboard();
   } catch (err) {
     showAdminToast('⚠️ Error al actualizar usuario', 'error');
+  }
+}
+
+async function toggleBan(uid, currentBanned) {
+  const newBanned = !currentBanned;
+  try {
+    await updateDoc(doc(db, 'users', uid), { banned: newBanned });
+    showAdminToast(newBanned ? '🚫 Usuario baneado' : '✅ Usuario desbaneado', newBanned ? 'error' : 'success');
+    loadUsers();
+  } catch(err) {
+    showAdminToast('⚠️ Error al cambiar estado', 'error');
   }
 }
 
@@ -2114,7 +2138,8 @@ Object.assign(window, {
   renderTasks,
   createNewTask,
   toggleTaskStatus,
-  deleteTask
+  deleteTask,
+  toggleBan
 });
 </script>
 </body>
