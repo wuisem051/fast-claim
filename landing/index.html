@@ -1,0 +1,361 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>FastClaim — Gana ARPA & USDT Gratis Cada Hora</title>
+  <meta name="description" content="Descubre FastClaim: La aplicación y Telegram Mini App donde ganas criptomonedas ARPA y USDT sin inversión previa con bonus horarios y referidos.">
+
+  <!-- Open Graph / Meta -->
+  <meta property="og:type" content="website">
+  <meta property="og:title" content="FastClaim — Gana ARPA & USDT Gratis Cada Hora">
+  <meta property="og:description" content="Reclama bonos cada hora, comparte con amigos y retira directo a tu wallet BEP-20 o TON. ¡Empieza hoy mismo!">
+  <meta property="og:image" content="./assets/img/mockup-dashboard.jpg">
+
+  <!-- Fonts & Icons -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
+
+  <link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+  <!-- Ambient Light Orbs -->
+  <div class="bg-glow-orb orb-1"></div>
+  <div class="bg-glow-orb orb-2"></div>
+
+  <!-- Header / Navigation -->
+  <header class="navbar">
+    <div class="container nav-container">
+      <a href="#" class="brand-logo">
+        <div class="brand-icon">
+          <i class="fa-solid fa-bolt"></i>
+        </div>
+        <span>Fast<span class="text-gradient">Claim</span></span>
+      </a>
+
+      <ul class="nav-links">
+        <li><a href="#como-funciona">Cómo Funciona</a></li>
+        <li><a href="#ganancias">Calculadora</a></li>
+        <li><a href="#pasos">Cómo Registrarte</a></li>
+        <li><a href="#capturas">Vistas de la App</a></li>
+      </ul>
+
+      <div class="nav-actions">
+        <a href="#comenzar" class="btn btn-secondary open-access-modal" id="btnNavWeb">
+          <i class="fa-solid fa-globe"></i> Web App
+        </a>
+        <a href="#comenzar" class="btn btn-primary open-access-modal" id="btnNavTelegram">
+          <i class="fa-brands fa-telegram"></i> Abrir en Telegram
+        </a>
+      </div>
+    </div>
+  </header>
+
+  <!-- Hero Section -->
+  <section class="hero" id="inicio">
+    <div class="container hero-grid">
+      <div class="hero-content">
+        <div class="badge">
+          <span class="badge-pulse"></span>
+          <span>¡Sin inversión requerida • 100% Gratis!</span>
+        </div>
+
+        <h1 class="hero-title">
+          Gana criptomonedas <span class="text-gradient">ARPA & USDT</span> en minutos
+        </h1>
+
+        <p class="hero-description">
+          FastClaim te premia cada hora por solo dar un toque. Reclama bonos gratis en ARPA, invita a tus amigos y transfiere tus ganancias instantáneamente a tu wallet personal. Disponible en navegador web o Telegram Mini App.
+        </p>
+
+        <div class="hero-cta-group">
+          <button class="btn btn-primary btn-lg open-access-modal" id="heroBtnStart">
+            <i class="fa-solid fa-rocket"></i> Empezar a Ganar Ahora
+          </button>
+          <a href="#pasos" class="btn btn-secondary btn-lg" id="heroBtnHow">
+            <i class="fa-solid fa-circle-play"></i> Ver Cómo Funciona
+          </a>
+        </div>
+
+        <div class="hero-stats">
+          <div class="stat-item">
+            <h3>+0.5 ARPA</h3>
+            <p>Bono gratis cada hora</p>
+          </div>
+          <div class="stat-item">
+            <h3>1.0 ARPA</h3>
+            <p>Por cada amigo invitado</p>
+          </div>
+          <div class="stat-item">
+            <h3>Instantáneo</h3>
+            <p>Retiros a tu wallet</p>
+          </div>
+        </div>
+      </div>
+
+      <!-- Hero Mockup Showcase -->
+      <div class="hero-mockup-wrapper">
+        <div class="mockup-frame">
+          <img src="./assets/img/mockup-dashboard.jpg" alt="FastClaim Dashboard App Interfaz" loading="eager">
+        </div>
+
+        <div class="floating-badge badge-claim">
+          <div class="floating-icon green">
+            <i class="fa-solid fa-gift"></i>
+          </div>
+          <div class="floating-text">
+            <h4>+0.5 ARPA Reclamado</h4>
+            <p>Acreditado a tu balance</p>
+          </div>
+        </div>
+
+        <div class="floating-badge badge-withdraw">
+          <div class="floating-icon purple">
+            <i class="fa-solid fa-circle-check"></i>
+          </div>
+          <div class="floating-text">
+            <h4>Retiro Completado</h4>
+            <p>Directo a BEP-20 / TON</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section: Features / ¿Qué es FastClaim? -->
+  <section class="section" id="como-funciona">
+    <div class="container">
+      <div class="section-header">
+        <div class="badge">Beneficios Destacados</div>
+        <h2 class="section-title">¿Por qué miles de usuarios usan FastClaim?</h2>
+        <p class="section-desc">
+          Una plataforma transparente, rápida y sin letra pequeña para acumular ARPA token y retirar en USDT.
+        </p>
+      </div>
+
+      <div class="features-grid">
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fa-solid fa-clock-rotate-left"></i>
+          </div>
+          <h3>Bonus Cada Hora</h3>
+          <p>
+            Entra cada 60 minutos, presiona el botón de reclamo y suma tokens directamente a tu saldo sin gastar un centavo.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fa-solid fa-user-group"></i>
+          </div>
+          <h3>Sistema de Referidos</h3>
+          <p>
+            Multiplica tus ganancias compartiendo tu link exclusivo. Recibe 1.0 ARPA por cada nuevo amigo activo que se registre.
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fa-solid fa-wallet"></i>
+          </div>
+          <h3>Retiros Rápidos & Seguros</h3>
+          <p>
+            Al alcanzar el mínimo de retiro (10 ARPA), solicita tu pago a cualquier wallet compatible (BEP-20 o red TON).
+          </p>
+        </div>
+
+        <div class="feature-card">
+          <div class="feature-icon">
+            <i class="fa-solid fa-mobile-screen-button"></i>
+          </div>
+          <h3>Uso Dual: Web & Telegram</h3>
+          <p>
+            Úsalo desde cualquier navegador web moderno o intégrate directamente desde Telegram sin descargar pesados archivos APK.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section: Earnings Calculator -->
+  <section class="section" id="ganancias">
+    <div class="container">
+      <div class="section-header">
+        <div class="badge">Calcula tus ganancias</div>
+        <h2 class="section-title">¿Cuánto puedes llegar a ganar?</h2>
+        <p class="section-desc">
+          Mueve los controles para simular tu potencial de acumulación mensual de tokens ARPA y su valor en USDT.
+        </p>
+      </div>
+
+      <div class="calc-card">
+        <div class="calc-grid">
+          <div class="calc-inputs">
+            <div class="calc-control">
+              <div class="calc-control-header">
+                <span>Reclamos por día:</span>
+                <span class="calc-value"><span id="claimsVal">6</span> claims</span>
+              </div>
+              <input type="range" class="calc-slider" id="claimsPerDay" min="1" max="24" value="6">
+            </div>
+
+            <div class="calc-control">
+              <div class="calc-control-header">
+                <span>Amigos referidos al mes:</span>
+                <span class="calc-value"><span id="refsVal">15</span> amigos</span>
+              </div>
+              <input type="range" class="calc-slider" id="referralsPerMonth" min="0" max="100" value="15">
+            </div>
+
+            <p style="font-size: 0.85rem; color: var(--text-muted); margin-top: 10px;">
+              * Cálculos basados en 0.5 ARPA/claim + 1.0 ARPA/referido con cotización estimada de ARPA/USDT.
+            </p>
+          </div>
+
+          <div class="calc-result-box">
+            <span class="result-total-label">Ganancia mensual estimada</span>
+            <span class="result-total-amount" id="totalArpa">+105.0 ARPA</span>
+            <span class="result-usd-equiv" id="totalUsdt">≈ $10.50 USDT</span>
+            <button class="btn btn-primary open-access-modal" style="margin-top: 10px;" id="btnCalcJoin">
+              ¡Comenzar a Acumular!
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section: Step by Step Guide -->
+  <section class="section" id="pasos">
+    <div class="container">
+      <div class="section-header">
+        <div class="badge">Proceso Simple</div>
+        <h2 class="section-title">Solo 3 pasos para empezar</h2>
+        <p class="section-desc">
+          Empezar a ganar en FastClaim toma menos de 30 segundos. Sin verificaciones tediosas.
+        </p>
+      </div>
+
+      <div class="steps-container">
+        <div class="step-box">
+          <div class="step-number">1</div>
+          <h3>1. Abre la App</h3>
+          <p>
+            Haz clic en "Usar en Web" o inicia la Mini App de Telegram. Si entras por Telegram, tu perfil se sincroniza en automático.
+          </p>
+        </div>
+
+        <div class="step-box">
+          <div class="step-number">2</div>
+          <h3>2. Reclama tu Bono</h3>
+          <p>
+            Toca el botón principal de claim en tu pantalla de inicio y recibe inmediatamente tus primeros tokens gratis.
+          </p>
+        </div>
+
+        <div class="step-box">
+          <div class="step-number">3</div>
+          <h3>3. Retira tus Fondos</h3>
+          <p>
+            Pega tu dirección de billetera favorita (TrustWallet, Binance, Tonkeeper, etc.) y confirma tu retiro con un clic.
+          </p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Section: App Mockups Gallery -->
+  <section class="section" id="capturas">
+    <div class="container">
+      <div class="section-header">
+        <div class="badge">Vistas Reales</div>
+        <h2 class="section-title">Conoce la Interfaz de FastClaim</h2>
+        <p class="section-desc">
+          Diseñada para ser ultra intuitiva, rápida y agradable a la vista con tema oscuro moderno.
+        </p>
+      </div>
+
+      <div class="gallery-grid">
+        <div class="gallery-card">
+          <div class="gallery-img-container">
+            <img src="./assets/img/mockup-dashboard.jpg" alt="Pantalla de Balance y Reclamo">
+          </div>
+          <h4>Panel Principal & Reclamo</h4>
+          <p>Observa tu saldo en tiempo real, activa tus bonos horarios y monitorea la cotización del token.</p>
+        </div>
+
+        <div class="gallery-card">
+          <div class="gallery-img-container">
+            <img src="./assets/img/mockup-withdraw.jpg" alt="Pantalla de Retiro de Fondos">
+          </div>
+          <h4>Módulo de Retiro Instantáneo</h4>
+          <p>Solicita tus pagos a redes seguras (BEP-20 / TON) y revisa el historial verificado de transacciones.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA Banner Section -->
+  <section class="section" id="comenzar" style="padding-top: 20px;">
+    <div class="container">
+      <div class="calc-card" style="text-align: center; max-width: 800px; padding: 60px 30px;">
+        <h2 style="font-size: 2.4rem; margin-bottom: 16px;">¿Listo para empezar a ganar hoy?</h2>
+        <p style="color: var(--text-muted); font-size: 1.1rem; max-width: 580px; margin: 0 auto 32px;">
+          Únete a la comunidad de FastClaim y empieza a acumular criptomonedas gratis en solo un par de clics.
+        </p>
+        <div style="display: flex; gap: 16px; justify-content: center; flex-wrap: wrap;">
+          <button class="btn btn-primary btn-lg open-access-modal" id="ctaBtnMain">
+            <i class="fa-solid fa-play"></i> Iniciar FastClaim Ahora
+          </button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- Footer -->
+  <footer class="footer">
+    <div class="container footer-bottom">
+      <div>
+        <strong>FastClaim</strong> © 2026. Todos los derechos reservados.
+      </div>
+      <div>
+        Página de Aterrizaje Oficial para la App & Web
+      </div>
+    </div>
+  </footer>
+
+  <!-- Modal: Access Options (Web or Telegram) -->
+  <div class="modal-overlay" id="accessModal">
+    <div class="modal-box">
+      <button class="modal-close" id="closeModal" aria-label="Cerrar modal">&times;</button>
+      <h3 style="font-size: 1.4rem; font-weight: 800; margin-bottom: 8px;">¿Cómo deseas acceder?</h3>
+      <p style="color: var(--text-muted); font-size: 0.95rem;">
+        Selecciona tu método preferido para ingresar a FastClaim:
+      </p>
+
+      <div class="access-options">
+        <a href="../index.html" class="access-btn" id="modalLinkWeb">
+          <i class="fa-solid fa-window-maximize" style="color: var(--accent-cyan);"></i>
+          <div class="access-btn-info">
+            <h4>Abrir Versión Web</h4>
+            <p>Úsala en cualquier navegador de PC o móvil al instante</p>
+          </div>
+        </a>
+
+        <a href="https://t.me" target="_blank" rel="noopener noreferrer" class="access-btn" id="modalLinkTelegram">
+          <i class="fa-brands fa-telegram" style="color: #24A1DE;"></i>
+          <div class="access-btn-info">
+            <h4>Abrir en Telegram Mini App</h4>
+            <p>Accede con tu cuenta de Telegram sin contraseñas</p>
+          </div>
+        </a>
+      </div>
+    </div>
+  </div>
+
+  <script src="main.js"></script>
+</body>
+</html>

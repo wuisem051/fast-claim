@@ -1,0 +1,20 @@
+{
+  "name": "fastclaim-landing",
+  "version": "1.0.0",
+  "description": "Pagina web de aterrizaje oficial de FastClaim - Gana ARPA USDT gratis, bonus horarios y referidos",
+  "main": "index.html",
+  "scripts": {
+    "start": "serve . -p 8080",
+    "build": "echo 'Landing page ready for Netlify deployment'"
+  },
+  "keywords": [
+    "fastclaim",
+    "arpa",
+    "usdt",
+    "crypto",
+    "landing-page",
+    "telegram-miniapp"
+  ],
+  "author": "FastClaim Team",
+  "license": "MIT"
+}
