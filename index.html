@@ -1212,15 +1212,19 @@
 
         <div class="form-group">
           <label class="form-label">Método de Retiro</label>
-          <select id="withdrawMethod" class="form-input" style="background-color: #0e0e24; color: #ffffff; cursor: pointer;" onchange="document.getElementById('walletInput').placeholder = this.value === 'Binance Pay' ? 'Ej: 123456789 (Tu Pay ID)' : '0x... o T... (dirección de wallet)';">
-            <option value="Wallet" style="background-color: #141432; color: #ffffff;">Dirección de Wallet ARPA / USDT</option>
-            <option value="Binance Pay" style="background-color: #141432; color: #ffffff;">ID de Binance Pay</option>
+          <select id="withdrawMethod" class="form-input" style="background-color: #0e0e24; color: #ffffff; cursor: pointer;" onchange="window.onWithdrawMethodChange(this.value)">
+            <option value="BSC (BEP20)" style="background-color: #141432; color: #ffffff;">Dirección Wallet (Red BSC - BNB Smart Chain BEP20)</option>
+            <option value="Binance Pay" style="background-color: #141432; color: #ffffff;">ID de Binance Pay (Recomendado)</option>
           </select>
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="walletInput">Dirección o Binance Pay ID</label>
-          <input type="text" id="walletInput" class="form-input" placeholder="0x... o T... (dirección de wallet)">
+          <label class="form-label" id="walletInputLabel" for="walletInput">Dirección de Wallet (Red BSC / BEP20)</label>
+          <input type="text" id="walletInput" class="form-input" placeholder="0x... (Tu dirección ARPA o USDT en red BSC)">
+          <div id="networkWarningBox" style="margin-top:6px;padding:10px 12px;border-radius:10px;background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.25);font-size:11px;color:#fbbf24;display:flex;align-items:flex-start;gap:8px;">
+            <i class="fa-solid fa-triangle-exclamation" style="font-size:14px;flex-shrink:0;margin-top:1px;"></i>
+            <span><strong>IMPORTANTE:</strong> La dirección debe ser en la red <strong>BSC (BNB Smart Chain BEP-20)</strong>. Si usas otra red los fondos se perderán.</span>
+          </div>
         </div>
 
         <div class="form-group">
@@ -2357,18 +2361,45 @@ function showClaimResult(success, message) {
 }
 
 // ─── Withdrawal ───────────────────────────────────────────
+window.onWithdrawMethodChange = function(val) {
+  const input = document.getElementById('walletInput');
+  const label = document.getElementById('walletInputLabel');
+  const warning = document.getElementById('networkWarningBox');
+  if (val === 'Binance Pay') {
+    if (label) label.textContent = 'ID de Binance Pay';
+    if (input) input.placeholder = 'Ej: 123456789 (Tu Binance Pay ID)';
+    if (warning) {
+      warning.style.background = 'rgba(99,102,241,0.12)';
+      warning.style.borderColor = 'rgba(99,102,241,0.3)';
+      warning.style.color = 'var(--accent2)';
+      warning.innerHTML = '<i class="fa-solid fa-circle-info" style="font-size:14px;flex-shrink:0;margin-top:1px;"></i><span><strong>Binance Pay:</strong> Ingresa tu Pay ID numérico de Binance (transferencia instantánea y sin comisiones).</span>';
+    }
+  } else {
+    if (label) label.textContent = 'Dirección de Wallet (Red BSC / BEP20)';
+    if (input) input.placeholder = '0x... (Tu dirección ARPA o USDT en red BSC)';
+    if (warning) {
+      warning.style.background = 'rgba(245,158,11,0.12)';
+      warning.style.borderColor = 'rgba(245,158,11,0.25)';
+      warning.style.color = '#fbbf24';
+      warning.innerHTML = '<i class="fa-solid fa-triangle-exclamation" style="font-size:14px;flex-shrink:0;margin-top:1px;"></i><span><strong>IMPORTANTE:</strong> La dirección debe ser en la red <strong>BSC (BNB Smart Chain BEP-20)</strong>. Si usas otra red los fondos se perderán.</span>';
+    }
+  }
+};
+
 window.handleWithdraw = async function() {
   const method = document.getElementById('withdrawMethod').value;
   const rawWallet = document.getElementById('walletInput').value.trim();
   const amount = parseFloat(document.getElementById('amountInput').value);
   const btn    = document.getElementById('withdrawBtn');
 
-  if (!rawWallet || rawWallet.length < 5) return showToast('⚠️ Dirección o ID inválido', 'error');
+  if (!rawWallet || rawWallet.length < 5) {
+    return showToast(method === 'Binance Pay' ? '⚠️ Ingresa tu Binance Pay ID válido' : '⚠️ Ingresa una dirección BSC BEP20 válida', 'error');
+  }
   if (isNaN(amount) || amount <= 0)  return showToast('⚠️ Ingresa un monto válido', 'error');
   if (amount < settings.min_withdraw) return showToast(`⚠️ Mínimo ${settings.min_withdraw} ARPA`, 'error');
   if (amount > (userData?.balance || 0)) return showToast('❌ Balance insuficiente', 'error');
 
-  const wallet = `[${method}] ${rawWallet}`;
+  const formattedWallet = method === 'Binance Pay' ? `[Binance Pay] ${rawWallet}` : `[BSC (BEP20)] ${rawWallet}`;
 
   btn.disabled = true;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Procesando...';
@@ -2391,7 +2422,9 @@ window.handleWithdraw = async function() {
       username:      userData.username,
       first_name:    userData.first_name,
       amount,
-      wallet_address: wallet,
+      method:        method,
+      wallet_address: formattedWallet,
+      raw_address:   rawWallet,
       status:        'pending',
       note:          '',
       created_at:    new Date().toISOString(),

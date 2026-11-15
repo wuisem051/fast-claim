@@ -1453,9 +1453,14 @@
   <div class="modal">
     <h2 class="modal-title" id="modalTitle">Procesar Retiro</h2>
     <p class="modal-subtitle" id="modalSubtitle">Agrega una nota opcional para este retiro</p>
+    <div id="modalPayDetails" style="margin:16px 0;padding:14px;border-radius:var(--radius-sm);background:rgba(255,255,255,0.03);border:1px solid var(--card-border);text-align:left;">
+      <div style="font-size:11px;color:var(--text3);text-transform:uppercase;font-weight:700;letter-spacing:0.5px;">Destino de Pago:</div>
+      <div id="modalPayAddress" style="margin-top:6px;"></div>
+      <div id="modalPayAmount" style="font-size:13px;color:var(--green);font-weight:700;margin-top:6px;"></div>
+    </div>
     <div class="form-group">
       <label class="form-label"><i class="fa-solid fa-pen"></i> Nota (opcional)</label>
-      <input type="text" class="form-control" id="modalNoteInput" placeholder="Ej: Pago procesado vía TonKeeper">
+      <input type="text" class="form-control" id="modalNoteInput" placeholder="Ej: Pago procesado exitosamente">
     </div>
     <div class="modal-actions">
       <button class="btn" style="background:var(--card);border-color:var(--card-border);color:var(--text2);" onclick="closeModal()">Cancelar</button>
@@ -1683,7 +1688,9 @@ async function loadDashboard() {
     if (recent.length === 0) {
       tbody.innerHTML = '<tr><td colspan="6" class="empty-row"><i class="fa-regular fa-folder-open"></i><p>No hay retiros</p></td></tr>';
     } else {
-      tbody.innerHTML = recent.map(w => `
+      tbody.innerHTML = recent.map(w => {
+        const info = parseWalletInfo(w.wallet_address);
+        return `
         <tr>
           <td class="mono">#${w.id.substring(0,6)}</td>
           <td>
@@ -1696,15 +1703,59 @@ async function loadDashboard() {
             </div>
           </td>
           <td style="font-weight:700;color:var(--text);">${parseFloat(w.amount).toFixed(3)}</td>
-          <td class="mono" title="${escapeHtml(w.wallet_address)}">${truncateWallet(w.wallet_address)}</td>
+          <td>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span class="badge" style="font-size:10px;padding:2px 6px;${info.isBinance ? 'background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);' : 'background:rgba(99,102,241,0.15);color:var(--accent2);border:1px solid rgba(99,102,241,0.3);'}">
+                ${info.isBinance ? '<i class="fa-solid fa-bolt"></i> Binance Pay' : '<i class="fa-solid fa-link"></i> BSC BEP20'}
+              </span>
+              <span class="mono" style="font-size:11px;font-weight:700;color:var(--text);word-break:break-all;">${escapeHtml(info.address)}</span>
+              <button class="btn" style="padding:2px 6px;font-size:10px;background:var(--card);border-color:var(--card-border);color:var(--text2);" onclick="copyAddress('${escapeHtml(info.address)}', '${info.method}')">
+                <i class="fa-solid fa-copy"></i>
+              </button>
+            </div>
+          </td>
           <td><span class="badge ${w.status}"><span class="badge-dot"></span> ${statusLabel(w.status)}</span></td>
           <td class="mono">${formatDate(w.created_at)}</td>
         </tr>
-      `).join('');
+      `;
+      }).join('');
     }
 
   } catch (err) {
     console.error('Dashboard error:', err);
+  }
+}
+
+// ─── Wallet Helper & Parser ───────────────────────────────
+function parseWalletInfo(raw) {
+  if (!raw) return { method: 'Red BSC (BEP-20)', address: '—', isBinance: false };
+  let str = String(raw).trim();
+  let method = 'Red BSC (BEP-20)';
+  let isBinance = false;
+
+  if (str.toLowerCase().includes('binance')) {
+    method = 'Binance Pay';
+    isBinance = true;
+    str = str.replace(/\[Binance Pay\]/gi, '').replace(/\[Binance\]/gi, '').trim();
+  } else {
+    method = 'Red BSC (BEP-20)';
+    isBinance = false;
+    str = str.replace(/\[Wallet\]/gi, '').replace(/\[BSC \(BEP20\)\]/gi, '').replace(/\[BEP-20 BSC\]/gi, '').replace(/\[BSC BEP-20\]/gi, '').replace(/\[BSC\]/gi, '').trim();
+  }
+
+  return { method, address: str, isBinance };
+}
+
+function copyAddress(addr, label = 'Dirección') {
+  if (!addr || addr === '—') return;
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(addr).then(() => {
+      showAdminToast(`📋 ${label} copiado: ${addr}`, 'success');
+    }).catch(() => {
+      showAdminToast(`Copiado: ${addr}`, 'info');
+    });
+  } else {
+    showAdminToast(`Destino: ${addr}`, 'info');
   }
 }
 
@@ -1740,7 +1791,14 @@ function renderWithdrawals() {
     return;
   }
 
-  tbody.innerHTML = filtered.map(w => `
+  tbody.innerHTML = filtered.map(w => {
+    const info = parseWalletInfo(w.wallet_address);
+    const badgeStyle = info.isBinance
+      ? 'background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);'
+      : 'background:rgba(99,102,241,0.15);color:var(--accent2);border:1px solid rgba(99,102,241,0.3);';
+    const icon = info.isBinance ? 'fa-solid fa-bolt' : 'fa-solid fa-link';
+
+    return `
     <tr>
       <td class="mono">#${w.id.substring(0,6)}</td>
       <td>
@@ -1752,8 +1810,22 @@ function renderWithdrawals() {
           </div>
         </div>
       </td>
-      <td style="font-weight:700;color:var(--text);">${parseFloat(w.amount).toFixed(3)}</td>
-      <td class="mono" title="${escapeHtml(w.wallet_address)}">${truncateWallet(w.wallet_address)}</td>
+      <td style="font-weight:700;color:var(--text);font-size:14px;">${parseFloat(w.amount).toFixed(3)} ARPA</td>
+      <td>
+        <div style="display:flex;flex-direction:column;gap:5px;min-width:200px;">
+          <div style="display:flex;align-items:center;gap:6px;">
+            <span class="badge" style="${badgeStyle}font-size:10px;padding:3px 8px;">
+              <i class="${icon}"></i> ${info.method}
+            </span>
+            <button class="btn" style="padding:2px 8px;font-size:10px;background:var(--card);border-color:var(--card-border);color:var(--text2);" onclick="copyAddress('${escapeHtml(info.address)}', '${info.method}')" title="Copiar destino de pago">
+              <i class="fa-solid fa-copy"></i> Copiar
+            </button>
+          </div>
+          <span class="mono" style="font-size:12px;font-weight:700;color:var(--text);user-select:all;word-break:break-all;">
+            ${escapeHtml(info.address)}
+          </span>
+        </div>
+      </td>
       <td><span class="badge ${w.status}"><span class="badge-dot"></span> ${statusLabel(w.status)}</span></td>
       <td class="mono" style="max-width:120px;overflow:hidden;text-overflow:ellipsis;">${escapeHtml(w.note || '—')}</td>
       <td class="mono">${formatDate(w.created_at)}</td>
@@ -1766,20 +1838,49 @@ function renderWithdrawals() {
         ` : `<span class="mono" style="font-size:11px;">${w.processed_at ? formatDate(w.processed_at) : '—'}</span>`}
       </td>
     </tr>
-  `).join('');
+  `;
+  }).join('');
 }
 
 // Withdrawal modal
 function openWithdrawalModal(id, action) {
   modalWithdrawalId = id;
   modalAction = action;
+  const w = allWithdrawals.find(x => x.id === id);
+  const info = w ? parseWalletInfo(w.wallet_address) : { method: '—', address: '—', isBinance: false };
+
   document.getElementById('modalTitle').textContent = action === 'approved' ? '✅ Aprobar Retiro' : '❌ Rechazar Retiro';
-  document.getElementById('modalSubtitle').textContent = `Retiro #${id.substring(0,6)} — ${action === 'approved' ? 'Se marcará como aprobado' : 'Se rechazará y se devolverá el balance'}`;
-  document.getElementById('modalNoteInput').value = '';
+  document.getElementById('modalSubtitle').textContent = `Retiro #${id.substring(0,6)} — ${action === 'approved' ? 'Verifica el pago antes de confirmar' : 'Se devolverá el balance al usuario'}`;
+
+  const payAddrEl = document.getElementById('modalPayAddress');
+  const payAmtEl = document.getElementById('modalPayAmount');
+  if (payAddrEl && w) {
+    const badgeStyle = info.isBinance
+      ? 'background:rgba(245,158,11,0.15);color:#f59e0b;border:1px solid rgba(245,158,11,0.3);'
+      : 'background:rgba(99,102,241,0.15);color:var(--accent2);border:1px solid rgba(99,102,241,0.3);';
+    payAddrEl.innerHTML = `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;">
+        <span class="badge" style="${badgeStyle}font-size:11px;">
+          ${info.isBinance ? '<i class="fa-solid fa-bolt"></i> Binance Pay' : '<i class="fa-solid fa-link"></i> Red BSC (BNB Smart Chain BEP-20)'}
+        </span>
+        <button class="btn" style="padding:3px 8px;font-size:11px;background:var(--card);border-color:var(--card-border);color:var(--text2);" onclick="copyAddress('${escapeHtml(info.address)}', '${info.method}')">
+          <i class="fa-solid fa-copy"></i> Copiar ${info.isBinance ? 'Pay ID' : 'Dirección'}
+        </button>
+      </div>
+      <div class="mono" style="font-size:13px;font-weight:700;color:#fff;word-break:break-all;user-select:all;padding:8px 10px;background:rgba(0,0,0,0.3);border-radius:8px;border:1px solid var(--card-border);">
+        ${escapeHtml(info.address)}
+      </div>
+    `;
+  }
+  if (payAmtEl && w) {
+    payAmtEl.textContent = `Monto a pagar: ${parseFloat(w.amount).toFixed(3)} ARPA`;
+  }
+
+  document.getElementById('modalNoteInput').value = action === 'approved' ? 'Pago procesado exitosamente' : '';
   document.getElementById('modalConfirmBtn').className = action === 'approved' ? 'btn btn-approve' : 'btn btn-reject';
   document.getElementById('modalConfirmBtn').innerHTML = action === 'approved'
-    ? '<i class="fa-solid fa-check"></i> Aprobar'
-    : '<i class="fa-solid fa-xmark"></i> Rechazar';
+    ? '<i class="fa-solid fa-check"></i> Aprobar y Confirmar'
+    : '<i class="fa-solid fa-xmark"></i> Rechazar Retiro';
   document.getElementById('noteModal').classList.add('show');
 }
 
@@ -2629,6 +2730,8 @@ Object.assign(window, {
   filterWithdrawals,
   renderWithdrawals,
   openWithdrawalModal,
+  copyAddress,
+  parseWalletInfo,
   closeModal,
   confirmModalAction,
   loadUsers,
