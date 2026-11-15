@@ -667,6 +667,18 @@
     .form-input::placeholder { color: var(--text3); }
     .form-input:focus { border-color: rgba(0,152,234,0.5); }
 
+    select.form-input {
+      background-color: #0e0e24;
+      color: #f0f0ff;
+      cursor: pointer;
+    }
+    select.form-input option {
+      background-color: #141432;
+      color: #ffffff;
+      padding: 12px 16px;
+      font-size: 14px;
+    }
+
     .balance-hint {
       font-size: 11px;
       color: var(--text2);
@@ -1200,9 +1212,9 @@
 
         <div class="form-group">
           <label class="form-label">Método de Retiro</label>
-          <select id="withdrawMethod" class="form-input" onchange="document.getElementById('walletInput').placeholder = this.value === 'Binance Pay' ? 'Ej: 123456789 (Tu Pay ID)' : '0x... o T... (dirección de wallet)';">
-            <option value="Wallet">Dirección de Wallet ARPA / USDT</option>
-            <option value="Binance Pay">ID de Binance Pay</option>
+          <select id="withdrawMethod" class="form-input" style="background-color: #0e0e24; color: #ffffff; cursor: pointer;" onchange="document.getElementById('walletInput').placeholder = this.value === 'Binance Pay' ? 'Ej: 123456789 (Tu Pay ID)' : '0x... o T... (dirección de wallet)';">
+            <option value="Wallet" style="background-color: #141432; color: #ffffff;">Dirección de Wallet ARPA / USDT</option>
+            <option value="Binance Pay" style="background-color: #141432; color: #ffffff;">ID de Binance Pay</option>
           </select>
         </div>
 
