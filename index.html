@@ -2444,6 +2444,39 @@ async function loadWithdrawalHistory() {
 // ─── Tasks ────────────────────────────────────────────────
 let allUserTasks = [];
 let currentTaskFilter = 'all';
+let taskTimerInterval = null;
+
+function formatRemainingTime(ms) {
+  const totalSeconds = Math.max(0, Math.floor(ms / 1000));
+  const mins = Math.floor(totalSeconds / 60);
+  const secs = totalSeconds % 60;
+  if (mins <= 0) return `${secs}s`;
+  if (secs === 0) return `${mins} minutos`;
+  return `${mins}m ${secs}s`;
+}
+
+function startTaskTimer() {
+  if (taskTimerInterval) clearInterval(taskTimerInterval);
+  taskTimerInterval = setInterval(() => {
+    let reloadNeeded = false;
+    document.querySelectorAll('[id^="taskBtn_"]').forEach(btn => {
+      let rem = parseInt(btn.getAttribute('data-remaining') || '0', 10);
+      if (rem > 0) {
+        rem -= 1000;
+        btn.setAttribute('data-remaining', rem);
+        if (rem <= 0) {
+          reloadNeeded = true;
+        } else {
+          const txt = btn.querySelector('.cooldown-text');
+          if (txt) txt.textContent = formatRemainingTime(rem);
+        }
+      }
+    });
+    if (reloadNeeded) {
+      window.loadUserTasks();
+    }
+  }, 1000);
+}
 
 window.loadUserTasks = async function() {
   if (!userData) return;
@@ -2456,11 +2489,55 @@ window.loadUserTasks = async function() {
       collection(db, 'user_tasks'),
       where('uid', '==', userData.uid)
     ));
-    const doneIds = new Set(completedSnap.docs.map(d => d.data().task_id));
 
+    const latestCompletions = {};
+    completedSnap.docs.forEach(d => {
+      const data = d.data();
+      const tid = data.task_id;
+      const cDate = new Date(data.completed_at || 0).getTime();
+      if (!latestCompletions[tid] || cDate > latestCompletions[tid]) {
+        latestCompletions[tid] = cDate;
+      }
+    });
+
+    const now = Date.now();
     allUserTasks = tasksSnap.docs
-      .map(d => ({ id: d.id, ...d.data(), completed: doneIds.has(d.id) }))
+      .map(d => {
+        const tData = d.data();
+        const tid = d.id;
+        const cooldownMins = tData.cooldown_minutes !== undefined ? Number(tData.cooldown_minutes) : 20;
+        const cooldownMs = cooldownMins * 60 * 1000;
+        const resetAtMs = tData.reset_at ? new Date(tData.reset_at).getTime() : 0;
+        const lastCompletedMs = latestCompletions[tid] || 0;
+
+        let isCompleted = false;
+        let remainingMs = 0;
+
+        if (lastCompletedMs > 0) {
+          if (resetAtMs > lastCompletedMs) {
+            isCompleted = false;
+          } else {
+            const elapsedMs = now - lastCompletedMs;
+            if (elapsedMs < cooldownMs) {
+              isCompleted = true;
+              remainingMs = cooldownMs - elapsedMs;
+            } else {
+              isCompleted = false;
+            }
+          }
+        }
+
+        return {
+          id: tid,
+          ...tData,
+          cooldown_minutes: cooldownMins,
+          completed: isCompleted,
+          remainingMs: remainingMs,
+          lastCompletedMs: lastCompletedMs
+        };
+      })
       .filter(t => t.active === true || t.active === 1 || t.active === '1' || String(t.active) === '1' || t.active === undefined);
+
     renderUserTasksList();
   } catch(err) {
     console.error('Tasks error:', err);
@@ -2513,11 +2590,17 @@ function renderUserTasksList() {
       </div>
       <div style="display:flex;justify-content:flex-end;">
         ${t.completed
-          ? `<button class="btn-primary" disabled style="background:rgba(0,230,118,0.15);border:1px solid rgba(0,230,118,0.3);color:var(--green);box-shadow:none;padding:10px 16px;font-size:12px;"><i class="fa-solid fa-circle-check"></i> Completada</button>`
-          : `<button class="btn-primary" onclick="executeTask('${t.id}','${escapeHtml(t.url)}','${t.type}')" style="padding:10px 18px;font-size:12px;width:auto;"><i class="fa-solid fa-bolt"></i> Realizar Tarea</button>`
+          ? `<button class="btn-primary" disabled style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);color:var(--amber);box-shadow:none;padding:10px 16px;font-size:12px;cursor:not-allowed;" id="taskBtn_${t.id}" data-remaining="${t.remainingMs}">
+               <i class="fa-solid fa-clock"></i> En <span class="cooldown-text">${formatRemainingTime(t.remainingMs)}</span> podrás reclamar otra vez
+             </button>`
+          : `<button class="btn-primary" onclick="executeTask('${t.id}','${escapeHtml(t.url)}','${t.type}')" style="padding:10px 18px;font-size:12px;width:auto;">
+               <i class="fa-solid fa-bolt"></i> Realizar Tarea
+             </button>`
         }
       </div>
     </div>`).join('');
+
+  startTaskTimer();
 }
 
 window.executeTask = async function(taskId, targetUrl, taskType) {
@@ -2529,12 +2612,30 @@ window.executeTask = async function(taskId, targetUrl, taskType) {
   } catch(e) {}
 
   try {
-    const existingQ = query(collection(db, 'user_tasks'), where('uid', '==', userData.uid), where('task_id', '==', taskId));
-    if (!(await getDocs(existingQ)).empty) { showToast('ℹ️ Tarea ya completada', 'info'); return; }
-
     const taskSnap = await getDoc(doc(db, 'tasks', taskId));
     if (!taskSnap.exists()) { showToast('⚠️ Tarea no encontrada', 'error'); return; }
-    const reward = taskSnap.data().reward || 0.5;
+    const taskData = taskSnap.data();
+    const reward = taskData.reward || 0.5;
+    const cooldownMins = taskData.cooldown_minutes !== undefined ? Number(taskData.cooldown_minutes) : 20;
+    const cooldownMs = cooldownMins * 60 * 1000;
+    const resetAtMs = taskData.reset_at ? new Date(taskData.reset_at).getTime() : 0;
+
+    const existingQ = query(collection(db, 'user_tasks'), where('uid', '==', userData.uid), where('task_id', '==', taskId));
+    const existingSnap = await getDocs(existingQ);
+    let lastCompletedMs = 0;
+    existingSnap.forEach(d => {
+      const cDate = new Date(d.data().completed_at || 0).getTime();
+      if (cDate > lastCompletedMs) lastCompletedMs = cDate;
+    });
+
+    if (lastCompletedMs > 0 && resetAtMs <= lastCompletedMs) {
+      const elapsedMs = Date.now() - lastCompletedMs;
+      if (elapsedMs < cooldownMs) {
+        const remainingMin = Math.ceil((cooldownMs - elapsedMs) / 60000);
+        showToast(`⏳ En ${remainingMin} minutos podrás reclamar otra vez`, 'info');
+        return;
+      }
+    }
 
     const userRef = doc(db, 'users', userData.uid);
     let newBalance;
@@ -2549,6 +2650,12 @@ window.executeTask = async function(taskId, targetUrl, taskType) {
       telegram_id: userData.telegram_id || userData.uid,
       completed_at: new Date().toISOString()
     });
+
+    try {
+      await updateDoc(doc(db, 'tasks', taskId), {
+        completion_count: (taskData.completion_count || 0) + 1
+      });
+    } catch(e) {}
 
     userData.balance = newBalance;
     animateNumber('bigBalance',     newBalance, 3);
@@ -2575,7 +2682,12 @@ window.switchPage = function(page) {
   document.getElementById('page'+page)?.classList.add('active');
   document.getElementById('nav'+page)?.classList.add('active');
   document.querySelector('.content').scrollTop = 0;
-  if (page === 'Tasks') window.loadUserTasks();
+  if (page === 'Tasks') {
+    window.loadUserTasks();
+  } else if (taskTimerInterval) {
+    clearInterval(taskTimerInterval);
+    taskTimerInterval = null;
+  }
   if (page === 'Profile' && userData) {
     const name = userData.first_name || userData.username || '—';
     const uname = '@' + (userData.username || '—');
