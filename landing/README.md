@@ -1,6 +1,6 @@
 # FastClaim - Página de Aterrizaje (Landing Page)
 
-Esta carpeta contiene la **Landing Page oficial** de FastClaim, diseñada para explicar la app, mostrar capturas reales de la interfaz, el sistema de ganancias (bonus por hora y referidos), calculadora interactiva y opciones de acceso tanto en versión Web como en Telegram Mini App.
+Esta carpeta contiene la **Landing Page oficial** de FastClaim, diseñada para explicar la app, mostrar capturas reales de la interfaz, el sistema de ganancias (bonus por hora y referidos), calculadora interactiva de rendimientos y opciones de acceso tanto en versión Web como a través de la **Telegram Mini App** oficial ([@Dolar_fastbot](https://t.me/Dolar_fastbot)).
 
 ---
 
@@ -39,20 +39,20 @@ landing/
 │   └── img/
 │       ├── mockup-dashboard.jpg  # Captura de pantalla de la app (Dashboard/Claim)
 │       └── mockup-withdraw.jpg   # Captura de pantalla de la app (Retiros)
-├── index.html                    # Estructura principal y SEO
+├── index.html                    # Estructura principal, SEO y enlaces al bot @Dolar_fastbot
 ├── style.css                     # Sistema de diseño moderno, animaciones y responsive
 ├── main.js                       # Calculadora interactiva y modal de acceso
 ├── netlify.toml                  # Configuración de headers y redirects para Netlify
 ├── package.json                  # Metadatos del proyecto
-└── README.md                     # Guía de despliegue
+└── README.md                     # Guía de despliegue y documentación (este archivo)
 ```
 
 ---
 
 ## 🎨 Características Incluidas
 
-- **Explicación clara**: Qué es FastClaim, cómo registrarse en 3 simples pasos.
-- **Calculadora en vivo**: Permite al visitante interactuar calculando cuántos tokens ARPA y USDT ganará según sus reclamos y amigos referidos.
-- **Mockups de alta resolución**: Capturas reales del funcionamiento (Home/Reclamo de Bono y Pantalla de Retiro a Wallet).
-- **Acceso Directo**: Botones para ingresar a la versión Web o a la versión Telegram Mini App.
-- **100% Responsive & Dark Theme**: Adaptado para móviles, tablets y ordenadores con efectos de iluminación modernos (glassmorphism).
+- **Explicación clara**: Qué es FastClaim y cómo registrarse en 3 simples pasos.
+- **Calculadora en vivo**: Permite al visitante calcular proyecciones de tokens ARPA y USDT según sus reclamos y amigos referidos.
+- **Mockups de alta resolución**: Muestra visual del funcionamiento real (Home/Reclamo de Bono y Pantalla de Retiro a Wallet BSC o Binance Pay).
+- **Acceso Directo**: Botones para ingresar a la versión Web o a la Telegram Mini App vinculada a `@Dolar_fastbot`.
+- **100% Responsive & Dark Theme**: Diseñado para móviles, tablets y ordenadores con efectos de iluminación modernos (glassmorphism).
