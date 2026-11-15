@@ -19,6 +19,13 @@
 
 
 
+  <noscript>
+    <style>
+      #loadingScreen { display: none !important; }
+      #authScreen { display: none !important; }
+    </style>
+  </noscript>
+
   <style>
     /* ─── Reset & Base ───────────────────────────────────── */
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
@@ -1022,9 +1029,11 @@
       </div>
 
       <!-- BEGIN AADS AD UNIT 2462229 -->
-      <div id="frame" style="width: 100%;margin: 16px auto;position: relative; z-index: 99998;">
-        <iframe data-aa='2462229' src='//acceptable.a-ads.com/2462229/?size=Adaptive'
-                style='border:0; padding:0; width:70%; height:auto; overflow:hidden;display: block;margin: auto'></iframe>
+      <div id="homeAdSlot">
+        <div id="frame" style="width: 100%;margin: 16px auto;position: relative; z-index: 99998;">
+          <iframe data-aa='2462229' src='//acceptable.a-ads.com/2462229/?size=Adaptive'
+                  style='border:0; padding:0; width:70%; min-height:60px; height:auto; overflow:hidden;display: block;margin: auto'></iframe>
+        </div>
       </div>
       <!-- END AADS AD UNIT 2462229 -->
 
@@ -1451,6 +1460,9 @@
       <div class="auth-error" id="regErrorMsg"></div>
     </div>
 
+    <!-- Ad Slot for verification & unauthenticated visitors -->
+    <div id="authAdSlot" style="margin-top: 16px; width: 100%;"></div>
+
   </div>
 </div>
 
@@ -1571,6 +1583,11 @@ function hideLoading() {
 }
 function showAuthScreen() {
   document.getElementById('authScreen').classList.remove('hidden');
+  const frame = document.getElementById('frame');
+  const authSlot = document.getElementById('authAdSlot');
+  if (frame && authSlot && !authSlot.contains(frame)) {
+    authSlot.appendChild(frame);
+  }
 }
 
 // ─── Telegram Auto-Auth ───────────────────────────────────
@@ -1696,6 +1713,11 @@ async function loadUserData(uid) {
     userData.monetag_sdk_func    = settings.monetag_sdk_func;
 
     document.getElementById('authScreen').classList.add('hidden');
+    const frame = document.getElementById('frame');
+    const homeSlot = document.getElementById('homeAdSlot');
+    if (frame && homeSlot && !homeSlot.contains(frame)) {
+      homeSlot.appendChild(frame);
+    }
     renderUserData();
     setupMonetagSDK();
     trackUserSession(uid);
@@ -1887,7 +1909,7 @@ window.handleUserLogout = function() {
     await signOut(auth);
     userData = null;
     if (claimTimer) { clearInterval(claimTimer); claimTimer = null; }
-    document.getElementById('authScreen').classList.remove('hidden');
+    showAuthScreen();
     switchPage('Home'); // reset nav
     showToast('ℹ️ Sesión cerrada', 'info');
     setTimeout(() => { isLoggingOut = false; }, 3000); // allow re-login after 3s
