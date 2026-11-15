@@ -850,6 +850,11 @@
         </button>
       </li>
       <li>
+        <button class="sidebar-nav-item" data-page="calculator" onclick="switchAdminPage('calculator')">
+          <i class="fa-solid fa-calculator"></i> Calculadora ARPA
+        </button>
+      </li>
+      <li>
         <button class="sidebar-nav-item" data-page="settings" onclick="switchAdminPage('settings')">
           <i class="fa-solid fa-gear"></i> Configuración
         </button>
@@ -1085,6 +1090,24 @@
         <p class="page-subtitle">Ajusta los parámetros de la aplicación</p>
       </div>
 
+      <!-- Quick Calculator Banner -->
+      <div class="panel" style="background: linear-gradient(135deg, rgba(99,102,241,0.12), rgba(168,85,247,0.06)); border-color: rgba(99,102,241,0.25); margin-bottom: 20px;">
+        <div class="panel-body" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+          <div style="display:flex;align-items:center;gap:14px;">
+            <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,var(--accent),var(--ton));display:flex;align-items:center;justify-content:center;font-size:20px;color:#fff;box-shadow:0 0 16px var(--accent-glow);">
+              <i class="fa-solid fa-calculator"></i>
+            </div>
+            <div>
+              <div style="font-weight:700;font-size:15px;color:var(--text);">Calculadora de Conversión USD / Centavos ↔ ARPA</div>
+              <div style="font-size:12px;color:var(--text2);margin-top:2px;">Calcula con exactitud cuánto equivale 0.50$, 0.05$ o cualquier monto a tokens ARPA con precio en vivo.</div>
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="switchAdminPage('calculator')" style="padding:10px 20px;">
+            <i class="fa-solid fa-calculator"></i> Abrir Calculadora
+          </button>
+        </div>
+      </div>
+
       <div class="panel">
         <div class="panel-header">
           <div class="panel-title"><i class="fa-solid fa-sliders"></i> Parámetros del Sistema (ARPA USDT)</div>
@@ -1241,7 +1264,169 @@
       </div>
     </div>
 
-  </main>
+    <!-- ═══ Calculator Page ══════════════════════════════ -->
+    <div id="pageCalculator" class="admin-page">
+      <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+        <div>
+          <h1 class="page-title"><i class="fa-solid fa-calculator" style="color:var(--accent2);"></i> Calculadora ARPA ↔ USD</h1>
+          <p class="page-subtitle">Calcula equivalencias exactas en ARPA para recompensas de centavos de dólar ($0.50, $0.05, $0.01) con precio en tiempo real.</p>
+        </div>
+        <div style="display:flex;align-items:center;gap:10px;">
+          <button class="btn btn-primary" id="calcRefreshBtn" onclick="fetchLiveArpaPrice(true)" style="padding:10px 18px;">
+            <i class="fa-solid fa-rotate"></i> Actualizar en Vivo
+          </button>
+        </div>
+      </div>
+
+      <!-- ARPA Live Price Bar -->
+      <div class="panel" style="background: linear-gradient(135deg, rgba(124,58,237,0.08), rgba(99,102,241,0.04));">
+        <div class="panel-body" style="padding:18px 22px;">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:16px;">
+            <div style="display:flex;align-items:center;gap:12px;">
+              <div style="width:40px;height:40px;border-radius:10px;background:rgba(124,58,237,0.15);border:1px solid rgba(168,85,247,0.3);color:var(--ton2);display:flex;align-items:center;justify-content:center;font-size:18px;">
+                <i class="fa-solid fa-coins"></i>
+              </div>
+              <div>
+                <div style="display:flex;align-items:center;gap:8px;">
+                  <span style="font-weight:700;font-size:15px;color:var(--text);">Precio Base de 1 ARPA:</span>
+                  <span class="badge approved" id="calcPriceBadge">🟢 En vivo (Binance)</span>
+                </div>
+                <div style="font-size:12px;color:var(--text3);margin-top:2px;">Se utiliza este valor para convertir los centavos de dólar a cantidad de ARPA</div>
+              </div>
+            </div>
+            <div style="display:flex;align-items:center;gap:10px;">
+              <span style="font-size:14px;color:var(--text2);font-weight:600;">1 ARPA = $</span>
+              <input type="number" id="calcArpaPrice" class="form-control" step="0.000001" min="0.000001" value="0.008340" style="width:140px;font-weight:700;color:var(--ton2);text-align:right;" oninput="onArpaPriceManualChange()">
+              <span style="font-size:13px;color:var(--text3);">USD</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Main Conversions Grid -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(360px, 1fr));gap:20px;margin-bottom:24px;">
+
+        <!-- USD/Centavos to ARPA Card -->
+        <div class="panel" style="border-color:rgba(99,102,241,0.25);position:relative;overflow:hidden;">
+          <div class="panel-header" style="background:rgba(99,102,241,0.08);">
+            <div class="panel-title" style="color:var(--text);">
+              <i class="fa-solid fa-dollar-sign" style="color:var(--green);"></i> De Dólares / Centavos (USD) a ARPA
+            </div>
+            <span class="badge" style="background:rgba(99,102,241,0.15);color:var(--accent2);border-color:rgba(99,102,241,0.3);">USD ➔ ARPA</span>
+          </div>
+          <div class="panel-body">
+            <div class="form-group">
+              <label class="form-label"><i class="fa-solid fa-money-bill-wave"></i> Monto en USD (Dólares o Centavos):</label>
+              <div style="position:relative;">
+                <span style="position:absolute;left:14px;top:50%;transform:translateY(-50%);color:var(--text3);font-size:16px;font-weight:700;">$</span>
+                <input type="number" id="calcUsdInput" class="form-control" step="0.001" min="0" value="0.50" style="padding-left:32px;font-size:18px;font-weight:800;color:#fff;" oninput="calcFromUsd()">
+              </div>
+              <span class="form-hint">Escribe por ejemplo <b>0.50</b> para 50 centavos, <b>0.05</b> para 5 centavos, o <b>0.01</b> para 1 centavo</span>
+            </div>
+
+            <!-- Quick Pill Buttons for Cents -->
+            <div style="margin-top:14px;">
+              <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:8px;letter-spacing:0.5px;">Valores frecuentes en centavos:</div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                <button type="button" class="btn" style="background:var(--card);border-color:var(--card-border);color:var(--text2);" onclick="setQuickUsd(0.01)">0.01$ (1¢)</button>
+                <button type="button" class="btn" style="background:var(--card);border-color:var(--card-border);color:var(--text2);" onclick="setQuickUsd(0.02)">0.02$ (2¢)</button>
+                <button type="button" class="btn" style="background:rgba(16,185,129,0.1);border-color:var(--green-border);color:var(--green);font-weight:700;" onclick="setQuickUsd(0.05)">0.05$ (5¢)</button>
+                <button type="button" class="btn" style="background:var(--card);border-color:var(--card-border);color:var(--text2);" onclick="setQuickUsd(0.10)">0.10$ (10¢)</button>
+                <button type="button" class="btn" style="background:var(--card);border-color:var(--card-border);color:var(--text2);" onclick="setQuickUsd(0.25)">0.25$ (25¢)</button>
+                <button type="button" class="btn" style="background:rgba(99,102,241,0.15);border-color:rgba(99,102,241,0.3);color:var(--accent2);font-weight:700;" onclick="setQuickUsd(0.50)">0.50$ (50¢)</button>
+                <button type="button" class="btn" style="background:var(--card);border-color:var(--card-border);color:var(--text2);" onclick="setQuickUsd(1.00)">1.00$ ($1)</button>
+              </div>
+            </div>
+
+            <!-- Result Box -->
+            <div style="margin-top:20px;padding:20px;border-radius:var(--radius-sm);background:linear-gradient(135deg,rgba(124,58,237,0.15),rgba(99,102,241,0.1));border:1px solid rgba(168,85,247,0.25);text-align:center;">
+              <div style="font-size:12px;color:var(--text3);text-transform:uppercase;font-weight:700;letter-spacing:1px;">Equivalente Exacto en Tokens:</div>
+              <div id="calcArpaResult" style="font-size:36px;font-weight:900;color:#fff;background:linear-gradient(135deg,#fff,var(--ton2));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text;margin:6px 0;">59.9520 ARPA</div>
+              <div id="calcUsdFormula" style="font-size:12px;color:var(--text2);font-family:monospace;">$0.50 USD ÷ $0.00834 = 59.9520 ARPA</div>
+            </div>
+
+            <!-- Action Buttons -->
+            <div style="margin-top:16px;display:flex;flex-wrap:wrap;gap:8px;">
+              <button class="btn" style="background:var(--card);border-color:var(--card-border);color:var(--text);flex:1;" onclick="copyArpaResult()">
+                <i class="fa-solid fa-copy"></i> Copiar ARPA
+              </button>
+              <button class="btn btn-primary" style="flex:1;" onclick="applyValueToBonus()">
+                <i class="fa-solid fa-bolt"></i> Usar como Claim
+              </button>
+              <button class="btn" style="background:rgba(16,185,129,0.12);border-color:var(--green-border);color:var(--green);flex:1;" onclick="applyValueToReferral()">
+                <i class="fa-solid fa-user-plus"></i> Usar como Referido
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- ARPA to USD Card -->
+        <div class="panel" style="border-color:rgba(168,85,247,0.25);position:relative;overflow:hidden;">
+          <div class="panel-header" style="background:rgba(124,58,237,0.08);">
+            <div class="panel-title" style="color:var(--text);">
+              <i class="fa-solid fa-gem" style="color:var(--ton2);"></i> De ARPA a Dólares / Centavos
+            </div>
+            <span class="badge" style="background:rgba(168,85,247,0.15);color:var(--ton2);border-color:rgba(168,85,247,0.3);">ARPA ➔ USD</span>
+          </div>
+          <div class="panel-body">
+            <div class="form-group">
+              <label class="form-label"><i class="fa-solid fa-coins"></i> Cantidad de ARPA a Evaluar:</label>
+              <input type="number" id="calcArpaInput" class="form-control" step="0.01" min="0" value="1.00" style="font-size:18px;font-weight:800;color:#fff;" oninput="calcFromArpa()">
+              <span class="form-hint">Escribe cuántos ARPA planeas dar o pagar para saber cuántos centavos o dólares cuesta</span>
+            </div>
+
+            <!-- Quick Pill Buttons for ARPA -->
+            <div style="margin-top:14px;">
+              <div style="font-size:11px;font-weight:700;color:var(--text3);text-transform:uppercase;margin-bottom:8px;letter-spacing:0.5px;">Cantidades frecuentes de ARPA:</div>
+              <div style="display:flex;flex-wrap:wrap;gap:6px;">
+                <button type="button" class="btn" style="background:var(--card);border-color:var(--card-border);color:var(--text2);" onclick="setQuickArpa(0.1)">0.1 ARPA</button>
+                <button type="button" class="btn" style="background:var(--card);border-color:var(--card-border);color:var(--text2);" onclick="setQuickArpa(0.5)">0.5 ARPA</button>
+                <button type="button" class="btn" style="background:var(--card);border-color:var(--card-border);color:var(--text2);" onclick="setQuickArpa(1.0)">1.0 ARPA</button>
+                <button type="button" class="btn" style="background:var(--card);border-color:var(--card-border);color:var(--text2);" onclick="setQuickArpa(5.0)">5.0 ARPA</button>
+                <button type="button" class="btn" style="background:var(--card);border-color:var(--card-border);color:var(--text2);" onclick="setQuickArpa(10.0)">10 ARPA</button>
+                <button type="button" class="btn" style="background:var(--card);border-color:var(--card-border);color:var(--text2);" onclick="setQuickArpa(50.0)">50 ARPA</button>
+              </div>
+            </div>
+
+            <!-- Result Box -->
+            <div style="margin-top:20px;padding:20px;border-radius:var(--radius-sm);background:linear-gradient(135deg,rgba(16,185,129,0.12),rgba(99,102,241,0.08));border:1px solid var(--green-border);text-align:center;">
+              <div style="font-size:12px;color:var(--text3);text-transform:uppercase;font-weight:700;letter-spacing:1px;">Valor Total en USD:</div>
+              <div id="calcUsdResult" style="font-size:32px;font-weight:900;color:var(--green);margin:6px 0;">$0.0083 USD (0.83¢)</div>
+              <div id="calcArpaFormula" style="font-size:12px;color:var(--text2);font-family:monospace;">1 ARPA × $0.00834 = $0.0083 USD</div>
+            </div>
+
+            <div style="margin-top:16px;padding:12px 14px;border-radius:var(--radius-xs);background:rgba(255,255,255,0.02);border:1px solid var(--card-border);font-size:12px;color:var(--text2);display:flex;align-items:center;gap:10px;">
+              <i class="fa-solid fa-lightbulb" style="color:var(--amber);font-size:16px;"></i>
+              <span>Úsalo para verificar que los costos de tus claims no sobrepasen tus ganancias publicitarias.</span>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
+      <!-- Quick Reference Table Panel -->
+      <div class="panel">
+        <div class="panel-header">
+          <div class="panel-title"><i class="fa-solid fa-table-list"></i> Tabla de Equivalencias Rápidas (Centavos ➔ ARPA)</div>
+          <span style="font-size:12px;color:var(--text3);">Calculado con el precio de ARPA actual</span>
+        </div>
+        <div class="table-container">
+          <table class="data-table">
+            <thead>
+              <tr>
+                <th>Centavos / Dólares</th>
+                <th>Valor USD</th>
+                <th>Equivalente en ARPA</th>
+                <th>Acción</th>
+              </tr>
+            </thead>
+            <tbody id="calcRefTableBody">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
 </div>
 
 <!-- ─── Toast ───────────────────────────────────────────── -->
@@ -1432,6 +1617,7 @@ function switchAdminPage(page) {
   }
   if (page === 'settings') loadSettings();
   if (page === 'tasks')    loadTasks();
+  if (page === 'calculator') initCalculator();
 }
 
 function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
@@ -2114,6 +2300,231 @@ async function deleteTask(id) {
   }
 }
 
+// ─── Calculator Logic ─────────────────────────────────────
+let currentArpaPrice = 0.00834;
+let isCalculatorInitialized = false;
+let lastCalculatedArpa = 59.9520;
+
+async function fetchLiveArpaPrice(showFeedback = false) {
+  const priceInput = document.getElementById('calcArpaPrice');
+  const statusBadge = document.getElementById('calcPriceBadge');
+  const refreshBtn = document.getElementById('calcRefreshBtn');
+  if (refreshBtn) refreshBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Actualizando...';
+
+  try {
+    const res = await fetch('https://api.binance.com/api/v3/ticker/price?symbol=ARPAUSDT');
+    if (!res.ok) throw new Error('Binance error');
+    const data = await res.json();
+    const price = parseFloat(data.price);
+    if (!isNaN(price) && price > 0) {
+      currentArpaPrice = price;
+      if (priceInput) priceInput.value = price.toFixed(6);
+      if (statusBadge) {
+        statusBadge.innerHTML = '🟢 En vivo (Binance)';
+        statusBadge.className = 'badge approved';
+      }
+      recalculateAll();
+      if (showFeedback) showAdminToast(`✅ Precio ARPA actualizado: $${price} USD`, 'success');
+      return;
+    }
+  } catch (e1) {
+    console.warn('Binance failed, trying CoinGecko fallback...', e1);
+    try {
+      const res2 = await fetch('https://api.coingecko.com/api/v3/simple/price?ids=arpa&vs_currencies=usd');
+      const data2 = await res2.json();
+      const price2 = data2?.arpa?.usd;
+      if (price2) {
+        currentArpaPrice = price2;
+        if (priceInput) priceInput.value = price2.toFixed(6);
+        if (statusBadge) {
+          statusBadge.innerHTML = '🟢 En vivo (CoinGecko)';
+          statusBadge.className = 'badge approved';
+        }
+        recalculateAll();
+        if (showFeedback) showAdminToast(`✅ Precio ARPA actualizado: $${price2} USD`, 'success');
+        return;
+      }
+    } catch (e2) {
+      console.warn('CoinGecko fallback failed too', e2);
+      if (statusBadge) {
+        statusBadge.innerHTML = '⚙️ Modo manual';
+        statusBadge.className = 'badge pending';
+      }
+      if (showFeedback) showAdminToast('⚠️ No se pudo obtener en vivo, usando modo manual', 'error');
+    }
+  } finally {
+    if (refreshBtn) refreshBtn.innerHTML = '<i class="fa-solid fa-rotate"></i> Actualizar en Vivo';
+  }
+}
+
+function initCalculator() {
+  if (!isCalculatorInitialized) {
+    isCalculatorInitialized = true;
+    fetchLiveArpaPrice(false);
+  }
+  recalculateAll();
+}
+
+function onArpaPriceManualChange() {
+  const p = parseFloat(document.getElementById('calcArpaPrice').value);
+  if (!isNaN(p) && p > 0) {
+    currentArpaPrice = p;
+    const statusBadge = document.getElementById('calcPriceBadge');
+    if (statusBadge) {
+      statusBadge.innerHTML = '⚙️ Manual';
+      statusBadge.className = 'badge pending';
+    }
+    recalculateAll();
+  }
+}
+
+function setQuickUsd(val) {
+  const input = document.getElementById('calcUsdInput');
+  if (input) {
+    input.value = val;
+    calcFromUsd();
+  }
+}
+
+function setQuickArpa(val) {
+  const input = document.getElementById('calcArpaInput');
+  if (input) {
+    input.value = val;
+    calcFromArpa();
+  }
+}
+
+function calcFromUsd() {
+  const inputEl = document.getElementById('calcUsdInput');
+  const usdVal = inputEl ? parseFloat(inputEl.value) || 0 : 0.50;
+  const price = currentArpaPrice > 0 ? currentArpaPrice : 0.00834;
+  const arpaResult = usdVal / price;
+  lastCalculatedArpa = arpaResult;
+
+  const resultEl = document.getElementById('calcArpaResult');
+  const formulaEl = document.getElementById('calcUsdFormula');
+
+  if (resultEl) {
+    resultEl.textContent = arpaResult > 0 ? arpaResult.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 4 }) + ' ARPA' : '0.0000 ARPA';
+  }
+  if (formulaEl) {
+    formulaEl.textContent = `$${usdVal} USD ÷ $${price.toFixed(6)} = ${(arpaResult).toFixed(4)} ARPA`;
+  }
+  renderQuickReferenceTable(price);
+}
+
+function calcFromArpa() {
+  const inputEl = document.getElementById('calcArpaInput');
+  const arpaVal = inputEl ? parseFloat(inputEl.value) || 0 : 1;
+  const price = currentArpaPrice > 0 ? currentArpaPrice : 0.00834;
+  const usdResult = arpaVal * price;
+  const centsResult = usdResult * 100;
+
+  const resultEl = document.getElementById('calcUsdResult');
+  const formulaEl = document.getElementById('calcArpaFormula');
+
+  if (resultEl) {
+    resultEl.textContent = `$${usdResult.toFixed(4)} USD (${centsResult.toFixed(2)}¢)`;
+  }
+  if (formulaEl) {
+    formulaEl.textContent = `${arpaVal} ARPA × $${price.toFixed(6)} = $${usdResult.toFixed(4)} USD`;
+  }
+}
+
+function recalculateAll() {
+  calcFromUsd();
+  calcFromArpa();
+}
+
+function renderQuickReferenceTable(price) {
+  const tbody = document.getElementById('calcRefTableBody');
+  if (!tbody) return;
+  const presets = [
+    { label: '0.01 USD (1¢ centavo)', usd: 0.01 },
+    { label: '0.02 USD (2¢ centavos)', usd: 0.02 },
+    { label: '0.05 USD (5¢ centavos)', usd: 0.05 },
+    { label: '0.10 USD (10¢ centavos)', usd: 0.10 },
+    { label: '0.25 USD (25¢ centavos)', usd: 0.25 },
+    { label: '0.50 USD (50¢ centavos)', usd: 0.50 },
+    { label: '1.00 USD (1 dólar)', usd: 1.00 },
+    { label: '2.00 USD (2 dólares)', usd: 2.00 },
+    { label: '5.00 USD (5 dólares)', usd: 5.00 }
+  ];
+
+  tbody.innerHTML = presets.map(p => {
+    const arpa = (p.usd / price).toFixed(4);
+    return `
+      <tr>
+        <td style="font-weight:700;color:var(--text);">${p.label}</td>
+        <td style="color:var(--green);font-weight:600;">$${p.usd.toFixed(2)} USD</td>
+        <td style="font-weight:800;color:var(--ton2);font-size:14px;">${arpa} ARPA</td>
+        <td>
+          <div style="display:flex;gap:6px;">
+            <button class="btn" style="background:var(--card);border-color:var(--card-border);color:var(--text2);padding:4px 8px;font-size:11px;" onclick="setQuickUsd(${p.usd})">
+              <i class="fa-solid fa-arrow-up-right-from-square"></i> Cargar
+            </button>
+            <button class="btn btn-primary" style="padding:4px 8px;font-size:11px;" onclick="applyValueToBonus(${arpa})">
+              <i class="fa-solid fa-bolt"></i> Claim
+            </button>
+            <button class="btn" style="background:rgba(16,185,129,0.12);border-color:var(--green-border);color:var(--green);padding:4px 8px;font-size:11px;" onclick="applyValueToReferral(${arpa})">
+              <i class="fa-solid fa-user-plus"></i> Ref
+            </button>
+          </div>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function copyArpaResult() {
+  const text = (lastCalculatedArpa).toFixed(4);
+  if (navigator.clipboard) {
+    navigator.clipboard.writeText(text).then(() => {
+      showAdminToast(`📋 ${text} ARPA copiado al portapapeles`, 'success');
+    }).catch(() => {
+      showAdminToast(`Valor: ${text} ARPA`, 'info');
+    });
+  } else {
+    showAdminToast(`Valor: ${text} ARPA`, 'info');
+  }
+}
+
+function applyValueToBonus(val) {
+  const arpaVal = val !== undefined ? val : parseFloat((lastCalculatedArpa).toFixed(4));
+  if (!arpaVal || arpaVal <= 0) {
+    showAdminToast('⚠️ Monto inválido para aplicar', 'error');
+    return;
+  }
+  switchAdminPage('settings');
+  setTimeout(() => {
+    const input = document.getElementById('settBonusAmount');
+    if (input) {
+      input.value = arpaVal;
+      input.focus();
+      input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      showAdminToast(`⚡ Bonus Claim establecido a ${arpaVal} ARPA. Recuerda Guardar.`, 'success');
+    }
+  }, 100);
+}
+
+function applyValueToReferral(val) {
+  const arpaVal = val !== undefined ? val : parseFloat((lastCalculatedArpa).toFixed(4));
+  if (!arpaVal || arpaVal <= 0) {
+    showAdminToast('⚠️ Monto inválido para aplicar', 'error');
+    return;
+  }
+  switchAdminPage('settings');
+  setTimeout(() => {
+    const input = document.getElementById('settReferralReward');
+    if (input) {
+      input.value = arpaVal;
+      input.focus();
+      input.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      showAdminToast(`🎁 Reward Referido establecido a ${arpaVal} ARPA. Recuerda Guardar.`, 'success');
+    }
+  }, 100);
+}
+
 // ─── Window Exports for HTML Event Handlers ──────────────
 Object.assign(window, {
   handleLogin,
@@ -2139,7 +2550,18 @@ Object.assign(window, {
   createNewTask,
   toggleTaskStatus,
   deleteTask,
-  toggleBan
+  toggleBan,
+  initCalculator,
+  fetchLiveArpaPrice,
+  onArpaPriceManualChange,
+  setQuickUsd,
+  setQuickArpa,
+  calcFromUsd,
+  calcFromArpa,
+  recalculateAll,
+  copyArpaResult,
+  applyValueToBonus,
+  applyValueToReferral
 });
 </script>
 </body>
