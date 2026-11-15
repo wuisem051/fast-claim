@@ -2505,6 +2505,7 @@ window.loadUserTasks = async function() {
       .map(d => {
         const tData = d.data();
         const tid = d.id;
+        const isOneTime = (tData.type === 'telegram_join' || tData.type === 'telegram_react' || tData.one_time === true);
         const cooldownMins = tData.cooldown_minutes !== undefined ? Number(tData.cooldown_minutes) : 20;
         const cooldownMs = cooldownMins * 60 * 1000;
         const resetAtMs = tData.reset_at ? new Date(tData.reset_at).getTime() : 0;
@@ -2516,7 +2517,12 @@ window.loadUserTasks = async function() {
         if (lastCompletedMs > 0) {
           if (resetAtMs > lastCompletedMs) {
             isCompleted = false;
+          } else if (isOneTime) {
+            // Tareas de Telegram: 1 sola vez
+            isCompleted = true;
+            remainingMs = 0;
           } else {
+            // Tareas de publicidad: cada 20 min
             const elapsedMs = now - lastCompletedMs;
             if (elapsedMs < cooldownMs) {
               isCompleted = true;
@@ -2530,6 +2536,7 @@ window.loadUserTasks = async function() {
         return {
           id: tid,
           ...tData,
+          isOneTime: isOneTime,
           cooldown_minutes: cooldownMins,
           completed: isCompleted,
           remainingMs: remainingMs,
@@ -2590,9 +2597,12 @@ function renderUserTasksList() {
       </div>
       <div style="display:flex;justify-content:flex-end;">
         ${t.completed
-          ? `<button class="btn-primary" disabled style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);color:var(--amber);box-shadow:none;padding:10px 16px;font-size:12px;cursor:not-allowed;" id="taskBtn_${t.id}" data-remaining="${t.remainingMs}">
-               <i class="fa-solid fa-clock"></i> En <span class="cooldown-text">${formatRemainingTime(t.remainingMs)}</span> podrás reclamar otra vez
-             </button>`
+          ? (t.isOneTime
+              ? `<button class="btn-primary" disabled style="background:rgba(0,230,118,0.15);border:1px solid rgba(0,230,118,0.3);color:var(--green);box-shadow:none;padding:10px 16px;font-size:12px;cursor:default;"><i class="fa-solid fa-circle-check"></i> Completada</button>`
+              : `<button class="btn-primary" disabled style="background:rgba(245,158,11,0.12);border:1px solid rgba(245,158,11,0.3);color:var(--amber);box-shadow:none;padding:10px 16px;font-size:12px;cursor:not-allowed;" id="taskBtn_${t.id}" data-remaining="${t.remainingMs}">
+                   <i class="fa-solid fa-clock"></i> En <span class="cooldown-text">${formatRemainingTime(t.remainingMs)}</span> podrás reclamar otra vez
+                 </button>`
+            )
           : `<button class="btn-primary" onclick="executeTask('${t.id}','${escapeHtml(t.url)}','${t.type}')" style="padding:10px 18px;font-size:12px;width:auto;">
                <i class="fa-solid fa-bolt"></i> Realizar Tarea
              </button>`
@@ -2628,7 +2638,13 @@ window.executeTask = async function(taskId, targetUrl, taskType) {
       if (cDate > lastCompletedMs) lastCompletedMs = cDate;
     });
 
+    const isOneTime = (taskData.type === 'telegram_join' || taskData.type === 'telegram_react' || taskData.one_time === true);
+
     if (lastCompletedMs > 0 && resetAtMs <= lastCompletedMs) {
+      if (isOneTime) {
+        showToast('ℹ️ Tarea de Telegram ya completada (1 sola vez)', 'info');
+        return;
+      }
       const elapsedMs = Date.now() - lastCompletedMs;
       if (elapsedMs < cooldownMs) {
         const remainingMin = Math.ceil((cooldownMs - elapsedMs) / 60000);

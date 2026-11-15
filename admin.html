@@ -1213,20 +1213,20 @@
             </div>
             <div class="form-group">
               <label class="form-label"><i class="fa-solid fa-list-ol"></i> Tipo de Acción</label>
-              <select class="form-control" id="newTaskType">
-                <option value="telegram_join">📢 Seguir Canal de Telegram</option>
-                <option value="telegram_react">🔥 Reaccionar en Telegram</option>
-                <option value="link">🔗 Abrir Enlace Web</option>
-                <option value="ad">🎯 Clic en Publicidad / Sponsor</option>
+              <select class="form-control" id="newTaskType" onchange="onTaskTypeChange()">
+                <option value="ad" selected>🎯 Clic en Publicidad / Sponsor (Recurrente)</option>
+                <option value="link">🔗 Abrir Enlace Web (Publicidad)</option>
+                <option value="telegram_join">📢 Seguir Canal de Telegram (1 sola vez)</option>
+                <option value="telegram_react">🔥 Reaccionar en Telegram (1 sola vez)</option>
               </select>
             </div>
-            <div class="form-group">
-              <label class="form-label"><i class="fa-solid fa-clock-rotate-left"></i> Reinicio / Cooldown</label>
+            <div class="form-group" id="cooldownGroup">
+              <label class="form-label"><i class="fa-solid fa-clock-rotate-left"></i> Reinicio / Cooldown (Publicidad)</label>
               <div style="display:flex;align-items:center;gap:8px;">
                 <input type="number" class="form-control" id="newTaskCooldown" min="1" step="1" value="20" style="flex:1;">
                 <span style="font-size:12px;color:var(--text3);white-space:nowrap;">Minutos</span>
               </div>
-              <span class="form-hint">Tiempo tras el cual el usuario puede volver a reclamar (ej: 20 min)</span>
+              <span class="form-hint" id="cooldownHint">Reclamable cada 20 min en el panel de usuario</span>
             </div>
             <div class="form-group" style="grid-column: span 2;">
               <label class="form-label"><i class="fa-solid fa-link"></i> URL de Destino / Link</label>
@@ -2238,6 +2238,8 @@ function renderTasks(tasks) {
 
   tbody.innerHTML = tasks.map(t => {
     const isActive = (t.active === true || t.active === 1 || t.active === '1' || t.active === undefined);
+    const isTelegramTask = (t.type === 'telegram_join' || t.type === 'telegram_react');
+    const isOneTime = isTelegramTask || t.one_time === true;
     const cooldownMins = t.cooldown_minutes !== undefined ? t.cooldown_minutes : 20;
     return `
     <tr>
@@ -2245,10 +2247,16 @@ function renderTasks(tasks) {
       <td>
         <div style="font-weight:600;color:var(--text);">${escapeHtml(t.title)}</div>
         <div style="font-size:11px;color:var(--text3);">${escapeHtml(t.description || '')}</div>
-        <div style="font-size:11px;color:var(--amber);margin-top:3px;display:flex;align-items:center;gap:4px;">
-          <i class="fa-solid fa-clock-rotate-left"></i> Reclamable cada <b>${cooldownMins} min</b>
-          ${t.reset_at ? `<span style="color:var(--text3);margin-left:6px;">(Reiniciada: ${new Date(t.reset_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})})</span>` : ''}
-        </div>
+        ${isOneTime ? `
+          <div style="font-size:11px;color:var(--text2);margin-top:3px;display:flex;align-items:center;gap:4px;">
+            <i class="fa-solid fa-lock" style="color:var(--ton2);"></i> <span>Pago único (1 sola vez)</span>
+          </div>
+        ` : `
+          <div style="font-size:11px;color:var(--amber);margin-top:3px;display:flex;align-items:center;gap:4px;">
+            <i class="fa-solid fa-clock-rotate-left"></i> Reclamable cada <b>${cooldownMins} min</b>
+            ${t.reset_at ? `<span style="color:var(--text3);margin-left:6px;">(Reiniciada: ${new Date(t.reset_at).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'})})</span>` : ''}
+          </div>
+        `}
       </td>
       <td><span class="badge" style="background:rgba(139,92,246,0.12);color:var(--accent2);border:1px solid rgba(139,92,246,0.3);">${typeLabels[t.type] || t.type}</span></td>
       <td style="font-weight:700;color:var(--green);">+${parseFloat(t.reward).toFixed(2)} ARPA</td>
@@ -2257,9 +2265,11 @@ function renderTasks(tasks) {
       <td><span class="badge ${isActive ? 'approved' : 'rejected'}"><span class="badge-dot"></span> ${isActive ? 'Activa' : 'Inactiva'}</span></td>
       <td>
         <div class="action-btns">
-          <button class="btn" style="background:rgba(99,102,241,0.15);border-color:rgba(99,102,241,0.3);color:var(--accent2);" onclick="resetTask('${t.id}')" title="Reiniciar tarea para todos los usuarios">
-            <i class="fa-solid fa-rotate-left"></i> Reiniciar
-          </button>
+          ${!isOneTime ? `
+            <button class="btn" style="background:rgba(99,102,241,0.15);border-color:rgba(99,102,241,0.3);color:var(--accent2);" onclick="resetTask('${t.id}')" title="Reiniciar tarea para todos los usuarios">
+              <i class="fa-solid fa-rotate-left"></i> Reiniciar
+            </button>
+          ` : ''}
           <button class="btn" style="background:var(--card);border-color:var(--card-border);color:var(--text2);" onclick="toggleTaskStatus('${t.id}', ${isActive ? 0 : 1})">
             ${isActive ? '<i class="fa-solid fa-eye-slash"></i> Pausar' : '<i class="fa-solid fa-eye"></i> Activar'}
           </button>
@@ -2272,11 +2282,34 @@ function renderTasks(tasks) {
   }).join('');
 }
 
+function onTaskTypeChange() {
+  const type = document.getElementById('newTaskType').value;
+  const cooldownGroup = document.getElementById('cooldownGroup');
+  const cooldownInput = document.getElementById('newTaskCooldown');
+  const isTg = (type === 'telegram_join' || type === 'telegram_react');
+  if (cooldownGroup) {
+    if (isTg) {
+      cooldownGroup.style.opacity = '0.5';
+      cooldownGroup.style.pointerEvents = 'none';
+      if (cooldownInput) cooldownInput.value = 0;
+      const hint = document.getElementById('cooldownHint');
+      if (hint) hint.textContent = '🔒 Las tareas de Telegram son de 1 sola vez';
+    } else {
+      cooldownGroup.style.opacity = '1';
+      cooldownGroup.style.pointerEvents = 'auto';
+      if (cooldownInput && (cooldownInput.value == 0 || !cooldownInput.value)) cooldownInput.value = 20;
+      const hint = document.getElementById('cooldownHint');
+      if (hint) hint.textContent = 'Reclamable cada 20 min en el panel de usuario';
+    }
+  }
+}
+
 async function createNewTask() {
   const title = document.getElementById('newTaskTitle').value.trim();
   const reward = parseFloat(document.getElementById('newTaskReward').value || '0.5');
   const type = document.getElementById('newTaskType').value;
-  const cooldown = parseInt(document.getElementById('newTaskCooldown')?.value) || 20;
+  const isOneTime = (type === 'telegram_join' || type === 'telegram_react');
+  const cooldown = isOneTime ? 0 : (parseInt(document.getElementById('newTaskCooldown')?.value) || 20);
   const url = document.getElementById('newTaskUrl').value.trim();
   const description = document.getElementById('newTaskDesc').value.trim();
 
@@ -2288,6 +2321,7 @@ async function createNewTask() {
   try {
     await addDoc(collection(db, 'tasks'), {
       title, reward, type, url, description,
+      one_time: isOneTime,
       cooldown_minutes: cooldown,
       active: 1, completion_count: 0,
       reset_at: null,
@@ -2602,6 +2636,7 @@ Object.assign(window, {
   saveSettings,
   loadTasks,
   renderTasks,
+  onTaskTypeChange,
   createNewTask,
   toggleTaskStatus,
   deleteTask,
