@@ -1322,10 +1322,28 @@
             <!-- Botones de Reacción (Emojis) -->
             <div class="form-group">
               <label class="form-label"><i class="fa-regular fa-face-smile"></i> Botones de Reacción Rápida (Opcional)</label>
-              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+              <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:8px;">
                 <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;background:var(--card);padding:6px 12px;border-radius:8px;border:1px solid var(--card-border);">
-                  <input type="checkbox" id="bcReactionsEnabled" checked onchange="updateBroadcastPreview()"> Incluir reacciones (👍 🔥 ✅ 🐒)
+                  <input type="checkbox" id="bcReactionsEnabled" checked onchange="updateBroadcastPreview()"> Incluir botones de reacción
                 </label>
+              </div>
+              <div id="bcReactionsEditor" style="background:var(--card);border:1px solid var(--card-border);border-radius:12px;padding:14px;">
+                <div style="font-size:12px;color:var(--text2);margin-bottom:10px;">
+                  <i class="fa-solid fa-circle-info" style="color:#2AABEE;"></i> Escribe los emojis separados por espacio. Máx. 8 botones por fila.
+                </div>
+                <div style="display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px;" id="bcReactionTagsPreview"></div>
+                <div style="display:flex;gap:8px;">
+                  <input type="text" id="bcReactionsInput" class="form-control" placeholder="Ej: 👍 🔥 ✅ ❤️ 😂 🎉" value="👍 🔥 ✅ 🐒" oninput="renderReactionTags()" style="flex:1;">
+                  <button class="btn" type="button" onclick="addReactionEmoji('👍')" style="padding:6px 10px;font-size:16px;background:var(--bg2);border-color:var(--card-border);">👍</button>
+                  <button class="btn" type="button" onclick="addReactionEmoji('🔥')" style="padding:6px 10px;font-size:16px;background:var(--bg2);border-color:var(--card-border);">🔥</button>
+                  <button class="btn" type="button" onclick="addReactionEmoji('❤️')" style="padding:6px 10px;font-size:16px;background:var(--bg2);border-color:var(--card-border);">❤️</button>
+                  <button class="btn" type="button" onclick="addReactionEmoji('✅')" style="padding:6px 10px;font-size:16px;background:var(--bg2);border-color:var(--card-border);">✅</button>
+                  <button class="btn" type="button" onclick="addReactionEmoji('🎉')" style="padding:6px 10px;font-size:16px;background:var(--bg2);border-color:var(--card-border);">🎉</button>
+                  <button class="btn" type="button" onclick="addReactionEmoji('😂')" style="padding:6px 10px;font-size:16px;background:var(--bg2);border-color:var(--card-border);">😂</button>
+                  <button class="btn" type="button" onclick="addReactionEmoji('💎')" style="padding:6px 10px;font-size:16px;background:var(--bg2);border-color:var(--card-border);">💎</button>
+                  <button class="btn" type="button" onclick="addReactionEmoji('🚀')" style="padding:6px 10px;font-size:16px;background:var(--bg2);border-color:var(--card-border);">🚀</button>
+                </div>
+                <span class="form-hint" style="margin-top:8px;display:block;">Haz clic en un emoji para agregarlo, o escríbelos directamente en el campo.</span>
               </div>
             </div>
 
@@ -3548,6 +3566,7 @@ const DEFAULT_TG_BOT_TOKEN = '8671776491:AAFlPCgWFxY593pUMsOKAPP4LzWAzp-PjgA';
 const CHANNEL_CHAT_ID = '@fastphartner';
 
 function loadBroadcastAdmin() {
+  renderReactionTags();
   updateBroadcastPreview();
 }
 
@@ -3613,7 +3632,56 @@ function updateBroadcastPreview() {
 
   if (reactWrap) {
     reactWrap.style.display = showReactions ? 'grid' : 'none';
+    if (showReactions) {
+      // Renderizar emojis personalizados en la vista previa
+      const reactionsRaw = (document.getElementById('bcReactionsInput')?.value || '👍 🔥 ✅ 🐒').trim();
+      const emojiList = reactionsRaw.split(/\s+/).filter(e => e.length > 0).slice(0, 8);
+      reactWrap.style.gridTemplateColumns = `repeat(${Math.min(emojiList.length, 4)}, 1fr)`;
+      reactWrap.innerHTML = emojiList.map(e =>
+        `<div style="background:#2a2f3a;border:1px solid #3a4055;border-radius:20px;padding:6px 10px;text-align:center;font-size:18px;cursor:pointer;">${e}</div>`
+      ).join('');
+    }
   }
+}
+
+// ─── Helpers de Reacciones ────────────────────────────────────────────────
+function addReactionEmoji(emoji) {
+  const input = document.getElementById('bcReactionsInput');
+  if (!input) return;
+  const current = input.value.trim();
+  const list = current.split(/\s+/).filter(e => e.length > 0);
+  if (list.length >= 8) { showAdminToast('⚠️ Máximo 8 botones de reacción', 'error'); return; }
+  if (!list.includes(emoji)) {
+    input.value = (current + ' ' + emoji).trim();
+  } else {
+    // Si ya existe, quitarlo (toggle)
+    input.value = list.filter(e => e !== emoji).join(' ');
+  }
+  renderReactionTags();
+  updateBroadcastPreview();
+}
+
+function renderReactionTags() {
+  const input = document.getElementById('bcReactionsInput');
+  const container = document.getElementById('bcReactionTagsPreview');
+  if (!input || !container) return;
+  const list = (input.value || '').trim().split(/\s+/).filter(e => e.length > 0).slice(0, 8);
+  container.innerHTML = list.map((e, i) =>
+    `<div style="display:inline-flex;align-items:center;gap:4px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);border-radius:20px;padding:4px 10px;font-size:16px;cursor:pointer;" title="Clic para eliminar" onclick="removeReactionEmoji(${i})">
+      ${e} <span style="font-size:10px;color:var(--text3);margin-left:2px;">✕</span>
+    </div>`
+  ).join('');
+  updateBroadcastPreview();
+}
+
+function removeReactionEmoji(index) {
+  const input = document.getElementById('bcReactionsInput');
+  if (!input) return;
+  const list = (input.value || '').trim().split(/\s+/).filter(e => e.length > 0);
+  list.splice(index, 1);
+  input.value = list.join(' ');
+  renderReactionTags();
+  updateBroadcastPreview();
 }
 
 async function sendTelegramBroadcast() {
@@ -3651,15 +3719,18 @@ async function sendTelegramBroadcast() {
   if (title) formattedText += `<b>${title}</b>\n\n`;
   formattedText += msg;
 
+  // Leer emojis personalizados del input
+  const reactionsRaw = (document.getElementById('bcReactionsInput')?.value || '').trim();
+  // Separar emojis por espacios y filtrar vacíos — máx 8
+  const emojiList = reactionsRaw.split(/\s+/).filter(e => e.length > 0).slice(0, 8);
+
   // Construir teclado interactivo
   const inlineKeyboard = [];
-  if (showReactions) {
-    inlineKeyboard.push([
-      { text: '👍', callback_data: 'react_like' },
-      { text: '🔥', callback_data: 'react_fire' },
-      { text: '✅', callback_data: 'react_check' },
-      { text: '🐒 1', callback_data: 'react_monkey' }
-    ]);
+  if (showReactions && emojiList.length > 0) {
+    // Usar URL vacía (t.me del bot) para evitar el spinner de carga — no callback_data
+    inlineKeyboard.push(
+      emojiList.map(emoji => ({ text: emoji, callback_data: `react_${emoji}` }))
+    );
   }
   if (btnText && btnUrl) {
     inlineKeyboard.push([
@@ -3818,7 +3889,12 @@ Object.assign(window, {
   loadBroadcastAdmin,
   updateBroadcastPreview,
   setPresetPromoImage,
-  sendTelegramBroadcast
+  sendTelegramBroadcast,
+  addReactionEmoji,
+  renderReactionTags,
+  removeReactionEmoji,
+  saveBotStartConfig,
+  testBotStartMessage
 });
 </script>
 </body>

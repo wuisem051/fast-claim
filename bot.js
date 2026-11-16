@@ -81,6 +81,24 @@ async function sendTelegramMessage(chatId, text, replyMarkup = null) {
   }
 }
 
+async function answerCallbackQuery(callbackQueryId, text = null) {
+  const payload = {
+    callback_query_id: callbackQueryId
+  };
+  if (text) payload.text = text;
+
+  try {
+    const res = await fetch(`${TELEGRAM_API}/answerCallbackQuery`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
+    });
+    return await res.json();
+  } catch (err) {
+    console.error('Error respondiendo callback_query:', err.message);
+  }
+}
+
 function escapeHtml(str) {
   return String(str || '')
     .replace(/&/g, '&amp;')
@@ -90,6 +108,19 @@ function escapeHtml(str) {
 }
 
 async function handleUpdate(update) {
+  // Manejo de clicks en botones interactivos (reacciones, etc.)
+  if (update.callback_query) {
+    const cb = update.callback_query;
+    const data = cb.data || '';
+    let toast = '¡Gracias por tu reacción!';
+    if (data.startsWith('react_')) {
+      const emoji = data.replace('react_', '');
+      toast = `¡Has reaccionado con ${emoji}! ✨`;
+    }
+    await answerCallbackQuery(cb.id, toast);
+    return;
+  }
+
   const msg = update.message;
   if (!msg || !msg.text) return;
 
