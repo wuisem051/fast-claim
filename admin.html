@@ -1553,7 +1553,7 @@
             </div>
             <div class="form-group">
               <label class="form-label"><i class="fa-solid fa-link"></i> URL del Botón Principal</label>
-              <input type="url" class="form-control" id="settBotStartBtnUrl" placeholder="https://fastclaim.netlify.app">
+              <input type="url" class="form-control" id="settBotStartBtnUrl" placeholder="https://faslcaim.netlify.app">
               <span class="form-hint">URL de la Mini App (web_app)</span>
             </div>
           </div>
@@ -1954,6 +1954,7 @@ let adminSecret = '';
 let allWithdrawals = [];
 let allUsers = [];
 let currentFilter = 'all';
+let settings = {};
 
 // Modal state
 let modalAction = '';
@@ -2648,7 +2649,7 @@ async function loadSettings() {
     if (!snap.exists()) {
       snap = await getDoc(doc(db, 'settings', 'config'));
     }
-    const settings = snap.exists() ? snap.data() : {};
+    settings = snap.exists() ? snap.data() : {};
 
     const el = (id) => document.getElementById(id);
 
@@ -2668,7 +2669,7 @@ async function loadSettings() {
     // Bot /start config
     if (el('settBotStartMessage')) el('settBotStartMessage').value = settings.bot_start_message || `👋 ¡Hola, <b>{nombre}</b>! Bienvenido a <b>FastClaim ARPA USDT</b> ⚡\n\nGana criptomonedas <b>ARPA</b> gratis cada hora por solo dar un toque:\n\n🎁 <b>Bono de Bienvenida:</b> Reclama tokens gratis cada hora.\n👥 <b>Sistema de Referidos:</b> Gana ARPA por cada amigo que invites más comisiones de sus reclamos.\n💳 <b>Retiros Directos:</b> Cobros a Binance Pay o BNB Smart Chain (BEP-20).\n\n👇 <i>Toca el botón abajo para iniciar la aplicación:</i>`;
     if (el('settBotStartBtnText')) el('settBotStartBtnText').value = settings.bot_start_btn_text || '🚀 Abrir FastClaim Mini App';
-    if (el('settBotStartBtnUrl')) el('settBotStartBtnUrl').value = settings.bot_start_btn_url || 'https://fastclaim.netlify.app';
+    if (el('settBotStartBtnUrl')) el('settBotStartBtnUrl').value = settings.bot_start_btn_url || 'https://faslcaim.netlify.app';
     if (el('settBotInviteBtnText')) el('settBotInviteBtnText').value = settings.bot_invite_btn_text || '👥 Invitar Amigos';
     if (el('settBotShareText')) el('settBotShareText').value = settings.bot_share_text || '🚀 Gana ARPA USDT gratis con FastClaim!';
     updateBotStartPreview();
@@ -2722,7 +2723,7 @@ async function saveSettings() {
     telegram_bot_token: elVal('settTelegramBotToken') || '8671776491:AAFlPCgWFxY593pUMsOKAPP4LzWAzp-PjgA',
     bot_start_message: elVal('settBotStartMessage') || '',
     bot_start_btn_text: elVal('settBotStartBtnText') || '🚀 Abrir FastClaim Mini App',
-    bot_start_btn_url: elVal('settBotStartBtnUrl') || 'https://fastclaim.netlify.app',
+    bot_start_btn_url: elVal('settBotStartBtnUrl') || 'https://faslcaim.netlify.app',
     bot_invite_btn_text: elVal('settBotInviteBtnText') || '👥 Invitar Amigos',
     bot_share_text: elVal('settBotShareText') || '🚀 Gana ARPA USDT gratis con FastClaim!',
     monetag_enabled: elVal('settMonetagEnabled') || '1',
@@ -2773,7 +2774,7 @@ async function saveBotStartConfig() {
   const data = {
     bot_start_message: elVal('settBotStartMessage'),
     bot_start_btn_text: elVal('settBotStartBtnText') || '🚀 Abrir FastClaim Mini App',
-    bot_start_btn_url: elVal('settBotStartBtnUrl') || 'https://fastclaim.netlify.app',
+    bot_start_btn_url: elVal('settBotStartBtnUrl') || 'https://faslcaim.netlify.app',
     bot_invite_btn_text: elVal('settBotInviteBtnText') || '👥 Invitar Amigos',
     bot_share_text: elVal('settBotShareText') || '🚀 Gana ARPA USDT gratis con FastClaim!',
     updated_at: new Date().toISOString()
@@ -2795,7 +2796,7 @@ async function testBotStartMessage() {
   const elVal = (id) => (document.getElementById(id)?.value || '').trim();
   const msg = elVal('settBotStartMessage') || '👋 Mensaje de prueba';
   const btnText = elVal('settBotStartBtnText') || '🚀 Abrir FastClaim Mini App';
-  const btnUrl = elVal('settBotStartBtnUrl') || 'https://fastclaim.netlify.app';
+  const btnUrl = elVal('settBotStartBtnUrl') || 'https://faslcaim.netlify.app';
   const inviteText = elVal('settBotInviteBtnText') || '👥 Invitar Amigos';
 
   // Get admin telegram_id
@@ -3282,6 +3283,15 @@ async function loadReferralsAdmin() {
   if (topTbody) topTbody.innerHTML = '<tr><td colspan="7" class="empty-row"><i class="fa-solid fa-spinner fa-spin"></i><p>Cargando ranking...</p></td></tr>';
 
   try {
+    // 0. Asegurar que settings esté cargado
+    if (!settings || Object.keys(settings).length === 0) {
+      try {
+        let snap = await getDoc(doc(db, 'settings', 'global'));
+        if (!snap.exists()) snap = await getDoc(doc(db, 'settings', 'config'));
+        settings = snap.exists() ? snap.data() : {};
+      } catch(e) {}
+    }
+
     // 1. Asegurar que tenemos todos los usuarios cargados
     if (!allUsers || allUsers.length === 0) {
       const snapUsers = await getDocs(collection(db, 'users'));

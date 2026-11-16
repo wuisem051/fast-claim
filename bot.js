@@ -2,7 +2,7 @@
 require('dotenv').config();
 
 const token = process.env.BOT_TOKEN;
-const appUrl = (process.env.APP_URL || 'https://fastclaim.netlify.app').replace(/\/+$/, '');
+const appUrl = (process.env.APP_URL || 'https://faslcaim.netlify.app').replace(/\/+$/, '');
 
 if (!token) {
   console.error('\n❌ ERROR: No se encontró BOT_TOKEN en el archivo .env\n');
