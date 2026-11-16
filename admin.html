@@ -1454,6 +1454,62 @@
         </div>
       </div>
 
+      <!-- Bot /start Config Panel -->
+      <div class="panel" style="border-color:rgba(0,136,255,0.3);">
+        <div class="panel-header" style="background:linear-gradient(135deg,rgba(0,136,255,0.12),rgba(0,180,255,0.05));">
+          <div class="panel-title"><i class="fa-brands fa-telegram" style="color:#2AABEE;"></i> Configuración del Bot — Respuesta a /start</div>
+          <span style="font-size:12px;color:var(--text2);">Personaliza el mensaje y botones que ve el usuario al abrir el bot</span>
+        </div>
+        <div class="panel-body">
+          <div class="form-group" style="margin-bottom:16px;">
+            <label class="form-label"><i class="fa-solid fa-message"></i> Mensaje de Bienvenida (HTML permitido)</label>
+            <textarea class="form-control" id="settBotStartMessage" rows="6" style="font-family:monospace;font-size:13px;resize:vertical;" placeholder="👋 ¡Hola, {nombre}! Bienvenido a FastClaim..."></textarea>
+            <span class="form-hint">Usa <code>{nombre}</code> para insertar el nombre del usuario. Soporta HTML de Telegram: &lt;b&gt;, &lt;i&gt;, &lt;a href=...&gt;</span>
+          </div>
+          <div class="form-grid" style="margin-bottom:16px;">
+            <div class="form-group">
+              <label class="form-label"><i class="fa-solid fa-rocket"></i> Texto del Botón Principal</label>
+              <input type="text" class="form-control" id="settBotStartBtnText" placeholder="🚀 Abrir FastClaim Mini App">
+              <span class="form-hint">Texto del botón que abre la Mini App</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label"><i class="fa-solid fa-link"></i> URL del Botón Principal</label>
+              <input type="url" class="form-control" id="settBotStartBtnUrl" placeholder="https://fastclaim.netlify.app">
+              <span class="form-hint">URL de la Mini App (web_app)</span>
+            </div>
+          </div>
+          <div class="form-grid" style="margin-bottom:16px;">
+            <div class="form-group">
+              <label class="form-label"><i class="fa-solid fa-user-group"></i> Texto del Botón Invitar</label>
+              <input type="text" class="form-control" id="settBotInviteBtnText" placeholder="👥 Invitar Amigos">
+              <span class="form-hint">Texto del botón de compartir</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label"><i class="fa-solid fa-share-nodes"></i> Texto al Compartir</label>
+              <input type="text" class="form-control" id="settBotShareText" placeholder="🚀 Gana ARPA USDT gratis con FastClaim!">
+              <span class="form-hint">Mensaje preescrito al compartir el link</span>
+            </div>
+          </div>
+          <!-- Vista previa estilo Telegram -->
+          <div style="background:#17212b;border-radius:14px;padding:18px;margin-bottom:16px;border:1px solid rgba(42,171,238,0.2);">
+            <div style="font-size:11px;color:#2AABEE;font-weight:700;margin-bottom:10px;text-transform:uppercase;letter-spacing:1px;">👁 Vista Previa</div>
+            <div style="background:#182533;border-radius:12px;padding:14px;max-width:340px;">
+              <div id="botStartPreviewText" style="color:#e8e8e8;font-size:14px;line-height:1.6;white-space:pre-wrap;"></div>
+              <div style="margin-top:12px;display:flex;flex-direction:column;gap:6px;">
+                <div id="botStartPreviewBtn1" style="background:#2AABEE;color:#fff;border-radius:8px;padding:10px;text-align:center;font-weight:600;font-size:14px;"></div>
+                <div id="botStartPreviewBtn2" style="background:#1c2f3f;color:#2AABEE;border-radius:8px;padding:10px;text-align:center;font-size:14px;"></div>
+              </div>
+            </div>
+          </div>
+          <button class="btn btn-primary" onclick="saveBotStartConfig()" style="padding:11px 28px;">
+            <i class="fa-solid fa-floppy-disk"></i> Guardar Config del Bot
+          </button>
+          <button class="btn" onclick="testBotStartMessage()" style="padding:11px 22px;margin-left:10px;background:rgba(42,171,238,0.15);color:#2AABEE;border-color:rgba(42,171,238,0.4);">
+            <i class="fa-brands fa-telegram"></i> Enviarme Prueba
+          </button>
+        </div>
+      </div>
+
       <!-- Monetag Panel -->
       <div class="panel">
         <div class="panel-header">
@@ -2529,6 +2585,14 @@ async function loadSettings() {
     if (el('refAdminPercentInput')) el('refAdminPercentInput').value = settings.referral_percent !== undefined ? settings.referral_percent : '10';
     if (el('settMinWithdraw')) el('settMinWithdraw').value = settings.min_withdraw || '10.0';
     if (el('settTelegramBotToken')) el('settTelegramBotToken').value = settings.telegram_bot_token || '8671776491:AAFlPCgWFxY593pUMsOKAPP4LzWAzp-PjgA';
+
+    // Bot /start config
+    if (el('settBotStartMessage')) el('settBotStartMessage').value = settings.bot_start_message || `👋 ¡Hola, <b>{nombre}</b>! Bienvenido a <b>FastClaim ARPA USDT</b> ⚡\n\nGana criptomonedas <b>ARPA</b> gratis cada hora por solo dar un toque:\n\n🎁 <b>Bono de Bienvenida:</b> Reclama tokens gratis cada hora.\n👥 <b>Sistema de Referidos:</b> Gana ARPA por cada amigo que invites más comisiones de sus reclamos.\n💳 <b>Retiros Directos:</b> Cobros a Binance Pay o BNB Smart Chain (BEP-20).\n\n👇 <i>Toca el botón abajo para iniciar la aplicación:</i>`;
+    if (el('settBotStartBtnText')) el('settBotStartBtnText').value = settings.bot_start_btn_text || '🚀 Abrir FastClaim Mini App';
+    if (el('settBotStartBtnUrl')) el('settBotStartBtnUrl').value = settings.bot_start_btn_url || 'https://fastclaim.netlify.app';
+    if (el('settBotInviteBtnText')) el('settBotInviteBtnText').value = settings.bot_invite_btn_text || '👥 Invitar Amigos';
+    if (el('settBotShareText')) el('settBotShareText').value = settings.bot_share_text || '🚀 Gana ARPA USDT gratis con FastClaim!';
+    updateBotStartPreview();
     if (el('settMonetagEnabled')) el('settMonetagEnabled').value = settings.monetag_enabled !== undefined ? settings.monetag_enabled : '1';
     if (el('settMonetagDirectLink')) el('settMonetagDirectLink').value = settings.monetag_direct_link || '';
     if (el('settMonetagScriptUrl')) el('settMonetagScriptUrl').value = settings.monetag_script_url || '//libtl.com/sdk.js';
@@ -2577,6 +2641,11 @@ async function saveSettings() {
     referral_percent: parseFloat(elVal('settReferralPercent') || '10'),
     min_withdraw: parseFloat(elVal('settMinWithdraw') || '10.0'),
     telegram_bot_token: elVal('settTelegramBotToken') || '8671776491:AAFlPCgWFxY593pUMsOKAPP4LzWAzp-PjgA',
+    bot_start_message: elVal('settBotStartMessage') || '',
+    bot_start_btn_text: elVal('settBotStartBtnText') || '🚀 Abrir FastClaim Mini App',
+    bot_start_btn_url: elVal('settBotStartBtnUrl') || 'https://fastclaim.netlify.app',
+    bot_invite_btn_text: elVal('settBotInviteBtnText') || '👥 Invitar Amigos',
+    bot_share_text: elVal('settBotShareText') || '🚀 Gana ARPA USDT gratis con FastClaim!',
     monetag_enabled: elVal('settMonetagEnabled') || '1',
     monetag_direct_link: elVal('settMonetagDirectLink'),
     monetag_script_url: scriptUrl,
@@ -2593,6 +2662,97 @@ async function saveSettings() {
     console.error('saveSettings error:', err);
     alert('❌ Error al guardar en Firebase:\n' + (err.message || err));
     showAdminToast('⚠️ Error al guardar: ' + (err.message || ''), 'error');
+  }
+}
+
+// ─── Bot /start Config ────────────────────────────────────────────────────
+function updateBotStartPreview() {
+  const msg = document.getElementById('settBotStartMessage')?.value || '';
+  const btn1 = document.getElementById('settBotStartBtnText')?.value || '🚀 Abrir FastClaim Mini App';
+  const btn2 = document.getElementById('settBotInviteBtnText')?.value || '👥 Invitar Amigos';
+
+  // Render preview — replace {nombre} with example name, strip HTML tags for plain preview
+  const previewMsg = msg.replace(/{nombre}/g, 'Maxi').replace(/<[^>]+>/g, '');
+  const p = document.getElementById('botStartPreviewText');
+  if (p) p.textContent = previewMsg;
+  const b1 = document.getElementById('botStartPreviewBtn1');
+  if (b1) b1.textContent = btn1;
+  const b2 = document.getElementById('botStartPreviewBtn2');
+  if (b2) b2.textContent = btn2;
+}
+
+// Auto-update preview on input
+['settBotStartMessage','settBotStartBtnText','settBotInviteBtnText'].forEach(id => {
+  setTimeout(() => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('input', updateBotStartPreview);
+  }, 2000);
+});
+
+async function saveBotStartConfig() {
+  const elVal = (id) => (document.getElementById(id)?.value || '').trim();
+  const data = {
+    bot_start_message: elVal('settBotStartMessage'),
+    bot_start_btn_text: elVal('settBotStartBtnText') || '🚀 Abrir FastClaim Mini App',
+    bot_start_btn_url: elVal('settBotStartBtnUrl') || 'https://fastclaim.netlify.app',
+    bot_invite_btn_text: elVal('settBotInviteBtnText') || '👥 Invitar Amigos',
+    bot_share_text: elVal('settBotShareText') || '🚀 Gana ARPA USDT gratis con FastClaim!',
+    updated_at: new Date().toISOString()
+  };
+  try {
+    await setDoc(doc(db, 'settings', 'global'), data, { merge: true });
+    await setDoc(doc(db, 'settings', 'config'), data, { merge: true });
+    showAdminToast('✅ Config del bot /start guardada. Reinicia bot.js para aplicar.', 'success');
+  } catch(err) {
+    showAdminToast('❌ Error: ' + err.message, 'error');
+  }
+}
+
+async function testBotStartMessage() {
+  // Get admin's telegram_id from current user's Firestore doc
+  const adminUid = auth.currentUser?.uid;
+  if (!adminUid) { showAdminToast('⚠️ No hay sesión activa', 'error'); return; }
+
+  const elVal = (id) => (document.getElementById(id)?.value || '').trim();
+  const msg = elVal('settBotStartMessage') || '👋 Mensaje de prueba';
+  const btnText = elVal('settBotStartBtnText') || '🚀 Abrir FastClaim Mini App';
+  const btnUrl = elVal('settBotStartBtnUrl') || 'https://fastclaim.netlify.app';
+  const inviteText = elVal('settBotInviteBtnText') || '👥 Invitar Amigos';
+
+  // Get admin telegram_id
+  const uDoc = await getDoc(doc(db, 'users', adminUid));
+  const telegramId = uDoc.exists() ? uDoc.data().telegram_id : null;
+  if (!telegramId || String(telegramId).startsWith('usr_')) {
+    showAdminToast('⚠️ No tienes telegram_id vinculado. Entra al bot con tu cuenta de Telegram primero.', 'error');
+    return;
+  }
+
+  // Get bot token
+  let token = DEFAULT_TG_BOT_TOKEN;
+  try {
+    const sDoc = await getDoc(doc(db, 'settings', 'global'));
+    if (sDoc.exists() && sDoc.data().telegram_bot_token) token = sDoc.data().telegram_bot_token;
+  } catch(e) {}
+
+  const previewText = msg.replace(/{nombre}/g, 'Admin');
+  const keyboard = {
+    inline_keyboard: [
+      [{ text: btnText, web_app: { url: btnUrl } }],
+      [{ text: inviteText, url: `https://t.me/share/url?url=${encodeURIComponent('https://t.me/Dolar_fastbot?start=TEST')}&text=${encodeURIComponent('Test')}` }]
+    ]
+  };
+
+  try {
+    const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: telegramId, text: previewText, parse_mode: 'HTML', reply_markup: keyboard })
+    });
+    const r = await res.json();
+    if (r.ok) showAdminToast('✅ Mensaje de prueba enviado a tu Telegram!', 'success');
+    else showAdminToast('❌ Error Telegram: ' + (r.description || 'desconocido'), 'error');
+  } catch(err) {
+    showAdminToast('❌ Error de red: ' + err.message, 'error');
   }
 }
 
