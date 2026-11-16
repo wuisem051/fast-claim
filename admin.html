@@ -861,6 +861,11 @@
         </button>
       </li>
       <li>
+        <button class="sidebar-nav-item" data-page="broadcast" onclick="switchAdminPage('broadcast')">
+          <i class="fa-solid fa-bullhorn"></i> Publicaciones
+        </button>
+      </li>
+      <li>
         <button class="sidebar-nav-item" data-page="calculator" onclick="switchAdminPage('calculator')">
           <i class="fa-solid fa-calculator"></i> Calculadora ARPA
         </button>
@@ -1232,6 +1237,152 @@
       </div>
     </div>
 
+    <!-- ═══ Broadcast / Telegram Publisher Page ═══════════ -->
+    <div id="pageBroadcast" class="admin-page">
+      <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+        <div>
+          <h1 class="page-title"><i class="fa-solid fa-bullhorn" style="color:var(--accent);"></i> Publicaciones en Telegram</h1>
+          <p class="page-subtitle">Publica anuncios, noticias y promociones con imagen y botones interactivos directamente al Canal Oficial y a los usuarios del Bot</p>
+        </div>
+      </div>
+
+      <!-- Config & Status Banner -->
+      <div class="panel" style="background:linear-gradient(135deg,rgba(0,152,234,0.1),rgba(139,92,246,0.06));border-color:rgba(0,152,234,0.25);margin-bottom:24px;">
+        <div class="panel-body" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;">
+          <div style="display:flex;align-items:center;gap:12px;">
+            <div style="width:44px;height:44px;border-radius:12px;background:rgba(0,152,234,0.2);border:1px solid rgba(0,152,234,0.4);display:flex;align-items:center;justify-content:center;font-size:20px;color:var(--ton2);">
+              <i class="fa-brands fa-telegram"></i>
+            </div>
+            <div>
+              <div style="font-weight:700;font-size:15px;color:var(--text);">Canal Vinculado: <span style="color:var(--ton2);">@fastphartner</span></div>
+              <div style="font-size:12px;color:var(--text3);margin-top:2px;">Bot Remitente: <strong style="color:var(--green);">@Dolar_fastbot</strong> (Administrador con permisos de publicación)</div>
+            </div>
+          </div>
+          <span class="badge approved" style="font-size:12px;padding:6px 12px;"><span class="badge-dot"></span>Canal Conectado y Verificado</span>
+        </div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(360px, 1fr));gap:20px;align-items:start;">
+        <!-- Formulario de Publicación -->
+        <div class="panel">
+          <div class="panel-header">
+            <div class="panel-title"><i class="fa-solid fa-pen-nib"></i> Crear Nueva Publicación</div>
+          </div>
+          <div class="panel-body">
+            <!-- Destino -->
+            <div class="form-group">
+              <label class="form-label"><i class="fa-solid fa-satellite-dish"></i> Destino del Mensaje</label>
+              <select class="form-control" id="bcDestination" onchange="updateBroadcastPreview()">
+                <option value="channel" selected>📢 Canal Oficial (@fastphartner)</option>
+                <option value="both">🚀 Canal (@fastphartner) + Todos los Usuarios del Bot</option>
+              </select>
+            </div>
+
+            <!-- URL Imagen opcional -->
+            <div class="form-group">
+              <label class="form-label"><i class="fa-regular fa-image"></i> URL de la Imagen (Banner / Mockup)</label>
+              <div style="display:flex;gap:8px;">
+                <input type="url" class="form-control" id="bcImageUrl" placeholder="https://ejemplo.com/banner.jpg" oninput="updateBroadcastPreview()" style="flex:1;">
+                <button class="btn" type="button" style="background:var(--card);border-color:var(--card-border);color:var(--text2);font-size:12px;padding:6px 12px;white-space:nowrap;" onclick="setPresetPromoImage()">
+                  <i class="fa-solid fa-wand-magic-sparkles"></i> Banner FastClaim
+                </button>
+              </div>
+              <span class="form-hint">Si colocas una imagen, se enviará como foto con el texto como descripción debajo (igual a la foto de referencia).</span>
+            </div>
+
+            <!-- Título / Texto -->
+            <div class="form-group">
+              <label class="form-label"><i class="fa-solid fa-heading"></i> Título Destacado</label>
+              <input type="text" class="form-control" id="bcTitle" value="Fast Claim" placeholder="Ej: Fast Claim" oninput="updateBroadcastPreview()">
+            </div>
+
+            <!-- Contenido del Mensaje -->
+            <div class="form-group">
+              <label class="form-label"><i class="fa-solid fa-align-left"></i> Mensaje o Descripción (Soporta HTML/Negrita)</label>
+              <textarea class="form-control" id="bcMessage" rows="5" placeholder="Escribe el texto de tu publicación aquí..." oninput="updateBroadcastPreview()" style="resize:vertical;">FastClaim te premia cada hora por solo dar un toque. Reclama bonos gratis en ARPA, invita a tus amigos y transfiere tus ganancias instantáneamente a tu wallet personal. Disponible en navegador web o Telegram Mini App.</textarea>
+              <span class="form-hint">Puedes usar etiquetas como &lt;b&gt;negrita&lt;/b&gt;, &lt;i&gt;cursiva&lt;/i&gt;, enlaces, etc.</span>
+            </div>
+
+            <!-- Botón 1: Iniciar Bot / Web App -->
+            <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:12px;margin-bottom:14px;">
+              <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px;"><i class="fa-solid fa-arrow-pointer"></i> Botón Principal (Iniciar Bot / Abrir App)</div>
+              <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:10px;">
+                <div>
+                  <label class="form-label" style="font-size:11px;">Texto del Botón</label>
+                  <input type="text" class="form-control" id="bcBtnText" value="Iniciar Bot" oninput="updateBroadcastPreview()">
+                </div>
+                <div>
+                  <label class="form-label" style="font-size:11px;">Enlace del Botón</label>
+                  <input type="url" class="form-control" id="bcBtnUrl" value="https://t.me/Dolar_fastbot/app" oninput="updateBroadcastPreview()">
+                </div>
+              </div>
+            </div>
+
+            <!-- Botones de Reacción (Emojis) -->
+            <div class="form-group">
+              <label class="form-label"><i class="fa-regular fa-face-smile"></i> Botones de Reacción Rápida (Opcional)</label>
+              <div style="display:flex;gap:8px;flex-wrap:wrap;">
+                <label style="display:inline-flex;align-items:center;gap:6px;font-size:12px;color:var(--text2);cursor:pointer;background:var(--card);padding:6px 12px;border-radius:8px;border:1px solid var(--card-border);">
+                  <input type="checkbox" id="bcReactionsEnabled" checked onchange="updateBroadcastPreview()"> Incluir reacciones (👍 🔥 ✅ 🐒)
+                </label>
+              </div>
+            </div>
+
+            <div style="margin-top:20px;">
+              <button class="btn btn-primary" id="btnSendBroadcast" onclick="sendTelegramBroadcast()" style="width:100%;padding:14px;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px;">
+                <i class="fa-solid fa-paper-plane"></i> Publicar en Telegram Ahora
+              </button>
+            </div>
+          </div>
+        </div>
+
+        <!-- Vista Previa en Vivo (Estilo Telegram) -->
+        <div class="panel">
+          <div class="panel-header" style="display:flex;align-items:center;justify-content:space-between;">
+            <div class="panel-title"><i class="fa-solid fa-eye"></i> Vista Previa en Telegram</div>
+            <span style="font-size:11px;color:var(--text3);">Simulación exacta</span>
+          </div>
+          <div class="panel-body" style="background:#0e1621;border-radius:12px;padding:16px;">
+            <div style="max-width:380px;margin:0 auto;background:#182533;border-radius:14px;overflow:hidden;box-shadow:0 4px 16px rgba(0,0,0,0.4);border:1px solid rgba(255,255,255,0.06);">
+              
+              <!-- Imagen Preview -->
+              <div id="previewImageWrap" style="width:100%;height:190px;background:#17212b;display:none;align-items:center;justify-content:center;overflow:hidden;">
+                <img id="previewImageEl" src="" style="width:100%;height:100%;object-fit:cover;">
+              </div>
+
+              <!-- Texto Preview -->
+              <div style="padding:14px 14px 10px;">
+                <div id="previewTitle" style="font-weight:700;font-size:14px;color:#5288c1;margin-bottom:6px;">Fast Claim</div>
+                <div id="previewBody" style="font-size:13px;color:#f5f5f5;line-height:1.45;word-break:break-word;white-space:pre-line;">
+                  FastClaim te premia cada hora por solo dar un toque. Reclama bonos gratis en ARPA, invita a tus amigos y transfiere tus ganancias instantáneamente a tu wallet personal. Disponible en navegador web o Telegram Mini App.
+                </div>
+                <div style="display:flex;align-items:center;justify-content:flex-end;gap:6px;margin-top:6px;font-size:11px;color:#708499;">
+                  <span>👁 3</span> • <span>6:40 p. m.</span>
+                </div>
+              </div>
+
+              <!-- Reacciones Preview -->
+              <div id="previewReactionsWrap" style="display:grid;grid-template-columns:repeat(4, 1fr);gap:4px;padding:6px 12px 10px;border-top:1px solid rgba(255,255,255,0.04);">
+                <div style="background:rgba(255,255,255,0.06);border-radius:8px;padding:6px;text-align:center;font-size:13px;">👍</div>
+                <div style="background:rgba(255,255,255,0.06);border-radius:8px;padding:6px;text-align:center;font-size:13px;">🔥</div>
+                <div style="background:rgba(255,255,255,0.06);border-radius:8px;padding:6px;text-align:center;font-size:13px;">✅</div>
+                <div style="background:rgba(255,255,255,0.06);border-radius:8px;padding:6px;text-align:center;font-size:12px;display:flex;align-items:center;justify-content:center;gap:3px;">🐒 <span style="font-size:10px;color:#708499;">1</span></div>
+              </div>
+
+              <!-- Botón URL / Web App Preview -->
+              <div style="padding:0 12px 14px;">
+                <div id="previewButton" style="background:#2b5278;color:#fff;font-weight:700;font-size:13px;padding:10px;border-radius:8px;text-align:center;display:flex;align-items:center;justify-content:center;gap:6px;cursor:pointer;">
+                  <span id="previewButtonText">Iniciar Bot</span>
+                  <i class="fa-solid fa-arrow-up-right-from-square" style="font-size:10px;opacity:0.8;"></i>
+                </div>
+              </div>
+
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- ═══ Settings Page ════════════════════════════════ -->
     <div id="pageSettings" class="admin-page">
       <div class="page-header">
@@ -1293,6 +1444,11 @@
               <label class="form-label"><i class="fa-solid fa-wallet"></i> Retiro Mínimo (ARPA)</label>
               <input type="number" class="form-control" id="settMinWithdraw" step="0.01" min="0">
               <span class="form-hint">Monto mínimo de ARPA para solicitar un retiro</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label"><i class="fa-brands fa-telegram"></i> Telegram Bot Token</label>
+              <input type="password" class="form-control" id="settTelegramBotToken" placeholder="8671776491:AAFl...">
+              <span class="form-hint">Token de @BotFather para envíos directos de publicaciones desde el admin</span>
             </div>
           </div>
         </div>
@@ -1789,6 +1945,7 @@ function switchAdminPage(page) {
   if (page === 'tasks')    loadTasks();
   if (page === 'calculator') initCalculator();
   if (page === 'referrals') loadReferralsAdmin();
+  if (page === 'broadcast') loadBroadcastAdmin();
 }
 
 function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
@@ -2371,6 +2528,7 @@ async function loadSettings() {
     if (el('refAdminRewardInput')) el('refAdminRewardInput').value = settings.referral_reward || '1.0';
     if (el('refAdminPercentInput')) el('refAdminPercentInput').value = settings.referral_percent !== undefined ? settings.referral_percent : '10';
     if (el('settMinWithdraw')) el('settMinWithdraw').value = settings.min_withdraw || '10.0';
+    if (el('settTelegramBotToken')) el('settTelegramBotToken').value = settings.telegram_bot_token || '8671776491:AAFlPCgWFxY593pUMsOKAPP4LzWAzp-PjgA';
     if (el('settMonetagEnabled')) el('settMonetagEnabled').value = settings.monetag_enabled !== undefined ? settings.monetag_enabled : '1';
     if (el('settMonetagDirectLink')) el('settMonetagDirectLink').value = settings.monetag_direct_link || '';
     if (el('settMonetagScriptUrl')) el('settMonetagScriptUrl').value = settings.monetag_script_url || '//libtl.com/sdk.js';
@@ -2418,6 +2576,7 @@ async function saveSettings() {
     referral_reward: parseFloat(elVal('settReferralReward') || '1.0'),
     referral_percent: parseFloat(elVal('settReferralPercent') || '10'),
     min_withdraw: parseFloat(elVal('settMinWithdraw') || '10.0'),
+    telegram_bot_token: elVal('settTelegramBotToken') || '8671776491:AAFlPCgWFxY593pUMsOKAPP4LzWAzp-PjgA',
     monetag_enabled: elVal('settMonetagEnabled') || '1',
     monetag_direct_link: elVal('settMonetagDirectLink'),
     monetag_script_url: scriptUrl,
@@ -3223,6 +3382,200 @@ async function saveReferralSettingsFromPanel() {
   }
 }
 
+// ─── Broadcast / Telegram Publisher (Admin) ──────────────
+const DEFAULT_TG_BOT_TOKEN = '8671776491:AAFlPCgWFxY593pUMsOKAPP4LzWAzp-PjgA';
+const CHANNEL_CHAT_ID = '@fastphartner';
+
+function loadBroadcastAdmin() {
+  updateBroadcastPreview();
+}
+
+function setPresetPromoImage() {
+  const input = document.getElementById('bcImageUrl');
+  if (input) {
+    // URL del mockup de la app alojado en el sitio o landing
+    input.value = 'https://fastclaim.netlify.app/landing/assets/img/mockup-dashboard.jpg';
+    updateBroadcastPreview();
+    showAdminToast('🖼️ Imagen promocional cargada en vista previa', 'info');
+  }
+}
+
+function updateBroadcastPreview() {
+  const title = (document.getElementById('bcTitle')?.value || '').trim();
+  const msg = (document.getElementById('bcMessage')?.value || '').trim();
+  const imgUrl = (document.getElementById('bcImageUrl')?.value || '').trim();
+  const btnText = (document.getElementById('bcBtnText')?.value || '').trim();
+  const showReactions = document.getElementById('bcReactionsEnabled')?.checked;
+
+  const titleEl = document.getElementById('previewTitle');
+  const bodyEl = document.getElementById('previewBody');
+  const imgWrap = document.getElementById('previewImageWrap');
+  const imgEl = document.getElementById('previewImageEl');
+  const btnWrap = document.getElementById('previewButton');
+  const btnTextEl = document.getElementById('previewButtonText');
+  const reactWrap = document.getElementById('previewReactionsWrap');
+
+  if (titleEl) {
+    titleEl.textContent = title || 'Fast Claim';
+    titleEl.style.display = title ? 'block' : 'none';
+  }
+
+  if (bodyEl) {
+    bodyEl.innerHTML = msg || 'Texto de la publicación...';
+  }
+
+  if (imgWrap && imgEl) {
+    if (imgUrl) {
+      imgEl.src = imgUrl;
+      imgWrap.style.display = 'flex';
+      imgEl.onerror = () => { imgWrap.style.display = 'none'; };
+    } else {
+      imgWrap.style.display = 'none';
+    }
+  }
+
+  if (btnWrap && btnTextEl) {
+    if (btnText) {
+      btnTextEl.textContent = btnText;
+      btnWrap.style.display = 'flex';
+    } else {
+      btnWrap.style.display = 'none';
+    }
+  }
+
+  if (reactWrap) {
+    reactWrap.style.display = showReactions ? 'grid' : 'none';
+  }
+}
+
+async function sendTelegramBroadcast() {
+  const btn = document.getElementById('btnSendBroadcast');
+  const originalHtml = btn ? btn.innerHTML : '';
+  const title = (document.getElementById('bcTitle')?.value || '').trim();
+  const msg = (document.getElementById('bcMessage')?.value || '').trim();
+  const imgUrl = (document.getElementById('bcImageUrl')?.value || '').trim();
+  const btnText = (document.getElementById('bcBtnText')?.value || '').trim();
+  const btnUrl = (document.getElementById('bcBtnUrl')?.value || '').trim();
+  const showReactions = document.getElementById('bcReactionsEnabled')?.checked;
+  const destination = document.getElementById('bcDestination')?.value || 'channel';
+
+  if (!msg) {
+    showAdminToast('⚠️ Debes ingresar un mensaje o descripción', 'error');
+    return;
+  }
+
+  // Obtener bot token desde settings o fallback
+  let token = DEFAULT_TG_BOT_TOKEN;
+  try {
+    const sDoc = await getDoc(doc(db, 'settings', 'global'));
+    if (sDoc.exists() && sDoc.data().telegram_bot_token) {
+      token = sDoc.data().telegram_bot_token;
+    }
+  } catch(e) {}
+
+  if (btn) {
+    btn.disabled = true;
+    btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Publicando en Telegram...';
+  }
+
+  // Construir texto formateado HTML
+  let formattedText = '';
+  if (title) formattedText += `<b>${title}</b>\n\n`;
+  formattedText += msg;
+
+  // Construir teclado interactivo
+  const inlineKeyboard = [];
+  if (showReactions) {
+    inlineKeyboard.push([
+      { text: '👍', callback_data: 'react_like' },
+      { text: '🔥', callback_data: 'react_fire' },
+      { text: '✅', callback_data: 'react_check' },
+      { text: '🐒 1', callback_data: 'react_monkey' }
+    ]);
+  }
+  if (btnText && btnUrl) {
+    inlineKeyboard.push([
+      { text: `${btnText} ↗`, url: btnUrl }
+    ]);
+  }
+
+  const replyMarkup = inlineKeyboard.length > 0 ? { inline_keyboard: inlineKeyboard } : null;
+
+  try {
+    // 1. Enviar al Canal Oficial (@fastphartner)
+    const resultChannel = await sendSingleTelegramPost(token, CHANNEL_CHAT_ID, formattedText, imgUrl, replyMarkup);
+    if (!resultChannel.ok) {
+      throw new Error(`Error en canal: ${resultChannel.description || 'Fallo desconocido'}`);
+    }
+
+    let usersNotified = 0;
+    // 2. Si se eligió 'both', enviar también a los usuarios que tengan telegram_id
+    if (destination === 'both') {
+      if (!allUsers || allUsers.length === 0) {
+        const uSnap = await getDocs(collection(db, 'users'));
+        allUsers = [];
+        uSnap.forEach(d => allUsers.push({ id: d.id, ...d.data() }));
+      }
+
+      const tgUsers = allUsers.filter(u => u.telegram_id && !String(u.telegram_id).startsWith('usr_'));
+      for (const u of tgUsers) {
+        try {
+          const res = await sendSingleTelegramPost(token, u.telegram_id, formattedText, imgUrl, replyMarkup);
+          if (res.ok) usersNotified++;
+          // Pequeño delay de 80ms para respetar rate limits de Telegram
+          await new Promise(r => setTimeout(r, 80));
+        } catch(eUser) {}
+      }
+    }
+
+    const successMsg = destination === 'both' 
+      ? `✅ Publicado con éxito en @fastphartner y enviado a ${usersNotified} usuarios`
+      : '✅ ¡Publicación enviada con éxito al canal @fastphartner!';
+
+    showAdminToast(successMsg, 'success');
+    alert(successMsg);
+
+  } catch(err) {
+    console.error('Error sendTelegramBroadcast:', err);
+    showAdminToast(`❌ Error al publicar: ${err.message}`, 'error');
+    alert(`❌ Error al publicar en Telegram:\n${err.message}`);
+  } finally {
+    if (btn) {
+      btn.disabled = false;
+      btn.innerHTML = originalHtml;
+    }
+  }
+}
+
+async function sendSingleTelegramPost(token, chatId, text, imgUrl, replyMarkup) {
+  const isPhoto = Boolean(imgUrl && (imgUrl.startsWith('http://') || imgUrl.startsWith('https://')));
+  const endpoint = isPhoto ? 'sendPhoto' : 'sendMessage';
+
+  const bodyObj = {
+    chat_id: chatId,
+    parse_mode: 'HTML'
+  };
+
+  if (isPhoto) {
+    bodyObj.photo = imgUrl;
+    bodyObj.caption = text;
+  } else {
+    bodyObj.text = text;
+  }
+
+  if (replyMarkup) {
+    bodyObj.reply_markup = replyMarkup;
+  }
+
+  const res = await fetch(`https://api.telegram.org/bot${token}/${endpoint}`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify(bodyObj)
+  });
+
+  return await res.json();
+}
+
 // ─── Window Exports for HTML Event Handlers ──────────────
 Object.assign(window, {
   handleLogin,
@@ -3269,7 +3622,11 @@ Object.assign(window, {
   renderReferralsAdmin,
   renderTopReferrersAdmin,
   filterReferralsAdmin,
-  saveReferralSettingsFromPanel
+  saveReferralSettingsFromPanel,
+  loadBroadcastAdmin,
+  updateBroadcastPreview,
+  setPresetPromoImage,
+  sendTelegramBroadcast
 });
 </script>
 </body>
