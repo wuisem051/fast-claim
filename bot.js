@@ -1,86 +1,135 @@
 // ─── FastClaim Telegram Bot Handler ──────────────────────────
 require('dotenv').config();
-const TelegramBot = require('node-telegram-bot-api');
 
 const token = process.env.BOT_TOKEN;
-const appUrl = process.env.APP_URL || 'https://fastclaim.netlify.app';
+const appUrl = (process.env.APP_URL || 'https://fastclaim.netlify.app').replace(/\/+$/, '');
 
 if (!token) {
-  console.error('\n❌ ERROR: No se encontró BOT_TOKEN en el archivo .env');
-  console.log('👉 Crea un archivo .env con:');
-  console.log('BOT_TOKEN=tu_token_de_botfather');
-  console.log('APP_URL=https://tu-sitio.netlify.app\n');
+  console.error('\n❌ ERROR: No se encontró BOT_TOKEN en el archivo .env\n');
   process.exit(1);
 }
 
-const bot = new TelegramBot(token, { polling: true });
+const TELEGRAM_API = `https://api.telegram.org/bot${token}`;
 
-console.log('🤖 FastClaim Bot iniciado correctamente con polling...');
-console.log(`🌐 Mini App URL configurada: ${appUrl}`);
+console.log('🤖 FastClaim Bot (@Dolar_fastbot) inicializado...');
+console.log(`🌐 Mini App URL: ${appUrl}`);
 
-// Manejar comando /start y /start <referral_code>
-bot.onText(/\/start(?:\s+(.+))?/, async (msg, match) => {
-  const chatId = msg.chat.id;
-  const firstName = msg.from.first_name || 'amigo';
-  const refCode = match && match[1] ? match[1].trim() : '';
-
-  // Construir la URL con el parámetro de referido si viene de una invitación
-  const targetUrl = refCode ? `${appUrl}?ref=${encodeURIComponent(refCode)}` : appUrl;
-
-  const welcomeMessage = 
-`👋 ¡Hola, *${escapeMarkdown(firstName)}*! Bienvenido a *FastClaim ARPA USDT* ⚡
-
-Gana criptomonedas *ARPA* gratis de forma periódica por solo dar un toque:
-
-🎁 *Bono de Bienvenida:* Reclama tokens gratis cada hora.
-👥 *Sistema de Referidos:* Gana ARPA por cada amigo que invites más el % de todos sus reclamos.
-💳 *Retiros Directos:* Cobros a tu wallet BSC (BEP-20) o Binance Pay.
-
-👇 *Toca el botón abajo para abrir la aplicación:*`;
+async function sendTelegramMessage(chatId, text, replyMarkup = null) {
+  const payload = {
+    chat_id: chatId,
+    text: text,
+    parse_mode: 'HTML'
+  };
+  if (replyMarkup) payload.reply_markup = replyMarkup;
 
   try {
-    await bot.sendMessage(chatId, welcomeMessage, {
-      parse_mode: 'Markdown',
-      reply_markup: {
-        inline_keyboard: [
-          [
-            {
-              text: '🚀 Abrir FastClaim Mini App',
-              web_app: { url: targetUrl }
-            }
-          ],
-          [
-            {
-              text: '👥 Invitar Amigos',
-              url: `https://t.me/share/url?url=${encodeURIComponent(`https://t.me/${bot.options.username || 'Dolar_fastbot'}?start=${refCode}`)}&text=${encodeURIComponent('🚀 Gana ARPA USDT gratis con FastClaim!')}`
-            }
-          ]
-        ]
-      }
+    const res = await fetch(`${TELEGRAM_API}/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(payload)
     });
+    return await res.json();
   } catch (err) {
-    console.error('Error enviando mensaje /start:', err.message);
+    console.error('Error enviando mensaje Telegram:', err.message);
   }
-});
-
-// Ayuda o comandos extras
-bot.onText(/\/help/, async (msg) => {
-  const chatId = msg.chat.id;
-  await bot.sendMessage(chatId, 
-`ℹ️ *Comandos Disponibles:*
-
-/start - Inicia el bot y abre la Mini App
-/help - Muestra este mensaje de ayuda
-
-Para ganar ARPA y USDT, abre la Mini App tocando el botón del menú o en el mensaje de bienvenida.`, { parse_mode: 'Markdown' });
-});
-
-function escapeMarkdown(text) {
-  return String(text).replace(/([_*\[\]()~`>#+\-=|{}.!])/g, '\\$1');
 }
 
-// Manejo de errores
-bot.on('polling_error', (error) => {
-  console.warn('Telegram Polling warning:', error.code || error.message);
-});
+function escapeHtml(str) {
+  return String(str || '')
+    .replace(/&/g, '&amp;')
+    .replace(/</g, '&lt;')
+    .replace(/>/g, '&gt;')
+    .replace(/"/g, '&quot;');
+}
 
+async function handleUpdate(update) {
+  const msg = update.message;
+  if (!msg || !msg.text) return;
+
+  const chatId = msg.chat.id;
+  const firstName = msg.from?.first_name || 'amigo';
+  const text = msg.text.trim();
+
+  // Comando /start o /start <refCode>
+  if (text.startsWith('/start')) {
+    const parts = text.split(/\s+/);
+    const refCode = parts.length > 1 ? parts[1].trim() : '';
+    const targetUrl = refCode ? `${appUrl}?ref=${encodeURIComponent(refCode)}` : appUrl;
+
+    const welcomeText = 
+`👋 ¡Hola, <b>${escapeHtml(firstName)}</b>! Bienvenido a <b>FastClaim ARPA USDT</b> ⚡\n\n` +
+`Gana criptomonedas <b>ARPA</b> gratis cada hora por solo dar un toque:\n\n` +
+`🎁 <b>Bono de Bienvenida:</b> Reclama tokens gratis cada hora.\n` +
+`👥 <b>Sistema de Referidos:</b> Gana ARPA por cada amigo que invites más comisiones de sus reclamos.\n` +
+`💳 <b>Retiros Directos:</b> Cobros a Binance Pay o BNB Smart Chain (BEP-20).\n\n` +
+`👇 <i>Toca el botón abajo para iniciar la aplicación:</i>`;
+
+    const keyboard = {
+      inline_keyboard: [
+        [
+          {
+            text: '🚀 Abrir FastClaim Mini App',
+            web_app: { url: targetUrl }
+          }
+        ],
+        [
+          {
+            text: '👥 Invitar Amigos',
+            url: `https://t.me/share/url?url=${encodeURIComponent(`https://t.me/Dolar_fastbot?start=${refCode}`)}&text=${encodeURIComponent('🚀 Gana ARPA USDT gratis con FastClaim!')}`
+          }
+        ]
+      ]
+    };
+
+    await sendTelegramMessage(chatId, welcomeText, keyboard);
+    console.log(`[BOT] /start respondido para ${firstName} (${chatId})${refCode ? ' con ref: ' + refCode : ''}`);
+  }
+
+  // Comando /help
+  else if (text.startsWith('/help')) {
+    const helpText = 
+`ℹ️ <b>FastClaim - Ayuda</b>\n\n` +
+`• <b>/start</b> - Inicia la aplicación y muestra el botón de acceso.\n` +
+`• <b>/help</b> - Información de ayuda y comandos.\n\n` +
+`Toca el botón <b>🚀 Ganar ARPA</b> abajo a la izquierda para abrir la aplicación.`;
+
+    await sendTelegramMessage(chatId, helpText);
+  }
+}
+
+// Long Polling infinito nativo
+async function startPolling() {
+  console.log('✅ Polling activo. Escuchando mensajes en Telegram...');
+  let offset = 0;
+
+  // Descartar mensajes pendientes viejos al iniciar
+  try {
+    const initRes = await fetch(`${TELEGRAM_API}/getUpdates?offset=-1`);
+    const initData = await initRes.json();
+    if (initData.ok && initData.result.length > 0) {
+      offset = initData.result[initData.result.length - 1].update_id + 1;
+    }
+  } catch(e) {}
+
+  while (true) {
+    try {
+      const res = await fetch(`${TELEGRAM_API}/getUpdates?offset=${offset}&timeout=25`);
+      const data = await res.json();
+
+      if (data.ok && Array.isArray(data.result)) {
+        for (const update of data.result) {
+          offset = update.update_id + 1;
+          handleUpdate(update).catch(err => console.error('Handler error:', err));
+        }
+      } else if (!data.ok) {
+        console.warn('Telegram API response not OK:', data.description);
+        await new Promise(r => setTimeout(r, 4000));
+      }
+    } catch (err) {
+      console.warn('Error de conexión polling (reintentando en 3s)...', err.message);
+      await new Promise(r => setTimeout(r, 3000));
+    }
+  }
+}
+
+startPolling();
