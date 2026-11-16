@@ -14,10 +14,10 @@ if (!token) {
 const FIRESTORE_PROJECT = 'fastclaim-355ff';
 const FIRESTORE_BASE = `https://firestore.googleapis.com/v1/projects/${FIRESTORE_PROJECT}/databases/(default)/documents`;
 
-// Cache de configuración del bot (se recarga cada 5 minutos)
+// Cache de configuración del bot (se recarga cada 15 segundos para aplicar cambios del admin rápido)
 let botConfig = null;
 let configLastLoaded = 0;
-const CONFIG_TTL_MS = 5 * 60 * 1000; // 5 minutos
+const CONFIG_TTL_MS = 15 * 1000; // 15 segundos (cambios en el admin se reflejan al instante)
 
 async function loadBotConfig() {
   const now = Date.now();
@@ -36,6 +36,7 @@ async function loadBotConfig() {
       btn_url: getFirestoreStr(fields, 'bot_start_btn_url') || appUrl,
       invite_text: getFirestoreStr(fields, 'bot_invite_btn_text') || '👥 Invitar Amigos',
       share_text: getFirestoreStr(fields, 'bot_share_text') || '🚀 Gana ARPA USDT gratis con FastClaim!',
+      menu_btn_text: getFirestoreStr(fields, 'bot_menu_btn_text') || '🚀 Abrir App',
     };
     configLastLoaded = now;
     console.log('[BOT] Config /start actualizada desde Firestore.');
@@ -47,6 +48,7 @@ async function loadBotConfig() {
       btn_url: appUrl,
       invite_text: '👥 Invitar Amigos',
       share_text: '🚀 Gana ARPA USDT gratis con FastClaim!',
+      menu_btn_text: '🚀 Abrir App',
     };
   }
   return botConfig;
@@ -325,8 +327,26 @@ async function startPolling() {
     }
   } catch (e) { }
 
-  // Cargar config inicial
-  await loadBotConfig();
+  // Cargar config inicial y sincronizar Chat Menu Button
+  const initialCfg = await loadBotConfig();
+  try {
+    const menuBtnUrl = initialCfg.btn_url || appUrl;
+    const menuBtnText = initialCfg.menu_btn_text || '🚀 Abrir App';
+    await fetch(`${TELEGRAM_API}/setChatMenuButton`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        menu_button: {
+          type: 'web_app',
+          text: menuBtnText,
+          web_app: { url: menuBtnUrl }
+        }
+      })
+    });
+    console.log(`[BOT] Menu Button sincronizado con URL: ${menuBtnUrl}`);
+  } catch (e) {
+    console.warn('[BOT] Error sincronizando setChatMenuButton:', e.message);
+  }
 
   while (true) {
     try {

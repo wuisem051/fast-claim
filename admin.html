@@ -1258,7 +1258,12 @@
               <div style="font-size:12px;color:var(--text3);margin-top:2px;">Bot Remitente: <strong style="color:var(--green);">@Dolar_fastbot</strong> (Administrador con permisos de publicación)</div>
             </div>
           </div>
-          <span class="badge approved" style="font-size:12px;padding:6px 12px;"><span class="badge-dot"></span>Canal Conectado y Verificado</span>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <button class="btn" onclick="switchAdminPage('settings')" style="background:rgba(0,152,234,0.18);border:1px solid rgba(0,152,234,0.4);color:var(--ton2);padding:7px 14px;font-size:12px;border-radius:8px;">
+              <i class="fa-solid fa-robot"></i> Editar Mensaje /start del Bot
+            </button>
+            <span class="badge approved" style="font-size:12px;padding:6px 12px;"><span class="badge-dot"></span>Canal Conectado y Verificado</span>
+          </div>
         </div>
       </div>
 
@@ -1566,6 +1571,13 @@
               <label class="form-label"><i class="fa-solid fa-share-nodes"></i> Texto al Compartir</label>
               <input type="text" class="form-control" id="settBotShareText" placeholder="🚀 Gana ARPA USDT gratis con FastClaim!">
               <span class="form-hint">Mensaje preescrito al compartir el link</span>
+            </div>
+          </div>
+          <div class="form-grid" style="margin-bottom:16px;">
+            <div class="form-group">
+              <label class="form-label"><i class="fa-solid fa-bars"></i> Botón de Menú Inferior (Chat Menu Button)</label>
+              <input type="text" class="form-control" id="settBotMenuBtnText" placeholder="🚀 Abrir App">
+              <span class="form-hint">Texto que aparece abajo a la izquierda en el chat con el bot</span>
             </div>
           </div>
           <!-- Vista previa estilo Telegram -->
@@ -2671,6 +2683,7 @@ async function loadSettings() {
     if (el('settBotStartBtnUrl')) el('settBotStartBtnUrl').value = settings.bot_start_btn_url || 'https://faslcaim.netlify.app';
     if (el('settBotInviteBtnText')) el('settBotInviteBtnText').value = settings.bot_invite_btn_text || '👥 Invitar Amigos';
     if (el('settBotShareText')) el('settBotShareText').value = settings.bot_share_text || '🚀 Gana ARPA USDT gratis con FastClaim!';
+    if (el('settBotMenuBtnText')) el('settBotMenuBtnText').value = settings.bot_menu_btn_text || '🚀 Abrir App';
     updateBotStartPreview();
     if (el('settMonetagEnabled')) el('settMonetagEnabled').value = settings.monetag_enabled !== undefined ? settings.monetag_enabled : '1';
     if (el('settMonetagDirectLink')) el('settMonetagDirectLink').value = settings.monetag_direct_link || '';
@@ -2725,6 +2738,7 @@ async function saveSettings() {
     bot_start_btn_url: elVal('settBotStartBtnUrl') || 'https://faslcaim.netlify.app',
     bot_invite_btn_text: elVal('settBotInviteBtnText') || '👥 Invitar Amigos',
     bot_share_text: elVal('settBotShareText') || '🚀 Gana ARPA USDT gratis con FastClaim!',
+    bot_menu_btn_text: elVal('settBotMenuBtnText') || '🚀 Abrir App',
     monetag_enabled: elVal('settMonetagEnabled') || '1',
     monetag_direct_link: elVal('settMonetagDirectLink'),
     monetag_script_url: scriptUrl,
@@ -2776,12 +2790,13 @@ async function saveBotStartConfig() {
     bot_start_btn_url: elVal('settBotStartBtnUrl') || 'https://faslcaim.netlify.app',
     bot_invite_btn_text: elVal('settBotInviteBtnText') || '👥 Invitar Amigos',
     bot_share_text: elVal('settBotShareText') || '🚀 Gana ARPA USDT gratis con FastClaim!',
+    bot_menu_btn_text: elVal('settBotMenuBtnText') || '🚀 Abrir App',
     updated_at: new Date().toISOString()
   };
   try {
     await setDoc(doc(db, 'settings', 'global'), data, { merge: true });
     await setDoc(doc(db, 'settings', 'config'), data, { merge: true });
-    showAdminToast('✅ Config del bot /start guardada. Reinicia bot.js para aplicar.', 'success');
+    showAdminToast('✅ Config del bot /start guardada en Firestore. Se aplica automáticamente.', 'success');
   } catch(err) {
     showAdminToast('❌ Error: ' + err.message, 'error');
   }
