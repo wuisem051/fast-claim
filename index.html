@@ -1554,6 +1554,7 @@ let claimTimer = null;
 let claimCooldownRemaining = 0;
 let isLoggingOut = false; // prevent Telegram re-auth after logout
 const CIRCUMFERENCE = 364.4;
+const setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
 
 let settings = {
   bonus_amount:       0.5,
@@ -2293,8 +2294,6 @@ function renderUserData() {
     if (avatarI) avatarI.textContent = init;
     if (profilePageInit) profilePageInit.textContent = init;
   }
-
-  const setTxt = (id, val) => { const el = document.getElementById(id); if (el) el.textContent = val; };
 
   setTxt('profileName', userData.first_name || 'Usuario');
   setTxt('profileUsername', userData.username ? '@' + userData.username : 'Sin usuario');
