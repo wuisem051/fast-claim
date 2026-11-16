@@ -3793,29 +3793,31 @@ async function loadBroadcastDrafts() {
     // Ordenar por fecha descendente
     cachedDrafts.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
 
-    // Si no hay borradores en Firestore, cargar sugerencias iniciales
-    if (cachedDrafts.length === 0) {
-      renderDefaultDrafts(container);
-      return;
-    }
+    // Combinar: borradores reales de Firebase primero, y luego las plantillas de ejemplo
+    const customDrafts = cachedDrafts.filter(d => !String(d.id).startsWith('preset_'));
+    const defaultPresets = getDefaultBroadcastPresets();
+    
+    // Si hay borradores del usuario en Firebase, mostrarlos primero y luego las plantillas
+    cachedDrafts = [...customDrafts, ...defaultPresets];
 
     renderDraftsList(container);
   } catch(err) {
     console.error('Error loadBroadcastDrafts:', err);
-    // Si falla Firestore, mostrar borradores locales por defecto
-    renderDefaultDrafts(container);
+    // Si falla Firestore, mostrar las plantillas locales
+    cachedDrafts = getDefaultBroadcastPresets();
+    renderDraftsList(container);
   }
 }
 
-function renderDefaultDrafts(container) {
-  const presets = [
+function getDefaultBroadcastPresets() {
+  return [
     {
       id: 'preset_welcome',
       title: 'Fast Claim Te Invita',
       message: 'Recuerda cada hora por solo dar un toque. Reclama bonos gratis en ARPA, invita a tus amigos y transfiere tus ganancias instantáneamente a tu wallet personal. Disponible en navegador web o Telegram Mini App.',
-      image_url: 'https://fastclaim.netlify.app/landing/assets/img/mockup-dashboard.jpg',
+      image_url: 'https://faslcaim.netlify.app/landing/assets/img/mockup-dashboard.jpg',
       btn_text: 'Iniciar Bot',
-      btn_url: 'https://t.me/Dolar_fastbot/app',
+      btn_url: 'https://t.me/Dolar_fastbot',
       reactions: '👍 🔥 ✅ 🐒',
       reactions_enabled: true,
       destination: 'channel'
@@ -3824,9 +3826,9 @@ function renderDefaultDrafts(container) {
       id: 'preset_daily_reminder',
       title: '⚡ ¡Hora de Reclamar tu ARPA Gratis!',
       message: 'Tu siguiente reclamo de ARPA ya está disponible. Entra ahora a la Mini App, reclama tu bono de la hora y continúa acumulando ganancias directas.',
-      image_url: 'https://fastclaim.netlify.app/landing/assets/img/mockup-dashboard.jpg',
-      btn_text: '🚀 Reclamar Ahora',
-      btn_url: 'https://t.me/Dolar_fastbot/app',
+      image_url: 'https://faslcaim.netlify.app/landing/assets/img/mockup-dashboard.jpg',
+      btn_text: 'Iniciar Bot',
+      btn_url: 'https://t.me/Dolar_fastbot',
       reactions: '⚡ 💰 🔥 💎',
       reactions_enabled: true,
       destination: 'both'
@@ -3835,17 +3837,14 @@ function renderDefaultDrafts(container) {
       id: 'preset_referrals',
       title: '👥 Multiplica tus Ganancias con Referidos',
       message: '¿Sabías que ganas ARPA por cada amigo que invites + comisión de todos sus reclamos de por vida? Comparte tu enlace personal de invitación que encuentras en el panel.',
-      image_url: 'https://fastclaim.netlify.app/landing/assets/img/mockup-dashboard.jpg',
-      btn_text: '👥 Invitar Amigos',
-      btn_url: 'https://t.me/Dolar_fastbot/app',
+      image_url: 'https://faslcaim.netlify.app/landing/assets/img/mockup-dashboard.jpg',
+      btn_text: 'Iniciar Bot',
+      btn_url: 'https://t.me/Dolar_fastbot',
       reactions: '🚀 👥 ❤️ 🤑',
       reactions_enabled: true,
       destination: 'both'
     }
   ];
-
-  cachedDrafts = presets;
-  renderDraftsList(container);
 }
 
 function renderDraftsList(container) {
