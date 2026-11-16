@@ -1304,17 +1304,43 @@
               <span class="form-hint">Puedes usar etiquetas como &lt;b&gt;negrita&lt;/b&gt;, &lt;i&gt;cursiva&lt;/i&gt;, enlaces, etc.</span>
             </div>
 
-            <!-- Botón 1: Iniciar Bot / Web App -->
-            <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:12px;margin-bottom:14px;">
-              <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:8px;"><i class="fa-solid fa-arrow-pointer"></i> Botón Principal (Iniciar Bot / Abrir App)</div>
-              <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:10px;">
-                <div>
-                  <label class="form-label" style="font-size:11px;">Texto del Botón</label>
-                  <input type="text" class="form-control" id="bcBtnText" value="Iniciar Bot" oninput="updateBroadcastPreview()">
+            <!-- Configuración de Botones de Acción -->
+            <div style="background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);border-radius:12px;padding:14px;margin-bottom:14px;">
+              <div style="font-size:12px;font-weight:700;color:var(--text);margin-bottom:10px;">
+                <i class="fa-solid fa-arrow-pointer" style="color:var(--accent);"></i> Botones Principales (Canal vs Bot Privado)
+              </div>
+              
+              <!-- Botón para el Canal Oficial -->
+              <div style="margin-bottom:12px;padding-bottom:12px;border-bottom:1px solid rgba(255,255,255,0.05);">
+                <div style="font-size:11px;font-weight:700;color:#2AABEE;margin-bottom:6px;">
+                  📢 En el Canal Oficial (Abre el Bot en Telegram):
                 </div>
-                <div>
-                  <label class="form-label" style="font-size:11px;">Enlace del Botón</label>
-                  <input type="url" class="form-control" id="bcBtnUrl" value="https://t.me/Dolar_fastbot/app" oninput="updateBroadcastPreview()">
+                <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:10px;">
+                  <div>
+                    <label class="form-label" style="font-size:11px;">Texto del Botón</label>
+                    <input type="text" class="form-control" id="bcBtnText" value="Iniciar Bot" oninput="updateBroadcastPreview()">
+                  </div>
+                  <div>
+                    <label class="form-label" style="font-size:11px;">Enlace del Canal (Abre @Dolar_fastbot)</label>
+                    <input type="url" class="form-control" id="bcBtnUrl" value="https://t.me/Dolar_fastbot" oninput="updateBroadcastPreview()">
+                  </div>
+                </div>
+              </div>
+
+              <!-- Botón cuando se envía a Usuarios del Bot -->
+              <div>
+                <div style="font-size:11px;font-weight:700;color:#10b981;margin-bottom:6px;">
+                  🤖 En Mensajes Privados del Bot (Abre directamente la Mini App):
+                </div>
+                <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:10px;">
+                  <div>
+                    <label class="form-label" style="font-size:11px;">Texto para Usuarios</label>
+                    <input type="text" class="form-control" id="bcUserBtnText" value="🚀 Abrir App" oninput="updateBroadcastPreview()">
+                  </div>
+                  <div>
+                    <label class="form-label" style="font-size:11px;">URL de la Mini App (web_app)</label>
+                    <input type="url" class="form-control" id="bcUserBtnUrl" value="https://fastclaim.netlify.app" oninput="updateBroadcastPreview()">
+                  </div>
                 </div>
               </div>
             </div>
@@ -3869,7 +3895,9 @@ function applyBroadcastDraft(index) {
   if (document.getElementById('bcMessage')) document.getElementById('bcMessage').value = d.message || '';
   if (document.getElementById('bcImageUrl')) document.getElementById('bcImageUrl').value = d.image_url || '';
   if (document.getElementById('bcBtnText')) document.getElementById('bcBtnText').value = d.btn_text || 'Iniciar Bot';
-  if (document.getElementById('bcBtnUrl')) document.getElementById('bcBtnUrl').value = d.btn_url || 'https://t.me/Dolar_fastbot/app';
+  if (document.getElementById('bcBtnUrl')) document.getElementById('bcBtnUrl').value = d.btn_url || 'https://t.me/Dolar_fastbot';
+  if (document.getElementById('bcUserBtnText')) document.getElementById('bcUserBtnText').value = d.user_btn_text || '🚀 Abrir App';
+  if (document.getElementById('bcUserBtnUrl')) document.getElementById('bcUserBtnUrl').value = d.user_btn_url || 'https://fastclaim.netlify.app';
   if (document.getElementById('bcReactionsInput')) document.getElementById('bcReactionsInput').value = d.reactions || '👍 🔥 ✅ 🐒';
   if (document.getElementById('bcReactionsEnabled')) document.getElementById('bcReactionsEnabled').checked = d.reactions_enabled !== false;
   if (document.getElementById('bcDestination') && d.destination) document.getElementById('bcDestination').value = d.destination;
@@ -3887,6 +3915,8 @@ async function saveBroadcastDraft() {
   const imgUrl = (document.getElementById('bcImageUrl')?.value || '').trim();
   const btnText = (document.getElementById('bcBtnText')?.value || '').trim();
   const btnUrl = (document.getElementById('bcBtnUrl')?.value || '').trim();
+  const userBtnText = (document.getElementById('bcUserBtnText')?.value || '').trim();
+  const userBtnUrl = (document.getElementById('bcUserBtnUrl')?.value || '').trim();
   const reactions = (document.getElementById('bcReactionsInput')?.value || '').trim();
   const reactionsEnabled = document.getElementById('bcReactionsEnabled')?.checked;
   const destination = document.getElementById('bcDestination')?.value || 'channel';
@@ -3902,6 +3932,8 @@ async function saveBroadcastDraft() {
     image_url: imgUrl,
     btn_text: btnText,
     btn_url: btnUrl,
+    user_btn_text: userBtnText,
+    user_btn_url: userBtnUrl,
     reactions: reactions,
     reactions_enabled: reactionsEnabled,
     destination: destination,
@@ -3956,6 +3988,8 @@ async function sendTelegramBroadcast() {
   const imgUrl = (document.getElementById('bcImageUrl')?.value || '').trim();
   const btnText = (document.getElementById('bcBtnText')?.value || '').trim();
   const btnUrl = (document.getElementById('bcBtnUrl')?.value || '').trim();
+  const userBtnText = (document.getElementById('bcUserBtnText')?.value || '').trim();
+  const userBtnUrl = (document.getElementById('bcUserBtnUrl')?.value || '').trim();
   const showReactions = document.getElementById('bcReactionsEnabled')?.checked;
   const destination = document.getElementById('bcDestination')?.value || 'channel';
 
@@ -3985,34 +4019,45 @@ async function sendTelegramBroadcast() {
 
   // Leer emojis personalizados del input
   const reactionsRaw = (document.getElementById('bcReactionsInput')?.value || '').trim();
-  // Separar emojis por espacios y filtrar vacíos — máx 8
   const emojiList = reactionsRaw.split(/\s+/).filter(e => e.length > 0).slice(0, 8);
 
-  // Construir teclado interactivo
-  const inlineKeyboard = [];
+  // 1. Teclado para el Canal (@fastphartner): Enlace directo a abrir el bot en Telegram
+  const channelKeyboard = [];
   if (showReactions && emojiList.length > 0) {
-    // Usar URL vacía (t.me del bot) para evitar el spinner de carga — no callback_data
-    inlineKeyboard.push(
+    channelKeyboard.push(
       emojiList.map(emoji => ({ text: emoji, callback_data: `react_${emoji}` }))
     );
   }
   if (btnText && btnUrl) {
-    inlineKeyboard.push([
+    channelKeyboard.push([
       { text: `${btnText} ↗`, url: btnUrl }
     ]);
   }
+  const channelReplyMarkup = channelKeyboard.length > 0 ? { inline_keyboard: channelKeyboard } : null;
 
-  const replyMarkup = inlineKeyboard.length > 0 ? { inline_keyboard: inlineKeyboard } : null;
+  // 2. Teclado para usuarios privados del Bot: Abre directamente la Mini App (web_app)
+  const userKeyboard = [];
+  if (showReactions && emojiList.length > 0) {
+    userKeyboard.push(
+      emojiList.map(emoji => ({ text: emoji, callback_data: `react_${emoji}` }))
+    );
+  }
+  if (userBtnText && userBtnUrl) {
+    userKeyboard.push([
+      { text: userBtnText, web_app: { url: userBtnUrl } }
+    ]);
+  }
+  const userReplyMarkup = userKeyboard.length > 0 ? { inline_keyboard: userKeyboard } : null;
 
   try {
-    // 1. Enviar al Canal Oficial (@fastphartner)
-    const resultChannel = await sendSingleTelegramPost(token, CHANNEL_CHAT_ID, formattedText, imgUrl, replyMarkup);
+    // 1. Enviar al Canal Oficial (@fastphartner) con el enlace https://t.me/Dolar_fastbot
+    const resultChannel = await sendSingleTelegramPost(token, CHANNEL_CHAT_ID, formattedText, imgUrl, channelReplyMarkup);
     if (!resultChannel.ok) {
       throw new Error(`Error en canal: ${resultChannel.description || 'Fallo desconocido'}`);
     }
 
     let usersNotified = 0;
-    // 2. Si se eligió 'both', enviar también a los usuarios que tengan telegram_id
+    // 2. Si se eligió 'both', enviar a los usuarios privados del bot con el botón Web App
     if (destination === 'both') {
       if (!allUsers || allUsers.length === 0) {
         const uSnap = await getDocs(collection(db, 'users'));
@@ -4023,7 +4068,7 @@ async function sendTelegramBroadcast() {
       const tgUsers = allUsers.filter(u => u.telegram_id && !String(u.telegram_id).startsWith('usr_'));
       for (const u of tgUsers) {
         try {
-          const res = await sendSingleTelegramPost(token, u.telegram_id, formattedText, imgUrl, replyMarkup);
+          const res = await sendSingleTelegramPost(token, u.telegram_id, formattedText, imgUrl, userReplyMarkup);
           if (res.ok) usersNotified++;
           // Pequeño delay de 80ms para respetar rate limits de Telegram
           await new Promise(r => setTimeout(r, 80));
