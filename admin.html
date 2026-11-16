@@ -1635,6 +1635,16 @@
               <input type="text" class="form-control" id="settMonetagScriptUrl" placeholder="//libtl.com/sdk.js">
               <span class="form-hint">URL del script SDK Telegram Mini App de Monetag</span>
             </div>
+            <div class="form-group" style="grid-column: span 2;">
+              <label class="form-label"><i class="fa-solid fa-rectangle-ad" style="color:var(--accent);"></i> Código Anuncio Banners en Tareas (320x50)</label>
+              <textarea class="form-control" id="settAdTasksBannerCode" rows="4" style="font-family:monospace;font-size:12px;" placeholder="<script>...atOptions = {'width': 320, 'height': 50}..."></textarea>
+              <span class="form-hint">Código HTML/JS del banner publicitario que aparece en la sección de Tareas (ej: Bauval/Adsterra 320x50)</span>
+            </div>
+            <div class="form-group" style="grid-column: span 2;">
+              <label class="form-label"><i class="fa-solid fa-rectangle-ad" style="color:var(--ton);"></i> Código Anuncio Banners en Inicio / Debajo del Botón Claim (728x90 o 300x250)</label>
+              <textarea class="form-control" id="settAdHomeBannerCode" rows="4" style="font-family:monospace;font-size:12px;" placeholder="<script>...atOptions = {'width': 728, 'height': 90}..."></textarea>
+              <span class="form-hint">Código HTML/JS del banner publicitario debajo del botón ¡RECLAMAR! y antes de Estadísticas</span>
+            </div>
           </div>
           <div style="margin-top:28px;display:flex;justify-content:flex-end;">
             <button class="btn btn-primary" onclick="saveSettings()" style="padding:12px 28px;font-size:14px;">
@@ -2690,6 +2700,8 @@ async function loadSettings() {
     if (el('settMonetagScriptUrl')) el('settMonetagScriptUrl').value = settings.monetag_script_url || '//libtl.com/sdk.js';
     if (el('settMonetagZoneId')) el('settMonetagZoneId').value = settings.monetag_zone_id || '11881112';
     if (el('settMonetagSdkFunc')) el('settMonetagSdkFunc').value = settings.monetag_sdk_func || 'show_11881112';
+    if (el('settAdTasksBannerCode')) el('settAdTasksBannerCode').value = settings.ad_tasks_banner_code !== undefined ? settings.ad_tasks_banner_code : `<script>\n  atOptions = {\n    'key' : 'cbe283d6ca80ded595dfd6243692f70d',\n    'format' : 'iframe',\n    'height' : 50,\n    'width' : 320,\n    'params' : {}\n  };\n<\/script>\n<script src="https://bauval.org/22/cbe283d6ca80ded595dfd6243692f70d"><\/script>`;
+    if (el('settAdHomeBannerCode')) el('settAdHomeBannerCode').value = settings.ad_home_banner_code !== undefined ? settings.ad_home_banner_code : `<script>\n  atOptions = {\n    'key' : 'e0a7417b22ed48b67b5c05ebacbe827e',\n    'format' : 'iframe',\n    'height' : 90,\n    'width' : 728,\n    'params' : {}\n  };\n<\/script>\n<script src="https://bauval.org/22/e0a7417b22ed48b67b5c05ebacbe827e"><\/script>`;
 
   } catch (err) {
     console.error('Settings error:', err);
@@ -2744,6 +2756,8 @@ async function saveSettings() {
     monetag_script_url: scriptUrl,
     monetag_zone_id: zoneId,
     monetag_sdk_func: sdkFunc,
+    ad_tasks_banner_code: elVal('settAdTasksBannerCode'),
+    ad_home_banner_code: elVal('settAdHomeBannerCode'),
     updated_at: new Date().toISOString()
   };
 

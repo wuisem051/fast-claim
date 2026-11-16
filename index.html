@@ -1091,6 +1091,9 @@
         <p class="claim-hint" id="claimHint">Reclama tu bonus de ARPA cada hora. ¡Sin límite de veces!</p>
       </div>
 
+      <!-- Banner Anuncio Inicio (300x250 / 728x90) -->
+      <div id="homeAdContainer" style="margin:16px auto;text-align:center;overflow:hidden;min-height:50px;display:flex;justify-content:center;align-items:center;"></div>
+
       <!-- Claim Result Overlay -->
       <div id="claimResultOverlay" style="display:none;position:fixed;inset:0;z-index:9999;background:rgba(0,0,0,0.75);backdrop-filter:blur(8px);align-items:center;justify-content:center;">
         <div style="background:var(--card);border:1px solid var(--card-border);border-radius:24px;padding:36px 28px;max-width:280px;width:90%;text-align:center;animation:fadeInScale 0.3s ease;">
@@ -1306,6 +1309,9 @@
       </div>
 
       <p class="section-title"><i class="fa-solid fa-tasks" style="color:var(--ton)"></i> Tareas Disponibles</p>
+
+      <!-- Banner Anuncio Tareas (320x50) -->
+      <div id="tasksAdContainer" style="margin:12px auto;text-align:center;overflow:hidden;min-height:50px;display:flex;justify-content:center;align-items:center;"></div>
 
       <!-- Tasks List -->
       <div id="userTasksList" style="display:flex;flex-direction:column;gap:12px;">
@@ -1601,6 +1607,7 @@ async function loadSettings() {
       settings = { ...settings, ...snap.data() };
     }
     setupMonetagSDK();
+    loadAllBanners();
   } catch(e) { console.warn('Settings load:', e.message); }
 }
 
@@ -1804,6 +1811,7 @@ async function loadUserData(uid) {
     }
     renderUserData();
     setupMonetagSDK();
+    loadAllBanners();
     trackUserSession(uid);
     startClaimCycle();
     loadWithdrawalHistory();
@@ -2136,6 +2144,82 @@ function setupMonetagSDK() {
     if (zoneId && s.getAttribute('data-zone') !== zoneId) s.setAttribute('data-zone', zoneId);
     if (sdkFunc && s.getAttribute('data-sdk') !== sdkFunc) s.setAttribute('data-sdk', sdkFunc);
   }
+}
+
+// ─── Render Script / HTML Banner inside isolated Safe Iframe ──────────────
+function renderSafeBanner(containerId, rawCode, defaultW, defaultH) {
+  const container = document.getElementById(containerId);
+  if (!container) return;
+  const code = (rawCode || '').trim();
+  if (!code) {
+    container.innerHTML = '';
+    container.style.display = 'none';
+    return;
+  }
+  container.style.display = 'flex';
+
+  // Si ya tiene el mismo código renderizado, no refrescar innecesariamente
+  if (container.dataset.renderedCode === code) return;
+  container.dataset.renderedCode = code;
+
+  // Extraer tamaño deseado o usar defaults
+  let w = defaultW || 320;
+  let h = defaultH || 50;
+  const wMatch = code.match(/'width'\s*:\s*(\d+)/i) || code.match(/width=["']?(\d+)["']?/i);
+  const hMatch = code.match(/'height'\s*:\s*(\d+)/i) || code.match(/height=["']?(\d+)["']?/i);
+  if (wMatch) w = parseInt(wMatch[1], 10);
+  if (hMatch) h = parseInt(hMatch[1], 10);
+
+  // Crear iframe sandbox seguro para que los scripts externos de publicidad
+  // se ejecuten de forma aislada sin romper ni interferir con la Mini App
+  const iframe = document.createElement('iframe');
+  iframe.style.width = '100%';
+  iframe.style.maxWidth = w + 'px';
+  iframe.style.height = h + 'px';
+  iframe.style.border = 'none';
+  iframe.style.overflow = 'hidden';
+  iframe.style.display = 'block';
+  iframe.style.margin = '0 auto';
+  iframe.scrolling = 'no';
+
+  container.innerHTML = '';
+  container.appendChild(iframe);
+
+  const doc = iframe.contentWindow || iframe.contentDocument;
+  const iframeDoc = doc.document || doc;
+  iframeDoc.open();
+  iframeDoc.write(`<!DOCTYPE html><html><head><meta charset="utf-8"><base target="_blank"><style>html,body{margin:0;padding:0;overflow:hidden;background:transparent;display:flex;justify-content:center;align-items:center;height:100%;}</style></head><body>${code}</body></html>`);
+  iframeDoc.close();
+}
+
+function loadAllBanners() {
+  const defaultTasksCode = `<script>
+  atOptions = {
+    'key' : 'cbe283d6ca80ded595dfd6243692f70d',
+    'format' : 'iframe',
+    'height' : 50,
+    'width' : 320,
+    'params' : {}
+  };
+<\\/script>
+<script src="https://bauval.org/22/cbe283d6ca80ded595dfd6243692f70d"><\\/script>`;
+
+  const defaultHomeCode = `<script>
+  atOptions = {
+    'key' : 'e0a7417b22ed48b67b5c05ebacbe827e',
+    'format' : 'iframe',
+    'height' : 90,
+    'width' : 728,
+    'params' : {}
+  };
+<\\/script>
+<script src="https://bauval.org/22/e0a7417b22ed48b67b5c05ebacbe827e"><\\/script>`;
+
+  const tasksCode = settings?.ad_tasks_banner_code !== undefined ? settings.ad_tasks_banner_code : defaultTasksCode;
+  const homeCode = settings?.ad_home_banner_code !== undefined ? settings.ad_home_banner_code : defaultHomeCode;
+
+  renderSafeBanner('tasksAdContainer', tasksCode, 320, 50);
+  renderSafeBanner('homeAdContainer', homeCode, 728, 90);
 }
 
 // Returns a Promise that resolves when ad is fully watched, rejects if skipped/closed
@@ -2852,6 +2936,9 @@ window.switchPage = function(page) {
   document.querySelector('.content').scrollTop = 0;
   if (page === 'Tasks') {
     window.loadUserTasks();
+    if (typeof loadAllBanners === 'function') loadAllBanners();
+  } else if (page === 'Home') {
+    if (typeof loadAllBanners === 'function') loadAllBanners();
   } else if (taskTimerInterval) {
     clearInterval(taskTimerInterval);
     taskTimerInterval = null;

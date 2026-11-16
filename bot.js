@@ -155,31 +155,22 @@ async function executeStartCommand(chatId, firstName, refCode = '') {
     ? cfg.start_message.replace(/{nombre}/g, escapeHtml(firstName))
     : defaultMessage;
 
-  // URL del botón principal: si está configurada en admin usa esa base + ref, si no usa appUrl
+  // URL del botón principal:
+  // Telegram exige que el botón interactivo de un mensaje use 'web_app' con una URL web directa (https://faslcaim.netlify.app)
+  // para que abra la aplicación instantáneamente en ventana modal completa sin mostrar la pantalla intermedia de "Open App".
   let baseBtnUrl = cfg.btn_url || appUrl;
-  
-  // Si el usuario guardó un link t.me/ en vez de una URL web HTTPS (Netlify),
-  // Telegram rechaza web_app con BUTTON_URL_INVALID porque web_app exige una URL HTTPS directa.
-  const isDirectTelegramLink = baseBtnUrl.startsWith('https://t.me/') || baseBtnUrl.startsWith('http://t.me/');
-  
-  let mainButton;
-  if (isDirectTelegramLink) {
-    const finalUrl = refCode
-      ? `${baseBtnUrl.replace(/\/+$/, '')}?startapp=${encodeURIComponent(refCode)}`
-      : baseBtnUrl;
-    mainButton = {
-      text: cfg.btn_text,
-      url: finalUrl
-    };
-  } else {
-    const finalBtnUrl = refCode
-      ? `${baseBtnUrl.replace(/\/+$/, '')}?ref=${encodeURIComponent(refCode)}`
-      : baseBtnUrl;
-    mainButton = {
-      text: cfg.btn_text,
-      web_app: { url: finalBtnUrl }
-    };
+  if (baseBtnUrl.includes('t.me/')) {
+    baseBtnUrl = appUrl; // Usar siempre la URL web para apertura directa
   }
+
+  const finalBtnUrl = refCode
+    ? `${baseBtnUrl.replace(/\/+$/, '')}?ref=${encodeURIComponent(refCode)}`
+    : baseBtnUrl;
+
+  const mainButton = {
+    text: cfg.btn_text,
+    web_app: { url: finalBtnUrl }
+  };
 
   const keyboard = {
     inline_keyboard: [
