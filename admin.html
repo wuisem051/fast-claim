@@ -2524,6 +2524,9 @@ function renderUsers(users) {
         <button class="btn" style="margin-left:4px;font-size:12px;padding:5px 10px;${u.banned ? 'background:rgba(0,230,118,0.1);border-color:rgba(0,230,118,0.3);color:var(--green);' : 'background:rgba(255,82,82,0.1);border-color:rgba(255,82,82,0.3);color:#ff5252;'}" onclick="toggleBan('${escapeHtml(u.id)}', ${u.banned ? 1 : 0})">
           <i class="fa-solid fa-${u.banned ? 'unlock' : 'ban'}"></i> ${u.banned ? 'Desbanear' : 'Banear'}
         </button>
+        <button class="btn" style="margin-left:4px;font-size:12px;padding:5px 10px;background:rgba(239,68,68,0.15);border:1px solid rgba(239,68,68,0.35);color:#ef4444;" onclick="deleteUser('${escapeHtml(u.id)}', '${escapeHtml(u.first_name || u.username || 'Usuario')}')" title="Eliminar usuario">
+          <i class="fa-solid fa-trash-can"></i> Eliminar
+        </button>
       </td>
     </tr>`;
   }).join('');
@@ -2660,6 +2663,21 @@ async function toggleBan(uid, currentBanned) {
     loadUsers();
   } catch(err) {
     showAdminToast('⚠️ Error al cambiar estado', 'error');
+  }
+}
+
+async function deleteUser(uid, displayName) {
+  const confirmMsg = `¿Estás seguro de que deseas eliminar permanentemente a "${displayName}" (${uid})?\n\nEsta acción no se puede deshacer. Se borrarán sus datos y balance en la base de datos.`;
+  if (!confirm(confirmMsg)) return;
+
+  try {
+    await deleteDoc(doc(db, 'users', uid));
+    showAdminToast(`🗑️ Usuario "${displayName}" eliminado correctamente`, 'success');
+    loadUsers();
+    loadDashboard();
+  } catch (err) {
+    console.error('deleteUser error:', err);
+    showAdminToast('❌ Error al eliminar usuario: ' + (err.message || err), 'error');
   }
 }
 
@@ -4216,6 +4234,7 @@ Object.assign(window, {
   resetTask,
   resetAllTasks,
   toggleBan,
+  deleteUser,
   initCalculator,
   fetchLiveArpaPrice,
   onArpaPriceManualChange,
