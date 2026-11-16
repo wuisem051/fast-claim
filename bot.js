@@ -83,3 +83,4 @@ function escapeMarkdown(text) {
 bot.on('polling_error', (error) => {
   console.warn('Telegram Polling warning:', error.code || error.message);
 });
+
