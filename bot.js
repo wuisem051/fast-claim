@@ -32,14 +32,14 @@ async function loadBotConfig() {
     // Extraer campos de configuración del bot
     botConfig = {
       start_message: getFirestoreStr(fields, 'bot_start_message') || null,
-      btn_text:      getFirestoreStr(fields, 'bot_start_btn_text') || '🚀 Abrir FastClaim Mini App',
-      btn_url:       getFirestoreStr(fields, 'bot_start_btn_url') || appUrl,
-      invite_text:   getFirestoreStr(fields, 'bot_invite_btn_text') || '👥 Invitar Amigos',
-      share_text:    getFirestoreStr(fields, 'bot_share_text') || '🚀 Gana ARPA USDT gratis con FastClaim!',
+      btn_text: getFirestoreStr(fields, 'bot_start_btn_text') || '🚀 Abrir FastClaim Mini App',
+      btn_url: getFirestoreStr(fields, 'bot_start_btn_url') || appUrl,
+      invite_text: getFirestoreStr(fields, 'bot_invite_btn_text') || '👥 Invitar Amigos',
+      share_text: getFirestoreStr(fields, 'bot_share_text') || '🚀 Gana ARPA USDT gratis con FastClaim!',
     };
     configLastLoaded = now;
     console.log('[BOT] Config /start actualizada desde Firestore.');
-  } catch(e) {
+  } catch (e) {
     console.warn('[BOT] No se pudo cargar config de Firestore, usando defaults.', e.message);
     if (!botConfig) botConfig = {
       start_message: null,
@@ -108,12 +108,12 @@ async function handleUpdate(update) {
 
     // Mensaje personalizable — {nombre} se reemplaza con el nombre del usuario
     const defaultMessage =
-`👋 ¡Hola, <b>${escapeHtml(firstName)}</b>! Bienvenido a <b>FastClaim ARPA USDT</b> ⚡\n\n` +
-`Gana criptomonedas <b>ARPA</b> gratis cada hora por solo dar un toque:\n\n` +
-`🎁 <b>Bono de Bienvenida:</b> Reclama tokens gratis cada hora.\n` +
-`👥 <b>Sistema de Referidos:</b> Gana ARPA por cada amigo que invites más comisiones de sus reclamos.\n` +
-`💳 <b>Retiros Directos:</b> Cobros a Binance Pay o BNB Smart Chain (BEP-20).\n\n` +
-`👇 <i>Toca el botón abajo para iniciar la aplicación:</i>`;
+      `👋 ¡Hola, <b>${escapeHtml(firstName)}</b>! Bienvenido a <b>FastClaim ARPA USDT</b> ⚡\n\n` +
+      `Gana criptomonedas <b>ARPA</b> gratis cada hora por solo dar un toque:\n\n` +
+      `🎁 <b>Bono de Bienvenida:</b> Reclama tokens gratis cada hora.\n` +
+      `👥 <b>Sistema de Referidos:</b> Gana ARPA por cada amigo que invites más comisiones de sus reclamos.\n` +
+      `💳 <b>Retiros Directos:</b> Cobros a Binance Pay o BNB Smart Chain (BEP-20).\n\n` +
+      `👇 <i>Toca el botón abajo para iniciar la aplicación:</i>`;
 
     // Usar mensaje personalizado si existe, si no el default
     const welcomeText = cfg.start_message
@@ -150,10 +150,10 @@ async function handleUpdate(update) {
   // Comando /help
   else if (text.startsWith('/help')) {
     const helpText =
-`ℹ️ <b>FastClaim - Ayuda</b>\n\n` +
-`• <b>/start</b> - Inicia la aplicación y muestra el botón de acceso.\n` +
-`• <b>/help</b> - Información de ayuda y comandos.\n\n` +
-`Toca el botón <b>🚀 Ganar ARPA</b> abajo a la izquierda para abrir la aplicación.`;
+      `ℹ️ <b>FastClaim - Ayuda</b>\n\n` +
+      `• <b>/start</b> - Inicia la aplicación y muestra el botón de acceso.\n` +
+      `• <b>/help</b> - Información de ayuda y comandos.\n\n` +
+      `Toca el botón <b>🚀 Ganar ARPA</b> abajo a la izquierda para abrir la aplicación.`;
 
     await sendTelegramMessage(chatId, helpText);
   }
@@ -171,7 +171,7 @@ async function startPolling() {
     if (initData.ok && initData.result.length > 0) {
       offset = initData.result[initData.result.length - 1].update_id + 1;
     }
-  } catch(e) {}
+  } catch (e) { }
 
   // Cargar config inicial
   await loadBotConfig();
