@@ -2236,7 +2236,7 @@ function renderUserData() {
   setTxt('qsRefs', refCount);
   setTxt('claimBtnAmount', '+' + bonusAmt + ' ARPA');
 
-  const botUsername = tg?.initDataUnsafe?.via_bot_username || 'Dolar_fastbot';
+  const botUsername = 'Dolar_fastbot'; // username fijo del bot
   const refInput = document.getElementById('refLinkInput');
   if (refInput) refInput.value = `https://t.me/${botUsername}?start=${userData.referral_code}`;
 
