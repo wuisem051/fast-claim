@@ -1347,9 +1347,15 @@
               </div>
             </div>
 
-            <div style="margin-top:20px;">
-              <button class="btn btn-primary" id="btnSendBroadcast" onclick="sendTelegramBroadcast()" style="width:100%;padding:14px;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px;">
+            <div style="margin-top:20px;display:flex;gap:10px;flex-wrap:wrap;">
+              <button class="btn btn-primary" id="btnSendBroadcast" onclick="sendTelegramBroadcast()" style="flex:2;min-width:200px;padding:14px;font-size:15px;font-weight:700;display:flex;align-items:center;justify-content:center;gap:10px;">
                 <i class="fa-solid fa-paper-plane"></i> Publicar en Telegram Ahora
+              </button>
+              <button class="btn" type="button" onclick="saveBroadcastDraft()" style="flex:1;min-width:140px;padding:14px;background:rgba(99,102,241,0.15);border:1px solid rgba(99,102,241,0.3);color:var(--accent);font-weight:700;display:flex;align-items:center;justify-content:center;gap:8px;">
+                <i class="fa-solid fa-bookmark"></i> Guardar Borrador
+              </button>
+              <button class="btn" type="button" onclick="clearBroadcastForm()" style="padding:14px;background:var(--card);border:1px solid var(--card-border);color:var(--text3);" title="Limpiar formulario">
+                <i class="fa-solid fa-rotate-left"></i>
               </button>
             </div>
           </div>
@@ -1399,6 +1405,34 @@
             </div>
           </div>
         </div>
+      </div>
+
+      <!-- ═══ Sección de Borradores y Publicaciones Guardadas ═══ -->
+      <div class="panel" style="margin-top:24px;">
+        <div class="panel-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+          <div class="panel-title">
+            <i class="fa-solid fa-folder-open" style="color:var(--accent);"></i> Borradores y Publicaciones Listas
+          </div>
+          <div style="display:flex;gap:8px;align-items:center;">
+            <button class="btn" onclick="saveBroadcastDraft()" style="font-size:12px;padding:6px 14px;background:rgba(99,102,241,0.15);color:var(--accent);border:1px solid rgba(99,102,241,0.3);">
+              <i class="fa-solid fa-plus"></i> Guardar Actual como Borrador
+            </button>
+            <button class="btn" onclick="loadBroadcastDrafts()" style="font-size:12px;padding:6px 10px;background:var(--card);border:1px solid var(--card-border);" title="Actualizar lista">
+              <i class="fa-solid fa-rotate"></i>
+            </button>
+          </div>
+        </div>
+        <div class="panel-body">
+          <div style="font-size:12px;color:var(--text2);margin-bottom:14px;">
+            Selecciona cualquier borrador para cargarlo al instante en el editor y la vista previa, o elimínalo si ya no lo necesitas.
+          </div>
+          <div id="broadcastDraftsList" style="display:grid;grid-template-columns:repeat(auto-fill, minmax(280px, 1fr));gap:14px;">
+            <div style="text-align:center;padding:24px;color:var(--text3);grid-column:1/-1;">
+              <i class="fa-solid fa-spinner fa-spin"></i> Cargando borradores...
+            </div>
+          </div>
+        </div>
+      </div>
       </div>
     </div>
 
@@ -3565,9 +3599,12 @@ async function saveReferralSettingsFromPanel() {
 const DEFAULT_TG_BOT_TOKEN = '8671776491:AAFlPCgWFxY593pUMsOKAPP4LzWAzp-PjgA';
 const CHANNEL_CHAT_ID = '@fastphartner';
 
+let cachedDrafts = [];
+
 function loadBroadcastAdmin() {
   renderReactionTags();
   updateBroadcastPreview();
+  loadBroadcastDrafts();
 }
 
 function setPresetPromoImage() {
@@ -3580,19 +3617,40 @@ function setPresetPromoImage() {
   }
 }
 
+// Convertir páginas comunes de alojamiento de imágenes (ej: ibb.co/xxx) a su URL directa
+function normalizeDirectImageUrl(rawUrl) {
+  if (!rawUrl) return '';
+  let url = rawUrl.trim();
+  return url;
+}
+
 function updateBroadcastPreview() {
   const title = (document.getElementById('bcTitle')?.value || '').trim();
   const msg = (document.getElementById('bcMessage')?.value || '').trim();
-  const imgUrl = (document.getElementById('bcImageUrl')?.value || '').trim();
+  const rawImgUrl = (document.getElementById('bcImageUrl')?.value || '').trim();
   const btnText = (document.getElementById('bcBtnText')?.value || '').trim();
   const showReactions = document.getElementById('bcReactionsEnabled')?.checked;
 
-  // Validar si la URL de imagen es una imagen directa
+  const imgUrl = normalizeDirectImageUrl(rawImgUrl);
+
+  // Validar si la URL de imagen es una imagen directa o página de visualización
   const imageExtensions = /\.(jpg|jpeg|png|gif|webp|bmp)(\?.*)?$/i;
-  const imageCDNs = /\b(imgur\.com|imgbb\.com|ibb\.co|cloudinary\.com|i\.ibb\.co|images\.|cdn\.|static\.|media\.|pbs\.twimg|upload\.wikimedia|githubusercontent)/i;
-  const isValidImageUrl = imgUrl && (imageExtensions.test(imgUrl) || imageCDNs.test(imgUrl));
+  const isDirectCDN = /\b(i\.ibb\.co|i\.imgur\.com|res\.cloudinary\.com|images\.|cdn\.|static\.|media\.|pbs\.twimg|upload\.wikimedia|githubusercontent)/i;
+  const isIndirectViewer = /^(https?:\/\/)?(ibb\.co|imgur\.com)\/[a-zA-Z0-9]+$/i.test(imgUrl);
+
+  const isValidImageUrl = imgUrl && (imageExtensions.test(imgUrl) || isDirectCDN.test(imgUrl));
   const warn = document.getElementById('bcImageUrlWarning');
-  if (warn) warn.style.display = (imgUrl && !isValidImageUrl) ? 'block' : 'none';
+  if (warn) {
+    if (isIndirectViewer) {
+      warn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Has pegado el enlace del visor (ej: <code>ibb.co/xx</code>). Telegram necesita el enlace directo a la imagen que empieza por <code>https://i.ibb.co/...png</code>. Haz clic derecho en la imagen abierta y elige "Copiar dirección de la imagen".';
+      warn.style.display = 'block';
+    } else if (imgUrl && !isValidImageUrl) {
+      warn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> La URL no parece una imagen directa (.jpg, .png...). Telegram necesita un enlace directo. <a href="https://imgbb.com" target="_blank" style="color:#2AABEE;">Sube tu imagen aquí →</a>';
+      warn.style.display = 'block';
+    } else {
+      warn.style.display = 'none';
+    }
+  }
 
   const titleEl = document.getElementById('previewTitle');
   const bodyEl = document.getElementById('previewBody');
@@ -3682,6 +3740,212 @@ function removeReactionEmoji(index) {
   input.value = list.join(' ');
   renderReactionTags();
   updateBroadcastPreview();
+}
+
+// ─── Gestión de Borradores y Publicaciones Guardadas ──────────────────────
+async function loadBroadcastDrafts() {
+  const container = document.getElementById('broadcastDraftsList');
+  if (!container) return;
+
+  try {
+    const snap = await getDocs(collection(db, 'broadcast_drafts'));
+    cachedDrafts = [];
+    snap.forEach(d => {
+      cachedDrafts.push({ id: d.id, ...d.data() });
+    });
+
+    // Ordenar por fecha descendente
+    cachedDrafts.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+
+    // Si no hay borradores en Firestore, cargar sugerencias iniciales
+    if (cachedDrafts.length === 0) {
+      renderDefaultDrafts(container);
+      return;
+    }
+
+    renderDraftsList(container);
+  } catch(err) {
+    console.error('Error loadBroadcastDrafts:', err);
+    // Si falla Firestore, mostrar borradores locales por defecto
+    renderDefaultDrafts(container);
+  }
+}
+
+function renderDefaultDrafts(container) {
+  const presets = [
+    {
+      id: 'preset_welcome',
+      title: 'Fast Claim Te Invita',
+      message: 'Recuerda cada hora por solo dar un toque. Reclama bonos gratis en ARPA, invita a tus amigos y transfiere tus ganancias instantáneamente a tu wallet personal. Disponible en navegador web o Telegram Mini App.',
+      image_url: 'https://fastclaim.netlify.app/landing/assets/img/mockup-dashboard.jpg',
+      btn_text: 'Iniciar Bot',
+      btn_url: 'https://t.me/Dolar_fastbot/app',
+      reactions: '👍 🔥 ✅ 🐒',
+      reactions_enabled: true,
+      destination: 'channel'
+    },
+    {
+      id: 'preset_daily_reminder',
+      title: '⚡ ¡Hora de Reclamar tu ARPA Gratis!',
+      message: 'Tu siguiente reclamo de ARPA ya está disponible. Entra ahora a la Mini App, reclama tu bono de la hora y continúa acumulando ganancias directas.',
+      image_url: 'https://fastclaim.netlify.app/landing/assets/img/mockup-dashboard.jpg',
+      btn_text: '🚀 Reclamar Ahora',
+      btn_url: 'https://t.me/Dolar_fastbot/app',
+      reactions: '⚡ 💰 🔥 💎',
+      reactions_enabled: true,
+      destination: 'both'
+    },
+    {
+      id: 'preset_referrals',
+      title: '👥 Multiplica tus Ganancias con Referidos',
+      message: '¿Sabías que ganas ARPA por cada amigo que invites + comisión de todos sus reclamos de por vida? Comparte tu enlace personal de invitación que encuentras en el panel.',
+      image_url: 'https://fastclaim.netlify.app/landing/assets/img/mockup-dashboard.jpg',
+      btn_text: '👥 Invitar Amigos',
+      btn_url: 'https://t.me/Dolar_fastbot/app',
+      reactions: '🚀 👥 ❤️ 🤑',
+      reactions_enabled: true,
+      destination: 'both'
+    }
+  ];
+
+  cachedDrafts = presets;
+  renderDraftsList(container);
+}
+
+function renderDraftsList(container) {
+  if (!cachedDrafts || cachedDrafts.length === 0) {
+    container.innerHTML = `
+      <div style="text-align:center;padding:24px;color:var(--text3);grid-column:1/-1;">
+        <i class="fa-regular fa-folder-open" style="font-size:28px;margin-bottom:8px;opacity:0.6;"></i>
+        <div>No hay borradores guardados aún. Guarda tu primera publicación arriba.</div>
+      </div>`;
+    return;
+  }
+
+  container.innerHTML = cachedDrafts.map((d, index) => {
+    const snippet = (d.message || '').slice(0, 95) + ((d.message || '').length > 95 ? '...' : '');
+    const title = d.title || 'Publicación sin título';
+    const isCustom = !String(d.id).startsWith('preset_');
+
+    return `
+      <div style="background:var(--card);border:1px solid var(--card-border);border-radius:12px;padding:14px;display:flex;flex-direction:column;justify-content:space-between;gap:10px;transition:border-color 0.2s;" onmouseenter="this.style.borderColor='var(--accent)'" onmouseleave="this.style.borderColor='var(--card-border)'">
+        <div>
+          <div style="display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:6px;">
+            <div style="font-weight:700;font-size:14px;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+              ${escapeHtml(title)}
+            </div>
+            ${!isCustom ? '<span style="font-size:10px;background:rgba(99,102,241,0.2);color:var(--accent);padding:2px 6px;border-radius:4px;white-space:nowrap;">Plantilla</span>' : ''}
+          </div>
+          <div style="font-size:12px;color:var(--text2);line-height:1.4;margin-bottom:8px;word-break:break-word;">
+            ${escapeHtml(snippet)}
+          </div>
+          <div style="display:flex;gap:6px;flex-wrap:wrap;font-size:11px;color:var(--text3);">
+            ${d.image_url ? '<span><i class="fa-regular fa-image"></i> Con imagen</span>' : ''}
+            ${d.btn_text ? `<span><i class="fa-solid fa-arrow-pointer"></i> ${escapeHtml(d.btn_text)}</span>` : ''}
+            ${d.reactions ? `<span>${escapeHtml(d.reactions)}</span>` : ''}
+          </div>
+        </div>
+
+        <div style="display:flex;gap:8px;margin-top:6px;border-top:1px solid var(--card-border);padding-top:10px;">
+          <button class="btn btn-primary" onclick="applyBroadcastDraft(${index})" style="flex:1;font-size:12px;padding:6px 10px;display:flex;align-items:center;justify-content:center;gap:6px;">
+            <i class="fa-solid fa-file-import"></i> Cargar al Editor
+          </button>
+          ${isCustom ? `
+            <button class="btn" onclick="deleteBroadcastDraft('${d.id}', ${index})" style="font-size:12px;padding:6px 10px;background:rgba(239,68,68,0.1);color:#ef4444;border-color:rgba(239,68,68,0.3);" title="Eliminar borrador">
+              <i class="fa-solid fa-trash-can"></i>
+            </button>
+          ` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+function applyBroadcastDraft(index) {
+  const d = cachedDrafts[index];
+  if (!d) return;
+
+  if (document.getElementById('bcTitle')) document.getElementById('bcTitle').value = d.title || '';
+  if (document.getElementById('bcMessage')) document.getElementById('bcMessage').value = d.message || '';
+  if (document.getElementById('bcImageUrl')) document.getElementById('bcImageUrl').value = d.image_url || '';
+  if (document.getElementById('bcBtnText')) document.getElementById('bcBtnText').value = d.btn_text || 'Iniciar Bot';
+  if (document.getElementById('bcBtnUrl')) document.getElementById('bcBtnUrl').value = d.btn_url || 'https://t.me/Dolar_fastbot/app';
+  if (document.getElementById('bcReactionsInput')) document.getElementById('bcReactionsInput').value = d.reactions || '👍 🔥 ✅ 🐒';
+  if (document.getElementById('bcReactionsEnabled')) document.getElementById('bcReactionsEnabled').checked = d.reactions_enabled !== false;
+  if (document.getElementById('bcDestination') && d.destination) document.getElementById('bcDestination').value = d.destination;
+
+  renderReactionTags();
+  updateBroadcastPreview();
+
+  showAdminToast(`📋 "${d.title || 'Borrador'}" cargado en el editor`, 'info');
+  window.scrollTo({ top: document.getElementById('pageBroadcast')?.offsetTop || 0, behavior: 'smooth' });
+}
+
+async function saveBroadcastDraft() {
+  const title = (document.getElementById('bcTitle')?.value || '').trim();
+  const msg = (document.getElementById('bcMessage')?.value || '').trim();
+  const imgUrl = (document.getElementById('bcImageUrl')?.value || '').trim();
+  const btnText = (document.getElementById('bcBtnText')?.value || '').trim();
+  const btnUrl = (document.getElementById('bcBtnUrl')?.value || '').trim();
+  const reactions = (document.getElementById('bcReactionsInput')?.value || '').trim();
+  const reactionsEnabled = document.getElementById('bcReactionsEnabled')?.checked;
+  const destination = document.getElementById('bcDestination')?.value || 'channel';
+
+  if (!msg && !title) {
+    showAdminToast('⚠️ Ingresa al menos un título o mensaje para guardar como borrador', 'error');
+    return;
+  }
+
+  const draftData = {
+    title: title || 'Publicación sin título',
+    message: msg,
+    image_url: imgUrl,
+    btn_text: btnText,
+    btn_url: btnUrl,
+    reactions: reactions,
+    reactions_enabled: reactionsEnabled,
+    destination: destination,
+    created_at: new Date().toISOString()
+  };
+
+  try {
+    const docRef = await addDoc(collection(db, 'broadcast_drafts'), draftData);
+    draftData.id = docRef.id;
+    cachedDrafts.unshift(draftData);
+    renderDraftsList(document.getElementById('broadcastDraftsList'));
+    showAdminToast('✅ Borrador guardado exitosamente', 'success');
+  } catch(err) {
+    console.error('saveBroadcastDraft error:', err);
+    showAdminToast('❌ Error al guardar borrador: ' + (err.message || err), 'error');
+  }
+}
+
+async function deleteBroadcastDraft(id, index) {
+  if (!confirm('¿Seguro que deseas eliminar este borrador?')) return;
+
+  try {
+    await deleteDoc(doc(db, 'broadcast_drafts', id));
+    cachedDrafts.splice(index, 1);
+    renderDraftsList(document.getElementById('broadcastDraftsList'));
+    showAdminToast('🗑️ Borrador eliminado', 'info');
+  } catch(err) {
+    console.error('deleteBroadcastDraft error:', err);
+    showAdminToast('❌ Error al eliminar: ' + err.message, 'error');
+  }
+}
+
+function clearBroadcastForm() {
+  if (document.getElementById('bcTitle')) document.getElementById('bcTitle').value = '';
+  if (document.getElementById('bcMessage')) document.getElementById('bcMessage').value = '';
+  if (document.getElementById('bcImageUrl')) document.getElementById('bcImageUrl').value = '';
+  if (document.getElementById('bcBtnText')) document.getElementById('bcBtnText').value = 'Iniciar Bot';
+  if (document.getElementById('bcBtnUrl')) document.getElementById('bcBtnUrl').value = 'https://t.me/Dolar_fastbot/app';
+  if (document.getElementById('bcReactionsInput')) document.getElementById('bcReactionsInput').value = '👍 🔥 ✅ 🐒';
+  if (document.getElementById('bcReactionsEnabled')) document.getElementById('bcReactionsEnabled').checked = true;
+
+  renderReactionTags();
+  updateBroadcastPreview();
+  showAdminToast('🧹 Formulario limpiado', 'info');
 }
 
 async function sendTelegramBroadcast() {
@@ -3894,7 +4158,12 @@ Object.assign(window, {
   renderReactionTags,
   removeReactionEmoji,
   saveBotStartConfig,
-  testBotStartMessage
+  testBotStartMessage,
+  loadBroadcastDrafts,
+  saveBroadcastDraft,
+  applyBroadcastDraft,
+  deleteBroadcastDraft,
+  clearBroadcastForm
 });
 </script>
 </body>
