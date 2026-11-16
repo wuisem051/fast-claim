@@ -99,6 +99,23 @@ async function answerCallbackQuery(callbackQueryId, text = null) {
   }
 }
 
+async function editMessageReplyMarkup(chatId, messageId, replyMarkup) {
+  try {
+    const res = await fetch(`${TELEGRAM_API}/editMessageReplyMarkup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        chat_id: chatId,
+        message_id: messageId,
+        reply_markup: replyMarkup
+      })
+    });
+    return await res.json();
+  } catch (err) {
+    console.error('Error en editMessageReplyMarkup:', err.message);
+  }
+}
+
 function escapeHtml(str) {
   return String(str || '')
     .replace(/&/g, '&amp;')
@@ -107,17 +124,108 @@ function escapeHtml(str) {
     .replace(/"/g, '&quot;');
 }
 
+// Estructura en memoria para seguimiento de reacciones por mensaje
+// Estructura: messageVotes[msgKey] = { [userId]: emojiIndex }
+// Esto garantiza exactamente 1 voto por cuenta de Telegram (si vota otro, se cambia)
+const messageVotes = new Map();
+
 async function handleUpdate(update) {
   // Manejo de clicks en botones interactivos (reacciones, etc.)
   if (update.callback_query) {
     const cb = update.callback_query;
     const data = cb.data || '';
-    let toast = '¡Gracias por tu reacción!';
+    const userId = cb.from?.id;
+
     if (data.startsWith('react_')) {
-      const emoji = data.replace('react_', '');
-      toast = `¡Has reaccionado con ${emoji}! ✨`;
+      const msg = cb.message;
+      if (!msg) {
+        await answerCallbackQuery(cb.id, '¡Reacción registrada!');
+        return;
+      }
+
+      const chatId = msg.chat?.id;
+      const messageId = msg.message_id;
+      const msgKey = `${chatId}_${messageId}`;
+
+      // Obtener el índice del botón presionado o el emoji
+      // Formato esperado de data: react_<emoji> o react_idx_<index>
+      const originalMarkup = msg.reply_markup?.inline_keyboard;
+      if (!originalMarkup || !originalMarkup.length) {
+        await answerCallbackQuery(cb.id, '¡Reacción registrada!');
+        return;
+      }
+
+      if (!messageVotes.has(msgKey)) {
+        messageVotes.set(msgKey, new Map());
+      }
+      const votesMap = messageVotes.get(msgKey);
+
+      // Localizar la fila de reacciones (la primera fila con botones que tengan callback_data react_)
+      let reactionRowIndex = -1;
+      for (let r = 0; r < originalMarkup.length; r++) {
+        if (originalMarkup[r].some(btn => btn.callback_data && btn.callback_data.startsWith('react_'))) {
+          reactionRowIndex = r;
+          break;
+        }
+      }
+
+      if (reactionRowIndex === -1) {
+        await answerCallbackQuery(cb.id, '¡Reacción registrada!');
+        return;
+      }
+
+      const reactionRow = originalMarkup[reactionRowIndex];
+      // Encontrar cuál botón fue pulsado
+      const clickedBtnIndex = reactionRow.findIndex(btn => btn.callback_data === data);
+      if (clickedBtnIndex === -1) {
+        await answerCallbackQuery(cb.id, '¡Reacción registrada!');
+        return;
+      }
+
+      const previousVote = votesMap.get(userId);
+      let toastMessage = '';
+
+      if (previousVote === clickedBtnIndex) {
+        // Si vuelve a presionar la misma reacción, se la quita (des-reaccionar)
+        votesMap.delete(userId);
+        toastMessage = 'Reacción eliminada';
+      } else {
+        // 1 reacción por cuenta de Telegram: asigna la nueva
+        votesMap.set(userId, clickedBtnIndex);
+        const emojiClean = reactionRow[clickedBtnIndex].text.replace(/\s*\d+$/, '').trim();
+        toastMessage = `¡Reaccionaste con ${emojiClean}! ✨`;
+      }
+
+      // Recontar votos por cada botón de esa fila
+      const counts = new Array(reactionRow.length).fill(0);
+      for (const [uId, btnIdx] of votesMap.entries()) {
+        if (btnIdx >= 0 && btnIdx < counts.length) {
+          counts[btnIdx]++;
+        }
+      }
+
+      // Reconstruir la fila de botones con los contadores
+      const newInlineKeyboard = originalMarkup.map((row, rIdx) => {
+        if (rIdx !== reactionRowIndex) return row;
+        return row.map((btn, bIdx) => {
+          // Extraer emoji base sin número previo
+          const baseEmoji = btn.text.replace(/\s*\d+$/, '').trim();
+          const count = counts[bIdx];
+          const newText = count > 0 ? `${baseEmoji} ${count}` : baseEmoji;
+          return {
+            ...btn,
+            text: newText
+          };
+        });
+      });
+
+      // Actualizar el teclado en el mensaje de Telegram
+      await editMessageReplyMarkup(chatId, messageId, { inline_keyboard: newInlineKeyboard });
+      await answerCallbackQuery(cb.id, toastMessage);
+      return;
     }
-    await answerCallbackQuery(cb.id, toast);
+
+    await answerCallbackQuery(cb.id, '¡Listo!');
     return;
   }
 
