@@ -1288,6 +1288,7 @@
                 </button>
               </div>
               <span class="form-hint">Si colocas una imagen, se enviará como foto con el texto como descripción debajo (igual a la foto de referencia).</span>
+              <span id="bcImageUrlWarning" style="display:none;color:#f59e0b;font-size:12px;margin-top:4px;"><i class="fa-solid fa-triangle-exclamation"></i> La URL no parece una imagen directa (.jpg, .png...). Telegram necesita una URL directa a un archivo de imagen. <a href="https://imgbb.com" target="_blank" style="color:#2AABEE;">Sube tu imagen aquí →</a></span>
             </div>
 
             <!-- Título / Texto -->
@@ -3567,6 +3568,13 @@ function updateBroadcastPreview() {
   const btnText = (document.getElementById('bcBtnText')?.value || '').trim();
   const showReactions = document.getElementById('bcReactionsEnabled')?.checked;
 
+  // Validar si la URL de imagen es una imagen directa
+  const imageExtensions = /\.(jpg|jpeg|png|gif|webp|bmp)(\?.*)?$/i;
+  const imageCDNs = /\b(imgur\.com|imgbb\.com|ibb\.co|cloudinary\.com|i\.ibb\.co|images\.|cdn\.|static\.|media\.|pbs\.twimg|upload\.wikimedia|githubusercontent)/i;
+  const isValidImageUrl = imgUrl && (imageExtensions.test(imgUrl) || imageCDNs.test(imgUrl));
+  const warn = document.getElementById('bcImageUrlWarning');
+  if (warn) warn.style.display = (imgUrl && !isValidImageUrl) ? 'block' : 'none';
+
   const titleEl = document.getElementById('previewTitle');
   const bodyEl = document.getElementById('previewBody');
   const imgWrap = document.getElementById('previewImageWrap');
@@ -3708,31 +3716,55 @@ async function sendTelegramBroadcast() {
 }
 
 async function sendSingleTelegramPost(token, chatId, text, imgUrl, replyMarkup) {
-  const isPhoto = Boolean(imgUrl && (imgUrl.startsWith('http://') || imgUrl.startsWith('https://')));
-  const endpoint = isPhoto ? 'sendPhoto' : 'sendMessage';
+  // Verificar si la URL es una imagen directa válida (extensión de imagen conocida o CDN de imágenes)
+  const imageExtensions = /\.(jpg|jpeg|png|gif|webp|bmp)(\?.*)?$/i;
+  const imageCDNs = /\b(imgur\.com|imgbb\.com|ibb\.co|cloudinary\.com|i\.ibb\.co|images\.|cdn\.|static\.|media\.|pbs\.twimg|upload\.wikimedia|githubusercontent)/i;
+  const isLikelyImage = imgUrl && (imageExtensions.test(imgUrl) || imageCDNs.test(imgUrl));
+
+  // --- Intentar con foto si la URL parece una imagen ---
+  if (isLikelyImage) {
+    const bodyObj = {
+      chat_id: chatId,
+      photo: imgUrl,
+      caption: text,
+      parse_mode: 'HTML'
+    };
+    if (replyMarkup) bodyObj.reply_markup = replyMarkup;
+
+    const res = await fetch(`https://api.telegram.org/bot${token}/sendPhoto`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(bodyObj)
+    });
+    const r = await res.json();
+    if (r.ok) return r;
+    // Si falla sendPhoto, caer en sendMessage (continúa abajo)
+    console.warn('[Broadcast] sendPhoto falló, usando sendMessage. Error:', r.description);
+  }
+
+  // --- sendMessage (texto puro o fallback de foto) ---
+  // Si había imagen pero no pudo enviarse como foto, agregar la URL como enlace al texto
+  let finalText = text;
+  if (imgUrl && !isLikelyImage) {
+    // La URL no parece imagen directa — agregar nota
+    finalText = text + (imgUrl ? `\n\n🖼 <a href="${imgUrl}">Ver imagen/enlace</a>` : '');
+  } else if (imgUrl && isLikelyImage) {
+    // sendPhoto falló — agregar URL al texto como fallback
+    finalText = text + `\n\n🖼 <a href="${imgUrl}">Ver imagen</a>`;
+  }
 
   const bodyObj = {
     chat_id: chatId,
+    text: finalText,
     parse_mode: 'HTML'
   };
+  if (replyMarkup) bodyObj.reply_markup = replyMarkup;
 
-  if (isPhoto) {
-    bodyObj.photo = imgUrl;
-    bodyObj.caption = text;
-  } else {
-    bodyObj.text = text;
-  }
-
-  if (replyMarkup) {
-    bodyObj.reply_markup = replyMarkup;
-  }
-
-  const res = await fetch(`https://api.telegram.org/bot${token}/${endpoint}`, {
+  const res = await fetch(`https://api.telegram.org/bot${token}/sendMessage`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
     body: JSON.stringify(bodyObj)
   });
-
   return await res.json();
 }
 
