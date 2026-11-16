@@ -1,51 +1,63 @@
 # ⚡ FastClaim — ARPA USDT Telegram Mini App & Web Platform
 
-Plataforma Web y **Telegram Mini App** diseñada para que los usuarios ganen tokens **ARPA / USDT** gratis de forma periódica, completando tareas, invitando amigos y canjeando bonus horarios, con integración publicitaria (A-Ads y Monetag), base de datos en tiempo real con Firebase Firestore y sistema administrativo completo.
+Plataforma Web y **Telegram Mini App** diseñada para que los usuarios ganen tokens **ARPA / USDT** gratis de forma periódica, completando tareas, invitando amigos y canjeando bonus horarios, con integración publicitaria flexible (Bauval, Adsterra, A-Ads, Monetag), base de datos en tiempo real con Firebase Firestore y sistema administrativo completo con bot daemon de Telegram.
 
 ---
 
 ## 📌 Tabla de Contenidos
 
 - [Características Principales](#-características-principales)
-- [Bot Oficial de Telegram](#-bot-oficial-de-telegram)
+- [Bot Oficial de Telegram y Mini App](#-bot-oficial-de-telegram-y-mini-app)
 - [Arquitectura del Proyecto](#-arquitectura-del-proyecto)
 - [Estructura del Repositorio](#-estructura-del-repositorio)
 - [Novedades y Módulos Recientes](#-novedades-y-módulos-recientes)
 - [Panel de Administración](#-panel-de-administración)
 - [Landing Page Oficial](#-landing-page-oficial)
+- [Publicidad y Monetización](#-publicidad-y-monetización)
 - [Variables y Configuración](#-variables-y-configuración)
-- [Despliegue](#-despliegue)
+- [Despliegue y Ejecución](#-despliegue-y-ejecución)
 - [Licencia](#-licencia)
 
 ---
 
 ## 🚀 Características Principales
 
-- **Fácil Acceso Multiplataforma**: Funciona como Telegram Mini App nativa mediante el bot oficial o como aplicación Web responsive en cualquier navegador.
-- **Bonus Recurrente de Reclamo (Claim)**: Bono periódico configurable (ej. `+0.02 ARPA` / `+0.5 ARPA` cada hora o minutos) con temporizador en tiempo real.
-- **Sistema de Referidos**: Enlace único por usuario asociado al bot `@Dolar_fastbot` (`https://t.me/Dolar_fastbot?start=CODIGO`) con acreditación automática.
+- **Fácil Acceso Multiplataforma**: Funciona como Telegram Mini App nativa a pantalla completa o como aplicación Web responsive en cualquier navegador (`https://faslcaim.netlify.app`).
+- **Bonus Recurrente de Reclamo (Claim)**: Bono periódico configurable (ej. `+1.1097 ARPA` cada X minutos/horas) con temporizador circular animado en tiempo real.
+- **Sistema de Referidos**: Enlace único por usuario asociado al bot `@Dolar_fastbot` (`https://t.me/Dolar_fastbot?start=CODIGO` o `https://t.me/Dolar_fastbot/app?startapp=CODIGO`) con acreditación automática de comisión.
 - **Muro de Tareas (Tasks) Avanzado**:
-  - **Tareas Publicitarias / Enlaces**: Tareas recurrentes con tiempo de espera configurable (cooldown de 20 min) y contador en vivo para el usuario.
-  - **Tareas de Telegram**: Unirse a canales o reaccionar a publicaciones, marcadas como de realización única (permanentes).
+  - **Publicidad / Enlaces**: Tareas recurrentes con temporizador de espera (*cooldown*) en vivo para el usuario.
+  - **Telegram**: Unirse a canales oficiales o reaccionar a publicaciones, registradas como misiones únicas permanentes.
 - **Módulo de Retiros**:
-  - Métodos soportados: **Dirección BSC (BEP-20) / BNB Smart Chain** y **Binance Pay ID**.
-  - Validación de saldo y mínimo de retiro configurable.
-  - Avisos visuales claros para los usuarios sobre la red correcta.
-- **Monetización Dual**:
-  - Banner publicitario integrado de **A-Ads** (unidad adaptativa `#2462229`) optimizado para visibilidad.
-  - Soporte y direct links de **Monetag**.
-- **Backend y Base de Datos**: Integración con **Firebase Firestore & Auth** para sincronización en tiempo real de saldos, tareas y solicitudes, con compatibilidad de servidor Express Node.js.
+  - Métodos soportados: **BNB Smart Chain (BEP-20)** y **Binance Pay ID**.
+  - Validación de saldo y mínimo de retiro configurable desde el panel admin.
+  - Avisos visuales claros para los usuarios sobre la red y formato correcto.
+- **Publicidad y Banners Dinámicos**:
+  - Banner en **Tareas (320x50)** y en **Inicio (728x90 / 300x250)** editables en vivo desde el panel admin sin tocar código.
+  - Renderizado en **Sandbox Iframe Aislado** para proteger la interacción táctil de la Mini App.
+  - Soporte para **Monetag SDK** (interstitial / rewarded ads) y Smartlink.
+- **Sistema de Publicaciones y Difusión (Broadcast)**:
+  - Envíos masivos simultáneos al **Canal Oficial (@fastphartner)** y a todos los usuarios del bot en Telegram.
+  - Botones con **reacciones interactivas en vivo** (1 voto por cuenta de Telegram con contadores actualizables).
+  - Gestor de **Borradores y Plantillas** almacenados en Firebase Firestore.
 
 ---
 
-## 🤖 Bot Oficial de Telegram
+## 🤖 Bot Oficial de Telegram y Mini App
 
-El bot oficial vinculado a la plataforma es:
 - **Bot Username**: [@Dolar_fastbot](https://t.me/Dolar_fastbot)
-- **Formato del link de referidos**: `https://t.me/Dolar_fastbot?start=<CODIGO_REFERIDO>`
+- **Direct Mini App Link**: `https://t.me/Dolar_fastbot/app`
+- **Link de Referidos**: `https://t.me/Dolar_fastbot?start=<CODIGO>` o `https://t.me/Dolar_fastbot/app?startapp=<CODIGO>`
+- **Canal Oficial**: [@fastphartner](https://t.me/fastphartner)
+- **Host de la App en Netlify**: `https://faslcaim.netlify.app`
 
-> [!NOTE]
-> Para la correcta apertura como Mini App, el bot debe tener configurado el **Menu Button** o **Web App URL** apuntando al dominio de despliegue en Netlify vía [@BotFather](https://t.me/BotFather).
+### Bot Daemon (`bot.js`)
+El backend del bot opera mediante long-polling nativo con soporte para:
+1. Respuesta dinámica a `/start` configurable desde el panel de administración (mensaje, botones de app e invitar).
+2. Manejo de botones de apertura instantánea (`web_app` para chats privados y enlaces `url` para canales).
+3. Sincronización del **Chat Menu Button** oficial de Telegram para abrir la app desde la esquina inferior izquierda.
+4. Procesamiento de `callback_query` para registrar y editar reacciones de publicaciones con contadores en tiempo real.
+5. Caché de configuración de 15 segundos para reflejar cambios del admin casi de inmediato.
 
 ---
 
@@ -56,11 +68,14 @@ graph TD
     A[Usuario Web] -->|Visita Landing| B(landing/index.html)
     A -->|Abre App Principal| C(index.html - Frontend App)
     T[Usuario Telegram] -->|Abre Mini App @Dolar_fastbot| C
-    C -->|Lectura / Escritura en Vivo| F[(Firebase Firestore)]
-    C -->|Banners / Publicidad| Ads[A-Ads / Monetag]
+    Bot[bot.js Telegram Daemon] -->|Long Polling| TGAPI[Telegram Bot API]
+    Bot -->|Lee Config /start y Broadcasts| F[(Firebase Firestore)]
+    C -->|Lectura / Escritura en Vivo| F
+    C -->|Banners Aislados en Sandbox| Ads[Bauval / Adsterra / Monetag]
     Adm[Administrador] -->|Panel de Control| E(admin.html)
     E -->|Gestión de Tareas, Pagos y Config| F
-    E -->|Consulta Precios en Vivo| BinAPI[Binance API Ticker ARPA/USDT]
+    E -->|Borradores y Broadcast| F
+    E -->|Calculadora en Vivo| BinAPI[Binance API Ticker ARPA/USDT]
 ```
 
 ---
@@ -71,6 +86,9 @@ graph TD
 FAst Claim/
 ├── admin.html                  # Panel de administración completo (Firebase Auth + Firestore)
 ├── index.html                  # Interfaz principal de usuario (Web & Telegram Mini App)
+├── bot.js                      # Daemon del Bot de Telegram (@Dolar_fastbot)
+├── firestore.rules             # Reglas de seguridad oficiales de Cloud Firestore
+├── .env                        # Variables de entorno locales (tokens y URLs)
 ├── netlify.toml                # Configuración de despliegue y headers para Netlify
 ├── package.json                # Dependencias del proyecto
 ├── server.js                   # Servidor Node.js / Express opcional
@@ -90,56 +108,97 @@ FAst Claim/
 
 ## 🌟 Novedades y Módulos Recientes
 
-### 1. 🧮 Calculadora ARPA / USDT en Tiempo Real (Panel Admin)
-- Conexión directa a la API pública de **Binance** (`ARPAUSDT`) para obtener el precio spot actualizado.
-- Conversor bidireccional: cálculo de equivalencia de centavos de USD ($0.01, $0.05, $0.50, etc.) a tokens ARPA y viceversa.
-- Tabla de referencia rápida.
-- Botones de un solo clic para transferir el cálculo directamente a la configuración del **Bono de Reclamo** o de la **Recompensa por Referido**.
+### 1. 📢 Banners de Publicidad Configurables desde Admin
+- **Tareas (320x50)**: Bloque publicitario colocado estratégicamente antes del listado de tareas disponibles.
+- **Inicio (728x90 / 300x250)**: Bloque colocado directamente debajo del botón `¡RECLAMAR!` y antes de las estadísticas.
+- **Gestión Visual**: En el panel de administración (**Configuración → Monetización & Publicidad**) se puede editar el código HTML/JavaScript de cada banner sin tocar archivos.
+- **Aislamiento Seguro (`renderSafeBanner`)**: Los anuncios se renderizan dentro de un `iframe` aislado que previene interferencias con los eventos táctiles y scripts de la Mini App.
 
-### 2. ⏱ Sistema Inteligente de Tareas y Cooldowns
-- Tareas publicitarias con temporizador dinámico: el usuario visualiza *"En X minutos podrás reclamar otra vez"* con cuenta regresiva en vivo.
-- Tareas de Telegram de un solo uso (`one_time: true`).
-- Botones en el panel admin para **reiniciar tareas individuales** o **reiniciar todas las tareas** para que los usuarios puedan volver a completarlas.
+### 2. 🤖 Editor de Respuestas del Comando `/start`
+- Ubicado en **Configuración → Configuración del Bot — Respuesta a /start** (con botón de acceso directo desde **Publicaciones**).
+- Permite personalizar:
+  - Mensaje de bienvenida con formato HTML y etiqueta dinámica `{nombre}`.
+  - Texto y URL del botón principal de apertura.
+  - Texto del botón de invitar y mensaje predefinido para compartir.
+  - Texto del **Chat Menu Button** (botón de menú inferior del chat de Telegram).
+  - Vista previa interactiva estilo Telegram en tiempo real.
 
-### 3. 💳 Gestión Detallada de Retiros
-- Soporte para **BSC (BEP20)** y **Binance Pay**.
-- Panel de administración muestra la dirección completa o Pay ID sin truncar, con etiqueta distintiva de color (Badge púrpura para BSC y amarillo/ámbar para Binance Pay).
-- Botón **"📋 Copiar"** rápido en cada fila de la tabla.
-- Modal de aprobación con verificación visual completa de la wallet de destino antes de confirmar el pago.
+### 3. 📣 Publicaciones con Reacciones y Borradores en Firestore
+- Soporte para adjuntar imágenes/banners directos a través de URL (`i.ibb.co`, etc.).
+- Botones de reacción rápida configurables (hasta 8 emojis). Los usuarios votan una sola vez por cuenta y el contador numérico se actualiza en el mensaje sin recargar.
+- Enlace diferenciado: en canales utiliza el enlace al bot (`https://t.me/Dolar_fastbot`), mientras que en chats privados ejecuta directamente la app o el flujo `/start`.
+- Sistema de **Borradores** guardados en la colección `broadcast_drafts` de Firestore para reutilizar mensajes prefabricados.
 
-### 4. 📢 Integración Publicitaria A-Ads
-- Bloque publicitario adaptativo de A-Ads insertado estratégicamente entre la tarjeta de perfil y el balance.
-- Manejo dinámico para asegurar visibilidad y correcta verificación por parte de los bots de auditoría de anuncios.
+### 4. 🧮 Calculadora ARPA / USDT en Tiempo Real
+- Conexión directa a la API de **Binance** (`ARPAUSDT`) para obtener el precio spot en tiempo real.
+- Conversión instantánea de centavos de dólar ($0.01, $0.05, $0.50, etc.) a tokens ARPA.
+- Botones rápidos para transferir el cálculo a la recompensa de Claim o de Referidos.
+
+### 5. 🛡 Reglas de Firestore y Navegación del Admin
+- Corrección estructural de contenedores DOM en `admin.html` que garantiza carga inmediata sin pantallas en negro en Tareas, Calculadora y Configuración.
+- Reglas actualizadas en `firestore.rules` con permisos habilitados para `broadcast_drafts` y configuración general.
 
 ---
 
 ## 🛡 Panel de Administración (`admin.html`)
 
 El panel administrativo incluye:
-1. **Métricas en tiempo real**: Usuarios registrados, total de balances, retiros pendientes y reclamos.
-2. **Gestión de Retiros**: Aprobación y rechazo con notas explicativas, visualización íntegra de destinos Binance Pay y BEP20.
-3. **Gestor de Tareas**: Creación de tareas con enlace, recompensa, selección de tipo (Enlace Web o Canal Telegram), control de cooldown y reinicio masivo o individual.
-4. **Calculadora ARPA**: Herramienta de conversión USD ↔ ARPA conectada a Binance.
-5. **Ajustes del Sistema**: Modificación de bono horario, cooldown, comisión de referidos y scripts de anuncios.
+1. **Dashboard**: Métricas en vivo (usuarios totales, reclamos procesados, balances y retiros pendientes).
+2. **Retiros**: Aprobación/rechazo de pagos BSC (BEP-20) y Binance Pay con botón de copiado rápido y modal de verificación.
+3. **Tareas**: Creación y edición de misiones (enlaces, publicidad, canales de Telegram), temporizadores de reinicio (*cooldown*) y reinicio masivo.
+4. **Usuarios & Referidos**: Directorio de usuarios registrados, estado en línea, balances individuales y tabla de patrocinadores destacados.
+5. **Publicaciones**: Creador de broadcasts para canal y bot con imágenes, reacciones interactivas y borradores guardados.
+6. **Calculadora ARPA**: Conversor de divisas y cripto conectado al ticker en vivo de Binance.
+7. **Configuración**: Parámetros económicos (bonus amount, cooldown, mínimo de retiro), respuesta del bot `/start` y códigos de banners publicitarios.
 
 ---
 
-## 🌐 Landing Page Oficial (`/landing`)
+## 🌐 Publicidad y Monetización
 
-La carpeta `/landing` incluye una landing moderna pensada para conversión:
-- Explicación del funcionamiento de FastClaim.
-- Calculadora interactiva de proyecciones de ganancias mensuales.
-- Mockups fotorrealistas de la aplicación.
-- Enlaces directos a la versión Web y a la Mini App de Telegram (`@Dolar_fastbot`).
+| Formato | Red / Proveedor | Ubicación | Control |
+|---|---|---|---|
+| **Banner 320x50** | Bauval / Adsterra / Cualquier red | Sección Tareas (`#tasksAdContainer`) | Editable desde Admin |
+| **Banner 728x90 / 300x250** | Bauval / Adsterra / Cualquier red | Inicio debajo de Claim (`#homeAdContainer`) | Editable desde Admin |
+| **Rewarded / Interstitial** | Monetag SDK (`//libtl.com/sdk.js`) | Al presionar ¡RECLAMAR! | Activable / Desactivable desde Admin |
+| **Smartlink / Direct Link** | Monetag / Otra red | Ventana secundaria opcional al reclamar | Editable desde Admin |
 
 ---
 
-## ☁️ Despliegue
+## ⚙️ Variables y Configuración
 
-### Despliegue en Netlify (Recomendado)
-El proyecto cuenta con configuración lista para Netlify:
-- **Despliegue de la App Principal**: Seleccionar la raíz del repositorio. Las páginas `index.html` y `admin.html` se sirven de forma estática conectadas directamente a Firebase Firestore.
-- **Despliegue de la Landing**: Se puede desplegar como sitio independiente usando la carpeta `landing` como directorio base o mediante arrastrar y soltar en Netlify Drop.
+Archivo `.env` en la raíz del proyecto:
+```env
+# Token del bot de Telegram obtenido de @BotFather
+BOT_TOKEN=8671776491:AAFlPCgWFxY593pUMsOKAPP4LzWAzp-PjgA
+
+# URL oficial de la Mini App alojada en Netlify
+APP_URL=https://faslcaim.netlify.app
+
+# Clave secreta administrativa
+ADMIN_SECRET=fastclaim_admin_2024
+```
+
+---
+
+## ☁️ Despliegue y Ejecución
+
+### 1. Iniciar el Daemon del Bot Localmente
+```powershell
+cd "E:\FAst Claim"
+node bot.js
+```
+
+### 2. Despliegue en Netlify (App Principal)
+Cada commit subido a la rama `main` en GitHub despliega automáticamente los cambios en Netlify:
+```powershell
+cd "E:\FAst Claim"
+git add .
+git commit -m "feat: nuevas funcionalidades"
+git push origin main
+```
+
+### 3. Despliegue de la Landing Page
+La carpeta `/landing` está configurada para desplegarse como sitio complementario de captación o subdirectorio.
 
 ---
 

@@ -1,6 +1,6 @@
-# FastClaim - Página de Aterrizaje (Landing Page)
+# FastClaim — Página de Aterrizaje (Landing Page)
 
-Esta carpeta contiene la **Landing Page oficial** de FastClaim, diseñada para explicar la app, mostrar capturas reales de la interfaz, el sistema de ganancias (bonus por hora y referidos), calculadora interactiva de rendimientos y opciones de acceso tanto en versión Web como a través de la **Telegram Mini App** oficial ([@Dolar_fastbot](https://t.me/Dolar_fastbot)).
+Esta carpeta contiene la **Landing Page oficial** de FastClaim, diseñada para captación de usuarios, explicar el funcionamiento de la plataforma, mostrar capturas reales de la interfaz, el sistema de ganancias (bonus recurrente y comisiones por referidos), calculadora interactiva de rendimientos y opciones de acceso tanto en versión Web como a través de la **Telegram Mini App** oficial ([@Dolar_fastbot](https://t.me/Dolar_fastbot)).
 
 ---
 
@@ -51,8 +51,9 @@ landing/
 
 ## 🎨 Características Incluidas
 
-- **Explicación clara**: Qué es FastClaim y cómo registrarse en 3 simples pasos.
-- **Calculadora en vivo**: Permite al visitante calcular proyecciones de tokens ARPA y USDT según sus reclamos y amigos referidos.
-- **Mockups de alta resolución**: Muestra visual del funcionamiento real (Home/Reclamo de Bono y Pantalla de Retiro a Wallet BSC o Binance Pay).
-- **Acceso Directo**: Botones para ingresar a la versión Web o a la Telegram Mini App vinculada a `@Dolar_fastbot`.
+- **Explicación clara**: Qué es FastClaim y cómo empezar en 3 simples pasos.
+- **Calculadora en vivo**: Permite al visitante proyectar ganancias estimadas en tokens ARPA y USDT según sus reclamos diarios y amigos invitados.
+- **Mockups de alta resolución**: Muestra visual del funcionamiento real (Home/Reclamo de Bono y Pantalla de Retiro a Wallet BEP-20 o Binance Pay).
+- **Acceso Directo**: Botones para ingresar a la versión Web (`https://faslcaim.netlify.app`) o a la Telegram Mini App vinculada a `@Dolar_fastbot` (`https://t.me/Dolar_fastbot/app`).
 - **100% Responsive & Dark Theme**: Diseñado para móviles, tablets y ordenadores con efectos de iluminación modernos (glassmorphism).
+- **Integración con la Plataforma Principal**: Redirección coordinada con el bot de Telegram y la Mini App principal.
