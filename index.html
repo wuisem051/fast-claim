@@ -1340,13 +1340,25 @@
         <div class="profile-name" id="profilePageName" style="font-size:20px;font-weight:800;">---</div>
         <div class="profile-username" id="profilePageUsername" style="margin-top:4px;">@---</div>
         <div class="profile-joined" id="profilePageJoined" style="margin-top:6px;">Miembro desde ---</div>
+        <div style="margin-top:14px;padding:8px 12px;background:rgba(255,255,255,0.04);border:1px solid var(--card-border);border-radius:12px;display:inline-flex;align-items:center;gap:8px;max-width:100%;cursor:pointer;" onclick="copyUserId()" title="Toca para copiar ID">
+          <i class="fa-solid fa-fingerprint" style="color:var(--accent);font-size:14px;"></i>
+          <span style="font-size:11px;color:var(--text3);font-weight:600;">UID:</span>
+          <span class="mono" id="profilePageUid" style="font-size:12px;font-weight:700;color:var(--text);word-break:break-all;">---</span>
+          <i class="fa-regular fa-copy" style="font-size:12px;color:var(--text3);margin-left:4px;"></i>
+        </div>
       </div>
 
-      <!-- Cerrar Sesión -->
-      <div style="margin-top:20px;padding-bottom:24px;">
-        <button onclick="handleUserLogout()" style="width:100%;padding:14px;border-radius:14px;border:1px solid rgba(255,82,82,0.3);background:rgba(255,82,82,0.08);color:#ff5252;font-size:14px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px;">
-          <i class="fa-solid fa-arrow-right-from-bracket"></i> Cerrar Sesión
-        </button>
+      <!-- Datos de cuenta / ID -->
+      <div class="card" style="margin-top:16px;padding:16px;display:flex;flex-direction:column;gap:12px;">
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:12px;color:var(--text3);font-weight:600;"><i class="fa-solid fa-id-card" style="color:var(--accent);margin-right:6px;"></i> ID Telegram</span>
+          <span class="mono" id="profilePageTgId" style="font-size:13px;font-weight:700;color:var(--text);">---</span>
+        </div>
+        <div style="height:1px;background:rgba(255,255,255,0.06);"></div>
+        <div style="display:flex;justify-content:space-between;align-items:center;">
+          <span style="font-size:12px;color:var(--text3);font-weight:600;"><i class="fa-solid fa-fire" style="color:#f59e0b;margin-right:6px;"></i> Firebase UID</span>
+          <span class="mono" id="profilePageFirebaseUid" style="font-size:12px;font-weight:700;color:var(--accent2);cursor:pointer;" onclick="copyUserId()" title="Copiar UID">---</span>
+        </div>
       </div>
 
     </div><!-- end pageProfile -->
@@ -2205,6 +2217,12 @@ function renderUserData() {
   setTxt('profilePageUsername', userData.username ? '@' + userData.username : 'Sin usuario');
   setTxt('profilePageJoined', 'Miembro desde ' + formatDate(userData.created_at));
 
+  const currentUid = userData.uid || (auth.currentUser ? auth.currentUser.uid : '—');
+  const tgId = userData.telegram_id || '—';
+  setTxt('profilePageUid', currentUid);
+  setTxt('profilePageFirebaseUid', currentUid);
+  setTxt('profilePageTgId', tgId);
+
   const balance    = parseFloat(userData.balance || 0);
   const bonusAmt   = settings.bonus_amount;
   const refReward  = settings.referral_reward;
@@ -2854,9 +2872,29 @@ window.switchPage = function(page) {
     document.getElementById('profilePageName').textContent  = name;
     document.getElementById('profilePageUsername').textContent = uname;
     document.getElementById('profilePageJoined').textContent   = joined;
+    const uidVal = userData.uid || (auth.currentUser ? auth.currentUser.uid : '—');
+    const tgVal = userData.telegram_id || '—';
+    const elUid = document.getElementById('profilePageUid');
+    const elFbUid = document.getElementById('profilePageFirebaseUid');
+    const elTgId = document.getElementById('profilePageTgId');
+    if (elUid) elUid.textContent = uidVal;
+    if (elFbUid) elFbUid.textContent = uidVal;
+    if (elTgId) elTgId.textContent = tgVal;
     const initial = (userData.first_name || userData.username || '?')[0].toUpperCase();
     const initialEl = document.getElementById('profilePageInitial');
     if (initialEl) initialEl.textContent = initial;
+  }
+};
+
+// ─── Copy User ID ─────────────────────────────────────────
+window.copyUserId = async function() {
+  const uidVal = (userData && userData.uid) || (auth.currentUser ? auth.currentUser.uid : '');
+  if (!uidVal) return;
+  try {
+    await navigator.clipboard.writeText(uidVal);
+    showToast('✅ ID copiado al portapapeles', 'success');
+  } catch (err) {
+    showToast('ID: ' + uidVal, 'info');
   }
 };
 
