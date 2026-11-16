@@ -129,6 +129,53 @@ function escapeHtml(str) {
 // Esto garantiza exactamente 1 voto por cuenta de Telegram (si vota otro, se cambia)
 const messageVotes = new Map();
 
+async function executeStartCommand(chatId, firstName, refCode = '') {
+  const targetUrl = refCode ? `${appUrl}?ref=${encodeURIComponent(refCode)}` : appUrl;
+
+  // Cargar config personalizada desde Firestore
+  const cfg = await loadBotConfig();
+
+  // Mensaje personalizable — {nombre} se reemplaza con el nombre del usuario
+  const defaultMessage =
+    `👋 ¡Hola, <b>${escapeHtml(firstName)}</b>! Bienvenido a <b>FastClaim ARPA USDT</b> ⚡\n\n` +
+    `Gana criptomonedas <b>ARPA</b> gratis cada hora por solo dar un toque:\n\n` +
+    `🎁 <b>Bono de Bienvenida:</b> Reclama tokens gratis cada hora.\n` +
+    `👥 <b>Sistema de Referidos:</b> Gana ARPA por cada amigo que invites más comisiones de sus reclamos.\n` +
+    `💳 <b>Retiros Directos:</b> Cobros a Binance Pay o BNB Smart Chain (BEP-20).\n\n` +
+    `👇 <i>Toca el botón abajo para iniciar la aplicación:</i>`;
+
+  // Usar mensaje personalizado si existe, si no el default
+  const welcomeText = cfg.start_message
+    ? cfg.start_message.replace(/{nombre}/g, escapeHtml(firstName))
+    : defaultMessage;
+
+  // URL del botón principal: si está configurada en admin usa esa base + ref, si no usa appUrl
+  const baseBtnUrl = cfg.btn_url || appUrl;
+  const finalBtnUrl = refCode
+    ? `${baseBtnUrl.replace(/\/+$/, '')}?ref=${encodeURIComponent(refCode)}`
+    : baseBtnUrl;
+
+  const keyboard = {
+    inline_keyboard: [
+      [
+        {
+          text: cfg.btn_text,
+          web_app: { url: finalBtnUrl }
+        }
+      ],
+      [
+        {
+          text: cfg.invite_text,
+          url: `https://t.me/share/url?url=${encodeURIComponent(`https://t.me/Dolar_fastbot?start=${refCode}`)}&text=${encodeURIComponent(cfg.share_text)}`
+        }
+      ]
+    ]
+  };
+
+  await sendTelegramMessage(chatId, welcomeText, keyboard);
+  console.log(`[BOT] /start ejecutado para ${firstName} (${chatId})${refCode ? ' con ref: ' + refCode : ''}`);
+}
+
 async function handleUpdate(update) {
   // Manejo de clicks en botones interactivos (reacciones, etc.)
   if (update.callback_query) {
@@ -225,6 +272,15 @@ async function handleUpdate(update) {
       return;
     }
 
+    if (data === 'trigger_start_app') {
+      await answerCallbackQuery(cb.id, '🚀 Iniciando FastClaim...');
+      // Ejecutar la rutina completa de /start para el usuario
+      const chatId = cb.message?.chat?.id || userId;
+      const firstName = cb.from?.first_name || 'amigo';
+      await executeStartCommand(chatId, firstName, '');
+      return;
+    }
+
     await answerCallbackQuery(cb.id, '¡Listo!');
     return;
   }
@@ -240,50 +296,7 @@ async function handleUpdate(update) {
   if (text.startsWith('/start')) {
     const parts = text.split(/\s+/);
     const refCode = parts.length > 1 ? parts[1].trim() : '';
-    const targetUrl = refCode ? `${appUrl}?ref=${encodeURIComponent(refCode)}` : appUrl;
-
-    // Cargar config personalizada desde Firestore
-    const cfg = await loadBotConfig();
-
-    // Mensaje personalizable — {nombre} se reemplaza con el nombre del usuario
-    const defaultMessage =
-      `👋 ¡Hola, <b>${escapeHtml(firstName)}</b>! Bienvenido a <b>FastClaim ARPA USDT</b> ⚡\n\n` +
-      `Gana criptomonedas <b>ARPA</b> gratis cada hora por solo dar un toque:\n\n` +
-      `🎁 <b>Bono de Bienvenida:</b> Reclama tokens gratis cada hora.\n` +
-      `👥 <b>Sistema de Referidos:</b> Gana ARPA por cada amigo que invites más comisiones de sus reclamos.\n` +
-      `💳 <b>Retiros Directos:</b> Cobros a Binance Pay o BNB Smart Chain (BEP-20).\n\n` +
-      `👇 <i>Toca el botón abajo para iniciar la aplicación:</i>`;
-
-    // Usar mensaje personalizado si existe, si no el default
-    const welcomeText = cfg.start_message
-      ? cfg.start_message.replace(/{nombre}/g, escapeHtml(firstName))
-      : defaultMessage;
-
-    // URL del botón principal: si está configurada en admin usa esa base + ref, si no usa appUrl
-    const baseBtnUrl = cfg.btn_url || appUrl;
-    const finalBtnUrl = refCode
-      ? `${baseBtnUrl.replace(/\/+$/, '')}?ref=${encodeURIComponent(refCode)}`
-      : baseBtnUrl;
-
-    const keyboard = {
-      inline_keyboard: [
-        [
-          {
-            text: cfg.btn_text,
-            web_app: { url: finalBtnUrl }
-          }
-        ],
-        [
-          {
-            text: cfg.invite_text,
-            url: `https://t.me/share/url?url=${encodeURIComponent(`https://t.me/Dolar_fastbot?start=${refCode}`)}&text=${encodeURIComponent(cfg.share_text)}`
-          }
-        ]
-      ]
-    };
-
-    await sendTelegramMessage(chatId, welcomeText, keyboard);
-    console.log(`[BOT] /start respondido para ${firstName} (${chatId})${refCode ? ' con ref: ' + refCode : ''}`);
+    await executeStartCommand(chatId, firstName, refCode);
   }
 
   // Comando /help

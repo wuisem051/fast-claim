@@ -1330,16 +1330,16 @@
               <!-- Botón cuando se envía a Usuarios del Bot -->
               <div>
                 <div style="font-size:11px;font-weight:700;color:#10b981;margin-bottom:6px;">
-                  🤖 En Mensajes Privados del Bot (Abre directamente la Mini App):
+                  🤖 En Mensajes Privados del Bot (Ejecuta /start y abre la aplicación):
                 </div>
                 <div class="form-grid" style="grid-template-columns:1fr 1fr;gap:10px;">
                   <div>
                     <label class="form-label" style="font-size:11px;">Texto para Usuarios</label>
-                    <input type="text" class="form-control" id="bcUserBtnText" value="🚀 Abrir App" oninput="updateBroadcastPreview()">
+                    <input type="text" class="form-control" id="bcUserBtnText" value="🚀 Iniciar FastClaim (/start)" oninput="updateBroadcastPreview()">
                   </div>
                   <div>
-                    <label class="form-label" style="font-size:11px;">URL de la Mini App (web_app)</label>
-                    <input type="url" class="form-control" id="bcUserBtnUrl" value="https://fastclaim.netlify.app" oninput="updateBroadcastPreview()">
+                    <label class="form-label" style="font-size:11px;">Acción al Presionar</label>
+                    <input type="text" class="form-control" id="bcUserBtnAction" value="Ejecutar /start en el Bot" disabled style="opacity:0.75;cursor:not-allowed;">
                   </div>
                 </div>
               </div>
@@ -4035,16 +4035,16 @@ async function sendTelegramBroadcast() {
   }
   const channelReplyMarkup = channelKeyboard.length > 0 ? { inline_keyboard: channelKeyboard } : null;
 
-  // 2. Teclado para usuarios privados del Bot: Abre directamente la Mini App (web_app)
+  // 2. Teclado para usuarios privados del Bot: Dispara /start en el bot
   const userKeyboard = [];
   if (showReactions && emojiList.length > 0) {
     userKeyboard.push(
       emojiList.map(emoji => ({ text: emoji, callback_data: `react_${emoji}` }))
     );
   }
-  if (userBtnText && userBtnUrl) {
+  if (userBtnText) {
     userKeyboard.push([
-      { text: userBtnText, web_app: { url: userBtnUrl } }
+      { text: `${userBtnText} ⚡`, callback_data: 'trigger_start_app' }
     ]);
   }
   const userReplyMarkup = userKeyboard.length > 0 ? { inline_keyboard: userKeyboard } : null;
