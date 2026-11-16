@@ -77,7 +77,11 @@ async function sendTelegramMessage(chatId, text, replyMarkup = null) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify(payload)
     });
-    return await res.json();
+    const result = await res.json();
+    if (!result.ok) {
+      console.error('Error Telegram API sendMessage:', result.description, 'Payload:', JSON.stringify(payload));
+    }
+    return result;
   } catch (err) {
     console.error('Error enviando mensaje Telegram:', err.message);
   }
@@ -152,19 +156,34 @@ async function executeStartCommand(chatId, firstName, refCode = '') {
     : defaultMessage;
 
   // URL del botón principal: si está configurada en admin usa esa base + ref, si no usa appUrl
-  const baseBtnUrl = cfg.btn_url || appUrl;
-  const finalBtnUrl = refCode
-    ? `${baseBtnUrl.replace(/\/+$/, '')}?ref=${encodeURIComponent(refCode)}`
-    : baseBtnUrl;
+  let baseBtnUrl = cfg.btn_url || appUrl;
+  
+  // Si el usuario guardó un link t.me/ en vez de una URL web HTTPS (Netlify),
+  // Telegram rechaza web_app con BUTTON_URL_INVALID porque web_app exige una URL HTTPS directa.
+  const isDirectTelegramLink = baseBtnUrl.startsWith('https://t.me/') || baseBtnUrl.startsWith('http://t.me/');
+  
+  let mainButton;
+  if (isDirectTelegramLink) {
+    const finalUrl = refCode
+      ? `${baseBtnUrl.replace(/\/+$/, '')}?startapp=${encodeURIComponent(refCode)}`
+      : baseBtnUrl;
+    mainButton = {
+      text: cfg.btn_text,
+      url: finalUrl
+    };
+  } else {
+    const finalBtnUrl = refCode
+      ? `${baseBtnUrl.replace(/\/+$/, '')}?ref=${encodeURIComponent(refCode)}`
+      : baseBtnUrl;
+    mainButton = {
+      text: cfg.btn_text,
+      web_app: { url: finalBtnUrl }
+    };
+  }
 
   const keyboard = {
     inline_keyboard: [
-      [
-        {
-          text: cfg.btn_text,
-          web_app: { url: finalBtnUrl }
-        }
-      ],
+      [mainButton],
       [
         {
           text: cfg.invite_text,
@@ -330,7 +349,8 @@ async function startPolling() {
   // Cargar config inicial y sincronizar Chat Menu Button
   const initialCfg = await loadBotConfig();
   try {
-    const menuBtnUrl = initialCfg.btn_url || appUrl;
+    // Si la URL es de Telegram t.me/, no se puede usar como web_app en setChatMenuButton
+    const menuBtnUrl = (!initialCfg.btn_url || initialCfg.btn_url.includes('t.me/')) ? appUrl : initialCfg.btn_url;
     const menuBtnText = initialCfg.menu_btn_text || '🚀 Abrir App';
     await fetch(`${TELEGRAM_API}/setChatMenuButton`, {
       method: 'POST',
