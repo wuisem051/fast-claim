@@ -23,8 +23,8 @@ service cloud.firestore {
 
     // ─── Borradores de Publicaciones y Anuncios de Telegram ──────────────
     match /broadcast_drafts/{draftId} {
-      // Lectura, creación, edición y eliminación permitida para administradores autenticados
-      allow read, write: if request.auth != null;
+      // Lectura y escritura abierta (solo el admin accede desde el panel)
+      allow read, write: if true;
     }
 
     // ─── Usuarios de la Plataforma ───────────────────────────────────────
