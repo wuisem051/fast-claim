@@ -1,0 +1,85 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ─── Función auxiliar para verificar si el usuario es Admin ──────────
+    // Considera admin a usuarios autenticados que tengan rol 'admin' o por email específico
+    function isAdmin() {
+      return request.auth != null && (
+        request.auth.token.email == 'admin@fastclaim.com' ||
+        request.auth.token.email == 'wuisem051@gmail.com' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.is_admin == true
+      );
+    }
+
+    // ─── Configuración Global del Sistema y Bot ──────────────────────────
+    match /settings/{docId} {
+      // Cualquier usuario puede leer la configuración del sistema (bonus, bot_token fallback, etc.)
+      allow read: if true;
+      // Solo administradores autenticados pueden modificar settings
+      allow write: if request.auth != null;
+    }
+
+    // ─── Borradores de Publicaciones y Anuncios de Telegram ──────────────
+    match /broadcast_drafts/{draftId} {
+      // Lectura, creación, edición y eliminación permitida para administradores autenticados
+      allow read, write: if request.auth != null;
+    }
+
+    // ─── Usuarios de la Plataforma ───────────────────────────────────────
+    match /users/{userId} {
+      allow read: if true;
+      // El propio usuario puede crearse/actualizarse, o cualquier admin
+      allow create: if true;
+      allow update: if request.auth != null || request.resource.data.diff(resource.data).affectedKeys().hasOnly(['last_claim', 'balance', 'total_claimed', 'referral_earnings', 'claims_count']);
+      allow delete: if request.auth != null;
+    }
+
+    // ─── Tareas y Recompensas ────────────────────────────────────────────
+    match /tasks/{taskId} {
+      allow read: if true;
+      allow write: if request.auth != null;
+    }
+
+    match /user_tasks/{userTaskId} {
+      allow read: if true;
+      allow create, update: if true;
+      allow delete: if request.auth != null;
+    }
+
+    // ─── Retiros de Criptomonedas ────────────────────────────────────────
+    match /withdrawals/{withdrawalId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if request.auth != null;
+    }
+
+    // ─── Sistema de Referidos y Comisiones ──────────────────────────────
+    match /referrals/{refId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if request.auth != null;
+    }
+
+    match /referral_commissions/{commId} {
+      allow read: if true;
+      allow create: if true;
+      allow update, delete: if request.auth != null;
+    }
+
+    // ─── Sesiones y Eventos de Claim ─────────────────────────────────────
+    match /user_sessions/{sessionId} {
+      allow read, write: if true;
+    }
+
+    match /claim_events/{eventId} {
+      allow read, write: if true;
+    }
+
+    // Regla de respaldo para cualquier otra colección del admin
+    match /{document=**} {
+      allow read, write: if request.auth != null;
+    }
+  }
+}
