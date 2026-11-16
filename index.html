@@ -530,7 +530,8 @@
     .ref-reward-badges {
       display: flex;
       justify-content: center;
-      gap: 12px;
+      flex-wrap: wrap;
+      gap: 8px;
       margin-top: 16px;
     }
     .reward-badge {
@@ -541,8 +542,9 @@
       background: rgba(255,255,255,0.04);
       border: 1px solid rgba(255,255,255,0.08);
       border-radius: 12px;
-      padding: 12px 16px;
-      min-width: 90px;
+      padding: 10px 8px;
+      min-width: 70px;
+      flex: 1 1 70px;
     }
     .reward-badge-val { font-size: 18px; font-weight: 900; color: var(--green); }
     .reward-badge-lbl { font-size: 10px; color: var(--text3); font-weight: 500; text-align: center; }
@@ -1126,11 +1128,15 @@
       <div class="card ref-hero">
         <div class="ref-hero-icon">🎁</div>
         <div class="ref-hero-title">Gana invitando amigos</div>
-        <div class="ref-hero-sub">Por cada amigo que se una con tu link, <strong style="color:var(--green)">tú ganas ARPA automáticamente</strong>.</div>
+        <div class="ref-hero-sub">Por cada amigo que se una con tu link, <strong style="color:var(--green)">ganas ARPA al instante</strong> más una <strong style="color:var(--ton2)">comisión de por vida</strong> en cada reclamo.</div>
         <div class="ref-reward-badges">
           <div class="reward-badge">
             <div class="reward-badge-val" id="refRewardVal">1.0</div>
-            <div class="reward-badge-lbl">ARPA por<br>referido</div>
+            <div class="reward-badge-lbl">ARPA por<br>registro</div>
+          </div>
+          <div class="reward-badge">
+            <div class="reward-badge-val" id="refPercentVal" style="color:var(--ton2);">10%</div>
+            <div class="reward-badge-lbl">De sus<br>reclamos</div>
           </div>
           <div class="reward-badge">
             <div class="reward-badge-val" id="refCountBig">0</div>
@@ -1145,7 +1151,7 @@
 
       <!-- Ref Link Box -->
       <div class="card ref-link-box" style="margin-top:12px;">
-        <div class="ref-link-label">Tu enlace de invitación</div>
+        <div class="ref-link-label">Tu enlace de recomendación</div>
         <div class="ref-link-input-wrap">
           <input type="text" class="ref-link-input" id="refLinkInput" readonly value="Cargando...">
           <button class="icon-btn copy-btn" id="copyRefBtn" onclick="copyRefLink()" title="Copiar enlace">
@@ -1158,7 +1164,7 @@
       </div>
 
       <!-- Ref Stats -->
-      <p class="section-title"><i class="fa-solid fa-users" style="color:var(--green)"></i> Tus Referidos</p>
+      <p class="section-title"><i class="fa-solid fa-chart-simple" style="color:var(--green)"></i> Estadísticas de Red</p>
       <div class="ref-stats">
         <div class="card ref-stat-card">
           <div class="ref-stat-icon">👥</div>
@@ -1169,6 +1175,20 @@
           <div class="ref-stat-icon">💰</div>
           <div class="ref-stat-val" id="refStatEarned">0.00</div>
           <div class="ref-stat-lbl">ARPA ganados</div>
+        </div>
+      </div>
+
+      <!-- Mis Amigos Referidos -->
+      <div style="display:flex;align-items:center;justify-content:space-between;margin:20px 0 10px;">
+        <p class="section-title" style="margin:0;"><i class="fa-solid fa-users" style="color:var(--accent);"></i> Mis Amigos Referidos (<span id="refListCount">0</span>)</p>
+        <button class="icon-btn" onclick="loadMyReferrals()" style="width:30px;height:30px;font-size:11px;" title="Actualizar lista">
+          <i class="fa-solid fa-rotate-right"></i>
+        </button>
+      </div>
+      <div class="card" id="myReferralsContainer" style="padding:14px;margin-bottom:16px;">
+        <div style="text-align:center;padding:20px;color:var(--text3);font-size:12px;">
+          <i class="fa-solid fa-spinner fa-spin" style="color:var(--accent);font-size:20px;margin-bottom:8px;"></i>
+          <p>Cargando lista de referidos...</p>
         </div>
       </div>
 
@@ -1533,6 +1553,7 @@ let settings = {
   bonus_amount:       0.5,
   bonus_cooldown_h:   1,
   referral_reward:    1.0,
+  referral_percent:   10,
   min_withdraw:       10,
   monetag_enabled:    '1',
   monetag_direct_link:'',
@@ -1548,8 +1569,25 @@ if (tg) { tg.expand(); tg.ready(); }
 function getTelegramUser() { return tg?.initDataUnsafe?.user || null; }
 
 function getRefCode() {
-  if (tg?.initDataUnsafe?.start_param) return tg.initDataUnsafe.start_param;
-  return new URLSearchParams(window.location.search).get('ref') || null;
+  const urlParams = new URLSearchParams(window.location.search);
+  const hashParams = new URLSearchParams(window.location.hash.substring(1));
+
+  let code = tg?.initDataUnsafe?.start_param || null;
+  if (!code) code = urlParams.get('ref') || urlParams.get('start') || urlParams.get('startapp') || urlParams.get('tgWebAppStartParam');
+  if (!code) code = hashParams.get('tgWebAppStartParam') || hashParams.get('start_param') || hashParams.get('ref') || hashParams.get('start');
+
+  if (code && code !== 'null' && code !== 'undefined') {
+    code = String(code).trim().toUpperCase();
+    try { localStorage.setItem('fc_ref_code', code); } catch(e){}
+    return code;
+  }
+
+  try {
+    const saved = localStorage.getItem('fc_ref_code');
+    if (saved && saved !== 'null' && saved !== 'undefined') return String(saved).trim().toUpperCase();
+  } catch(e){}
+
+  return null;
 }
 
 // ─── Load Settings from Firestore ─────────────────────────
@@ -1640,19 +1678,24 @@ function genCode() {
 async function createUserDoc(uid, profile, refCode) {
   const referralCode = genCode();
   let referredBy = null;
+  let referrerData = null;
+  const cleanRefCode = refCode ? String(refCode).trim().toUpperCase() : null;
 
-  if (refCode) {
+  if (cleanRefCode) {
     try {
-      const q = query(collection(db, 'users'), where('referral_code', '==', refCode));
+      const q = query(collection(db, 'users'), where('referral_code', '==', cleanRefCode));
       const snap = await getDocs(q);
       if (!snap.empty) {
         const referrer = snap.docs[0];
         if (referrer.id !== uid) {
           referredBy = referrer.id;
-          const rData = referrer.data();
+          referrerData = referrer.data();
+          const refReward = parseFloat(settings.referral_reward || 0);
+
           await updateDoc(doc(db, 'users', referrer.id), {
-            balance:        (rData.balance        || 0) + settings.referral_reward,
-            referral_count: (rData.referral_count || 0) + 1
+            balance:           (referrerData.balance           || 0) + refReward,
+            referral_count:    (referrerData.referral_count    || 0) + 1,
+            referral_earnings: (referrerData.referral_earnings || 0) + refReward
           });
         }
       }
@@ -1663,18 +1706,43 @@ async function createUserDoc(uid, profile, refCode) {
 
   await setDoc(doc(db, 'users', uid), {
     uid,
-    username:       profile.username    || '',
-    first_name:     profile.first_name  || 'User',
-    photo_url:      defaultAvatar,
-    telegram_id:    profile.telegram_id || '',
-    balance:        0,
-    referral_code:  referralCode,
-    referred_by:    referredBy,
-    last_bonus_claim: null,
-    total_claimed:  0,
-    referral_count: 0,
-    created_at:     new Date().toISOString()
+    username:             profile.username    || '',
+    first_name:           profile.first_name  || 'User',
+    photo_url:            defaultAvatar,
+    telegram_id:          profile.telegram_id || '',
+    balance:              0,
+    referral_code:        referralCode,
+    referred_by:          referredBy,
+    referred_by_username: referrerData ? (referrerData.username || referrerData.first_name || 'Patrocinador') : '',
+    last_bonus_claim:     null,
+    total_claimed:        0,
+    referral_count:       0,
+    referral_earnings:    0,
+    created_at:           new Date().toISOString()
   });
+
+  // Guardar registro en la colección 'referrals'
+  if (referredBy && referrerData) {
+    try {
+      await addDoc(collection(db, 'referrals'), {
+        referrer_id:          referredBy,
+        referrer_username:    referrerData.username || '',
+        referrer_first_name:  referrerData.first_name || 'Usuario',
+        referrer_code:        cleanRefCode,
+        referred_id:          uid,
+        referred_username:    profile.username || '',
+        referred_first_name:  profile.first_name || 'Usuario',
+        referred_photo:       defaultAvatar,
+        referred_telegram_id: profile.telegram_id || '',
+        reward_amount:        parseFloat(settings.referral_reward || 0),
+        commission_percent:   parseFloat(settings.referral_percent || 10),
+        status:               'active',
+        created_at:           new Date().toISOString()
+      });
+    } catch(e) { console.warn('Error guardando historial de referido:', e.message); }
+  }
+
+  try { localStorage.removeItem('fc_ref_code'); } catch(e){}
 }
 
 // ─── Load User Data ───────────────────────────────────────
@@ -1739,6 +1807,7 @@ async function loadUserData(uid) {
     trackUserSession(uid);
     startClaimCycle();
     loadWithdrawalHistory();
+    loadMyReferrals();
 
   } catch(err) {
     console.error('loadUserData error:', err);
@@ -2171,7 +2240,13 @@ function renderUserData() {
   const refInput = document.getElementById('refLinkInput');
   if (refInput) refInput.value = `https://t.me/${botUsername}?start=${userData.referral_code}`;
 
-  const refEarned = (refCount * parseFloat(refReward)).toFixed(2);
+  const refPercent = settings.referral_percent !== undefined ? settings.referral_percent : 10;
+  setTxt('refPercentVal', refPercent + '%');
+
+  const refEarned = userData.referral_earnings !== undefined && Number(userData.referral_earnings) > 0
+    ? parseFloat(userData.referral_earnings).toFixed(3)
+    : (refCount * parseFloat(refReward)).toFixed(2);
+
   setTxt('refCountBig', refCount);
   setTxt('refEarnedBig', refEarned);
   setTxt('refStatCount', refCount);
@@ -2300,6 +2375,38 @@ window.handleClaim = async function() {
       new_balance:  newBalance,
       timestamp:    now.toISOString()
     }).catch(() => {});
+
+    // Acreditar comisión por reclamo al patrocinador si aplica
+    if (userData.referred_by && (settings.referral_percent || 0) > 0) {
+      const pct = Number(settings.referral_percent || 0);
+      const commission = parseFloat(((bonus * pct) / 100).toFixed(4));
+      if (commission > 0) {
+        (async () => {
+          try {
+            const sponsorRef = doc(db, 'users', userData.referred_by);
+            const sponsorSnap = await getDoc(sponsorRef);
+            if (sponsorSnap.exists()) {
+              const sData = sponsorSnap.data();
+              await updateDoc(sponsorRef, {
+                balance: (sData.balance || 0) + commission,
+                referral_earnings: (sData.referral_earnings || 0) + commission
+              });
+              addDoc(collection(db, 'referral_commissions'), {
+                referrer_id: userData.referred_by,
+                referred_id: uid,
+                referred_username: userData.username || '',
+                claim_amount: bonus,
+                percent: pct,
+                commission: commission,
+                created_at: now.toISOString()
+              }).catch(() => {});
+            }
+          } catch(err) {
+            console.warn('Commission credit error:', err.message);
+          }
+        })();
+      }
+    }
 
     // Update local state
     userData.balance         = newBalance;
@@ -2749,6 +2856,9 @@ window.switchPage = function(page) {
     clearInterval(taskTimerInterval);
     taskTimerInterval = null;
   }
+  if (page === 'Referrals') {
+    window.loadMyReferrals();
+  }
   if (page === 'Profile' && userData) {
     const name = userData.first_name || userData.username || '—';
     const uname = '@' + (userData.username || '—');
@@ -2777,9 +2887,140 @@ window.copyRefLink = async function() {
 
 window.shareRefLink = function() {
   const link = document.getElementById('refLinkInput').value;
-  if (tg) tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent('🚀 Gana ARPA USDT gratis con FastClaim! Únete:')}`);
-  else if (navigator.share) navigator.share({ title:'FastClaim ARPA', url: link });
+  const text = '🚀 ¡Únete a FastClaim y gana ARPA USDT gratis cada hora! Regístrate aquí:';
+  if (tg?.openTelegramLink) tg.openTelegramLink(`https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent(text)}`);
+  else if (navigator.share) navigator.share({ title:'FastClaim ARPA USDT', text: text, url: link }).catch(() => {});
   else window.copyRefLink();
+};
+
+window.loadMyReferrals = async function() {
+  if (!userData || !userData.uid) return;
+  const container = document.getElementById('myReferralsContainer');
+  if (!container) return;
+
+  try {
+    const list = [];
+    const seenIds = new Set();
+
+    // 1. Consultar colección 'referrals'
+    try {
+      const q1 = query(collection(db, 'referrals'), where('referrer_id', '==', userData.uid));
+      const snap1 = await getDocs(q1);
+      snap1.forEach(d => {
+        const data = d.data();
+        if (data.referred_id) seenIds.add(data.referred_id);
+        list.push({ id: d.id, ...data });
+      });
+    } catch(err1) {
+      console.warn('Referrals query 1:', err1.message);
+    }
+
+    // 2. Consultar usuarios donde referred_by == userData.uid
+    try {
+      const q2 = query(collection(db, 'users'), where('referred_by', '==', userData.uid));
+      const snap2 = await getDocs(q2);
+      snap2.forEach(d => {
+        if (!seenIds.has(d.id)) {
+          seenIds.add(d.id);
+          const u = d.data();
+          list.push({
+            id: d.id,
+            referrer_id: userData.uid,
+            referred_id: d.id,
+            referred_username: u.username || '',
+            referred_first_name: u.first_name || 'Usuario',
+            referred_photo: u.photo_url || '',
+            referred_telegram_id: u.telegram_id || '',
+            reward_amount: parseFloat(settings.referral_reward || 0),
+            commission_percent: parseFloat(settings.referral_percent || 10),
+            created_at: u.created_at || new Date().toISOString()
+          });
+        }
+      });
+    } catch(err2) {
+      console.warn('Referrals query 2:', err2.message);
+    }
+
+    // Ordenar de más reciente a más antiguo
+    list.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+
+    // Actualizar conteos en la interfaz
+    const count = list.length;
+    setTxt('refListCount', count);
+    setTxt('refCountBig', count);
+    setTxt('refStatCount', count);
+    setTxt('qsRefs', count);
+    setTxt('statRefs', count);
+
+    // Calcular ganancias totales
+    let totalEarned = 0;
+    if (userData.referral_earnings !== undefined && Number(userData.referral_earnings) > 0) {
+      totalEarned = parseFloat(userData.referral_earnings);
+    } else {
+      totalEarned = count * parseFloat(settings.referral_reward || 0);
+    }
+    setTxt('refEarnedBig', totalEarned.toFixed(3));
+    setTxt('refStatEarned', totalEarned.toFixed(3));
+
+    if (list.length === 0) {
+      container.innerHTML = `
+        <div style="text-align:center;padding:26px 16px;">
+          <div style="width:48px;height:48px;border-radius:50%;background:rgba(139,92,246,0.12);border:1px solid rgba(139,92,246,0.3);display:flex;align-items:center;justify-content:center;margin:0 auto 12px;font-size:22px;color:var(--accent);">
+            <i class="fa-solid fa-users"></i>
+          </div>
+          <div style="font-weight:700;font-size:14px;color:var(--text);margin-bottom:4px;">Aún no tienes amigos referidos</div>
+          <div style="font-size:12px;color:var(--text3);max-width:260px;margin:0 auto 14px;line-height:1.4;">
+            Comparte tu enlace arriba para ganar <strong style="color:var(--green);">+${settings.referral_reward || 1} ARPA</strong> por cada amigo registrado y el <strong style="color:var(--ton2);">${settings.referral_percent || 10}%</strong> de todos sus reclamos.
+          </div>
+          <button class="btn btn-primary" onclick="shareRefLink()" style="margin:0 auto;display:inline-flex;align-items:center;gap:8px;padding:8px 18px;font-size:12px;">
+            <i class="fa-solid fa-share-nodes"></i> Compartir mi Enlace
+          </button>
+        </div>
+      `;
+      return;
+    }
+
+    container.innerHTML = `
+      <div style="display:flex;flex-direction:column;gap:8px;">
+        ${list.map(r => {
+          const name = escapeHtml(r.referred_first_name || r.referred_username || 'Amigo');
+          const username = r.referred_username ? '@' + escapeHtml(r.referred_username) : (r.referred_telegram_id ? 'ID: ' + escapeHtml(r.referred_telegram_id) : '');
+          const avatar = r.referred_photo || `https://api.dicebear.com/8.x/adventurer/svg?seed=${r.referred_username || r.referred_id}&backgroundColor=c0aede,d1d4f9,b6e3f4,ffdfbf`;
+          const dateStr = r.created_at ? formatDate(r.created_at) : 'Reciente';
+          const reward = r.reward_amount !== undefined ? parseFloat(r.reward_amount).toFixed(2) : parseFloat(settings.referral_reward || 0).toFixed(2);
+
+          return `
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 12px;border-radius:12px;background:rgba(255,255,255,0.02);border:1px solid rgba(255,255,255,0.06);">
+              <div style="display:flex;align-items:center;gap:10px;min-width:0;">
+                <img src="${avatar}" style="width:36px;height:36px;border-radius:50%;object-fit:cover;border:1.5px solid rgba(139,92,246,0.3);flex-shrink:0;">
+                <div style="min-width:0;">
+                  <div style="font-size:13px;font-weight:700;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">${name}</div>
+                  <div style="font-size:11px;color:var(--text3);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+                    ${username ? `<span style="color:var(--ton2);">${username}</span> • ` : ''}${dateStr}
+                  </div>
+                </div>
+              </div>
+              <div style="text-align:right;flex-shrink:0;">
+                <div style="font-size:11px;font-weight:800;color:var(--green);background:rgba(16,185,129,0.1);border:1px solid rgba(16,185,129,0.25);padding:3px 8px;border-radius:8px;display:inline-block;">
+                  +${reward} ARPA
+                </div>
+                <div style="font-size:10px;color:var(--text3);margin-top:2px;">
+                  <span style="color:var(--green);">●</span> Activo
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('')}
+      </div>
+    `;
+  } catch(err) {
+    console.error('loadMyReferrals error:', err);
+    container.innerHTML = `
+      <div style="text-align:center;padding:16px;color:#ff5252;font-size:12px;">
+        ⚠️ Error al cargar referidos. <button onclick="loadMyReferrals()" style="background:none;border:none;color:var(--accent);cursor:pointer;text-decoration:underline;">Reintentar</button>
+      </div>
+    `;
+  }
 };
 
 window.setMaxWithdraw = function() {

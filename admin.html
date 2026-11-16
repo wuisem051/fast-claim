@@ -855,6 +855,12 @@
         </button>
       </li>
       <li>
+        <button class="sidebar-nav-item" data-page="referrals" onclick="switchAdminPage('referrals')">
+          <i class="fa-solid fa-users-rays"></i> Referidos
+          <span class="nav-badge" id="referralsBadge" style="display:none;">0</span>
+        </button>
+      </li>
+      <li>
         <button class="sidebar-nav-item" data-page="calculator" onclick="switchAdminPage('calculator')">
           <i class="fa-solid fa-calculator"></i> Calculadora ARPA
         </button>
@@ -1088,6 +1094,144 @@
       </div>
     </div>
 
+    <!-- ═══ Referrals Page ════════════════════════════════ -->
+    <div id="pageReferrals" class="admin-page">
+      <div class="page-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+        <div>
+          <h1 class="page-title"><i class="fa-solid fa-users-rays" style="color:var(--accent);"></i> Gestión de Referidos</h1>
+          <p class="page-subtitle">Supervisa la red de invitaciones, comisiones repartidas, ranking de patrocinadores y ajustes</p>
+        </div>
+        <div style="display:flex;gap:10px;">
+          <button class="btn btn-primary" onclick="loadReferralsAdmin()" style="padding:10px 18px;">
+            <i class="fa-solid fa-rotate-right"></i> Actualizar
+          </button>
+        </div>
+      </div>
+
+      <!-- Stats Grid -->
+      <div class="stats-grid" style="grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));margin-bottom:24px;">
+        <div class="stat-card">
+          <div class="stat-icon" style="background:rgba(139,92,246,0.15);color:var(--accent);">
+            <i class="fa-solid fa-people-arrows"></i>
+          </div>
+          <div class="stat-value" id="adminTotalRefsCount">0</div>
+          <div class="stat-label">Total Referidos Registrados</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon" style="background:rgba(16,185,129,0.15);color:var(--green);">
+            <i class="fa-solid fa-hand-holding-dollar"></i>
+          </div>
+          <div class="stat-value" id="adminTotalRefEarnings" style="color:var(--green);">0.000 ARPA</div>
+          <div class="stat-label">Total ARPA en Comisiones</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon" style="background:rgba(0,152,234,0.15);color:var(--ton2);">
+            <i class="fa-solid fa-chart-pie"></i>
+          </div>
+          <div class="stat-value" id="adminRefRate">0%</div>
+          <div class="stat-label">Tasa de Usuarios con Referido</div>
+        </div>
+
+        <div class="stat-card">
+          <div class="stat-icon" style="background:rgba(245,158,11,0.15);color:var(--amber);">
+            <i class="fa-solid fa-crown"></i>
+          </div>
+          <div class="stat-value" id="adminTopReferrerName" style="font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">—</div>
+          <div class="stat-label">Top Patrocinador (#1)</div>
+        </div>
+      </div>
+
+      <!-- Quick Config Panel -->
+      <div class="panel" style="margin-bottom:24px;">
+        <div class="panel-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+          <div class="panel-title"><i class="fa-solid fa-sliders"></i> Ajustes del Sistema de Referidos</div>
+          <span style="font-size:12px;color:var(--text3);">Configura cuánto ganan los usuarios al invitar amigos</span>
+        </div>
+        <div class="panel-body">
+          <div class="form-grid" style="grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));gap:16px;align-items:flex-end;">
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label"><i class="fa-solid fa-gift"></i> Bono por Registro de Referido (ARPA)</label>
+              <input type="number" class="form-control" id="refAdminRewardInput" step="0.001" min="0" placeholder="Ej: 1.0">
+              <span class="form-hint">Monto que recibe el patrocinador inmediatamente al registrarse su referido</span>
+            </div>
+            <div class="form-group" style="margin-bottom:0;">
+              <label class="form-label"><i class="fa-solid fa-percent"></i> Comisión por Claims de Referidos (%)</label>
+              <input type="number" class="form-control" id="refAdminPercentInput" step="0.5" min="0" max="100" placeholder="Ej: 10">
+              <span class="form-hint">% del bono que gana el patrocinador de cada reclamo que haga su amigo</span>
+            </div>
+            <div>
+              <button class="btn btn-primary" onclick="saveReferralSettingsFromPanel()" style="width:100%;height:42px;">
+                <i class="fa-solid fa-floppy-disk"></i> Guardar Ajustes de Referidos
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Top Referrers Ranking -->
+      <div class="panel" style="margin-bottom:24px;">
+        <div class="panel-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+          <div class="panel-title"><i class="fa-solid fa-trophy" style="color:var(--amber);"></i> Ranking: Top Patrocinadores (Top 10)</div>
+          <span class="panel-badge" id="topReferrersBadge">0 patrocinadores activos</span>
+        </div>
+        <div class="panel-body" style="padding:0;">
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th style="width:60px;">Puesto</th>
+                  <th>Patrocinador</th>
+                  <th>Código Ref</th>
+                  <th style="text-align:center;">Amigos Invitados</th>
+                  <th>Total Ganado en Referidos</th>
+                  <th>Balance Actual</th>
+                  <th style="width:110px;">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="topReferrersTableBody">
+                <tr><td colspan="7" class="empty-row"><i class="fa-solid fa-spinner fa-spin"></i><p>Cargando ranking...</p></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+      <!-- All Referrals Network Table -->
+      <div class="panel">
+        <div class="panel-header" style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:12px;">
+          <div class="panel-title"><i class="fa-solid fa-network-wired"></i> Red Completa de Referencias (<span id="totalRefsBadge">0</span>)</div>
+          <div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap;">
+            <div class="search-wrap" style="width:280px;">
+              <i class="fa-solid fa-magnifying-glass search-icon"></i>
+              <input type="text" class="search-input" id="referralsSearchInput" placeholder="Buscar patrocinador o referido..." oninput="filterReferralsAdmin()">
+            </div>
+          </div>
+        </div>
+        <div class="panel-body" style="padding:0;">
+          <div class="table-container">
+            <table>
+              <thead>
+                <tr>
+                  <th>Fecha</th>
+                  <th>Patrocinador (Referidor)</th>
+                  <th>Usuario Referido</th>
+                  <th>Código Usado</th>
+                  <th>Bono Inicial</th>
+                  <th>Estado</th>
+                  <th style="width:110px;">Acciones</th>
+                </tr>
+              </thead>
+              <tbody id="allReferralsTableBody">
+                <tr><td colspan="7" class="empty-row"><i class="fa-solid fa-spinner fa-spin"></i><p>Cargando referencias...</p></td></tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <!-- ═══ Settings Page ════════════════════════════════ -->
     <div id="pageSettings" class="admin-page">
       <div class="page-header">
@@ -1139,6 +1283,11 @@
               <label class="form-label"><i class="fa-solid fa-user-plus"></i> Reward por Referido (ARPA)</label>
               <input type="number" class="form-control" id="settReferralReward" step="0.001" min="0">
               <span class="form-hint">ARPA que gana el referidor cuando alguien se registra</span>
+            </div>
+            <div class="form-group">
+              <label class="form-label"><i class="fa-solid fa-percent"></i> Comisión por Claims de Referidos (%)</label>
+              <input type="number" class="form-control" id="settReferralPercent" step="0.5" min="0" max="100" placeholder="Ej: 10">
+              <span class="form-hint">% del reclamo que gana el patrocinador cada vez que su referido reclama</span>
             </div>
             <div class="form-group">
               <label class="form-label"><i class="fa-solid fa-wallet"></i> Retiro Mínimo (ARPA)</label>
@@ -1639,6 +1788,7 @@ function switchAdminPage(page) {
   if (page === 'settings') loadSettings();
   if (page === 'tasks')    loadTasks();
   if (page === 'calculator') initCalculator();
+  if (page === 'referrals') loadReferralsAdmin();
 }
 
 function capitalize(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
@@ -2217,6 +2367,9 @@ async function loadSettings() {
     if (el('settBonusCooldown')) el('settBonusCooldown').value = cdVal;
     if (el('settBonusCooldownUnit')) el('settBonusCooldownUnit').value = cdUnit;
     if (el('settReferralReward')) el('settReferralReward').value = settings.referral_reward || '1.0';
+    if (el('settReferralPercent')) el('settReferralPercent').value = settings.referral_percent !== undefined ? settings.referral_percent : '10';
+    if (el('refAdminRewardInput')) el('refAdminRewardInput').value = settings.referral_reward || '1.0';
+    if (el('refAdminPercentInput')) el('refAdminPercentInput').value = settings.referral_percent !== undefined ? settings.referral_percent : '10';
     if (el('settMinWithdraw')) el('settMinWithdraw').value = settings.min_withdraw || '10.0';
     if (el('settMonetagEnabled')) el('settMonetagEnabled').value = settings.monetag_enabled !== undefined ? settings.monetag_enabled : '1';
     if (el('settMonetagDirectLink')) el('settMonetagDirectLink').value = settings.monetag_direct_link || '';
@@ -2263,6 +2416,7 @@ async function saveSettings() {
     bonus_cooldown_unit: cdUnit,
     bonus_cooldown_h: cdHours,
     referral_reward: parseFloat(elVal('settReferralReward') || '1.0'),
+    referral_percent: parseFloat(elVal('settReferralPercent') || '10'),
     min_withdraw: parseFloat(elVal('settMinWithdraw') || '10.0'),
     monetag_enabled: elVal('settMonetagEnabled') || '1',
     monetag_direct_link: elVal('settMonetagDirectLink'),
@@ -2720,6 +2874,355 @@ function applyValueToReferral(val) {
   }, 100);
 }
 
+// ─── Referrals Management (Admin) ─────────────────────────
+let allReferralsAdminList = [];
+
+async function loadReferralsAdmin() {
+  const allTbody = document.getElementById('allReferralsTableBody');
+  const topTbody = document.getElementById('topReferrersTableBody');
+  if (allTbody) allTbody.innerHTML = '<tr><td colspan="7" class="empty-row"><i class="fa-solid fa-spinner fa-spin"></i><p>Cargando referencias...</p></td></tr>';
+  if (topTbody) topTbody.innerHTML = '<tr><td colspan="7" class="empty-row"><i class="fa-solid fa-spinner fa-spin"></i><p>Cargando ranking...</p></td></tr>';
+
+  try {
+    // 1. Asegurar que tenemos todos los usuarios cargados
+    if (!allUsers || allUsers.length === 0) {
+      const snapUsers = await getDocs(collection(db, 'users'));
+      allUsers = [];
+      snapUsers.forEach(d => allUsers.push({ id: d.id, ...d.data() }));
+    }
+
+    // Mapa de usuarios por ID y por código de referido
+    const userById = {};
+    const userByCode = {};
+    allUsers.forEach(u => {
+      userById[u.id] = u;
+      if (u.referral_code) userByCode[u.referral_code.toUpperCase()] = u;
+    });
+
+    // 2. Cargar colección 'referrals'
+    let refDocs = [];
+    try {
+      const snapRefs = await getDocs(collection(db, 'referrals'));
+      snapRefs.forEach(d => refDocs.push({ id: d.id, ...d.data() }));
+    } catch(e) {
+      console.warn('Error fetching referrals collection:', e.message);
+    }
+
+    // 3. Unificar referencias:
+    const seenPairs = new Set();
+    allReferralsAdminList = [];
+
+    refDocs.forEach(r => {
+      const key = `${r.referrer_id}_${r.referred_id}`;
+      seenPairs.add(key);
+
+      const sponsor = userById[r.referrer_id] || { username: r.referrer_username, first_name: r.referrer_first_name };
+      const referred = userById[r.referred_id] || { username: r.referred_username, first_name: r.referred_first_name, photo_url: r.referred_photo };
+
+      allReferralsAdminList.push({
+        id: r.id,
+        created_at: r.created_at || '',
+        referrer_id: r.referrer_id,
+        referrer_name: sponsor.first_name || r.referrer_first_name || 'Usuario',
+        referrer_username: sponsor.username || r.referrer_username || '',
+        referrer_code: r.referrer_code || sponsor.referral_code || '—',
+        referrer_balance: sponsor.balance || 0,
+        referred_id: r.referred_id,
+        referred_name: referred.first_name || r.referred_first_name || 'Usuario',
+        referred_username: referred.username || r.referred_username || '',
+        referred_telegram_id: referred.telegram_id || r.referred_telegram_id || '',
+        referred_photo: referred.photo_url || r.referred_photo || '',
+        reward_amount: r.reward_amount !== undefined ? r.reward_amount : (settings.referral_reward || 1.0),
+        status: r.status || 'active'
+      });
+    });
+
+    // 4. Agregar usuarios que tengan referred_by y no estén ya en la lista
+    allUsers.forEach(u => {
+      if (u.referred_by) {
+        const key = `${u.referred_by}_${u.id}`;
+        if (!seenPairs.has(key)) {
+          seenPairs.add(key);
+          const sponsor = userById[u.referred_by] || userByCode[String(u.referred_by).toUpperCase()] || {};
+          allReferralsAdminList.push({
+            id: `legacy_${u.id}`,
+            created_at: u.created_at || '',
+            referrer_id: sponsor.id || u.referred_by,
+            referrer_name: sponsor.first_name || u.referred_by_username || 'Patrocinador',
+            referrer_username: sponsor.username || '',
+            referrer_code: sponsor.referral_code || '—',
+            referrer_balance: sponsor.balance || 0,
+            referred_id: u.id,
+            referred_name: u.first_name || 'Usuario',
+            referred_username: u.username || '',
+            referred_telegram_id: u.telegram_id || '',
+            referred_photo: u.photo_url || '',
+            reward_amount: settings.referral_reward || 1.0,
+            status: 'active'
+          });
+        }
+      }
+    });
+
+    // Ordenar de más reciente a más antiguo
+    allReferralsAdminList.sort((a, b) => new Date(b.created_at || 0) - new Date(a.created_at || 0));
+
+    // 5. Calcular KPIs
+    const totalRefs = allReferralsAdminList.length;
+    document.getElementById('adminTotalRefsCount').textContent = totalRefs;
+    document.getElementById('totalRefsBadge').textContent = totalRefs;
+    const badge = document.getElementById('referralsBadge');
+    if (badge) {
+      if (totalRefs > 0) {
+        badge.textContent = totalRefs;
+        badge.style.display = 'inline-block';
+      } else {
+        badge.style.display = 'none';
+      }
+    }
+
+    // Total ARPA repartido
+    let totalEarnings = 0;
+    allUsers.forEach(u => {
+      if (u.referral_earnings) totalEarnings += parseFloat(u.referral_earnings);
+      else if (u.referral_count) totalEarnings += (u.referral_count * parseFloat(settings.referral_reward || 1.0));
+    });
+    document.getElementById('adminTotalRefEarnings').textContent = totalEarnings.toFixed(3) + ' ARPA';
+
+    // Tasa de usuarios con referido
+    const totalUsers = allUsers.length || 1;
+    const rate = Math.round((totalRefs / totalUsers) * 100);
+    document.getElementById('adminRefRate').textContent = `${rate}%`;
+
+    // 6. Top Referidores Ranking
+    const refCounts = {};
+    const refEarningsMap = {};
+
+    allReferralsAdminList.forEach(r => {
+      const refId = r.referrer_id;
+      if (refId) {
+        refCounts[refId] = (refCounts[refId] || 0) + 1;
+        refEarningsMap[refId] = (refEarningsMap[refId] || 0) + parseFloat(r.reward_amount || 0);
+      }
+    });
+
+    allUsers.forEach(u => {
+      if (u.referral_count && u.referral_count > (refCounts[u.id] || 0)) {
+        refCounts[u.id] = u.referral_count;
+      }
+      if (u.referral_earnings && u.referral_earnings > (refEarningsMap[u.id] || 0)) {
+        refEarningsMap[u.id] = parseFloat(u.referral_earnings);
+      }
+    });
+
+    const topList = Object.keys(refCounts)
+      .map(uid => {
+        const u = userById[uid] || {};
+        return {
+          id: uid,
+          name: u.first_name || u.username || 'Usuario',
+          username: u.username || '',
+          code: u.referral_code || '—',
+          telegram_id: u.telegram_id || '',
+          count: refCounts[uid],
+          earnings: refEarningsMap[uid] || (refCounts[uid] * parseFloat(settings.referral_reward || 1.0)),
+          balance: parseFloat(u.balance || 0),
+          password: u.password || '',
+          banned: u.banned ? 1 : 0
+        };
+      })
+      .filter(x => x.count > 0)
+      .sort((a, b) => b.count - a.count);
+
+    if (topList.length > 0) {
+      const top1 = topList[0];
+      document.getElementById('adminTopReferrerName').textContent = `${top1.name} (${top1.count} refs)`;
+    } else {
+      document.getElementById('adminTopReferrerName').textContent = '—';
+    }
+
+    const topBadge = document.getElementById('topReferrersBadge');
+    if (topBadge) topBadge.textContent = `${topList.length} patrocinadores activos`;
+
+    renderTopReferrersAdmin(topList.slice(0, 10));
+    renderReferralsAdmin(allReferralsAdminList);
+
+    // Llenar campos de configuración rápida
+    const rewInput = document.getElementById('refAdminRewardInput');
+    const pctInput = document.getElementById('refAdminPercentInput');
+    if (rewInput) rewInput.value = settings.referral_reward !== undefined ? settings.referral_reward : '1.0';
+    if (pctInput) pctInput.value = settings.referral_percent !== undefined ? settings.referral_percent : '10';
+
+  } catch(err) {
+    console.error('Error loadReferralsAdmin:', err);
+    if (allTbody) allTbody.innerHTML = `<tr><td colspan="7" class="empty-row" style="color:#ff5252;">⚠️ Error al cargar referencias: ${escapeHtml(err.message)}</td></tr>`;
+    if (topTbody) topTbody.innerHTML = `<tr><td colspan="7" class="empty-row" style="color:#ff5252;">⚠️ Error al cargar ranking</td></tr>`;
+  }
+}
+
+function renderTopReferrersAdmin(topList) {
+  const tbody = document.getElementById('topReferrersTableBody');
+  if (!tbody) return;
+
+  if (!topList || topList.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty-row"><i class="fa-solid fa-users-slash"></i><p>Aún no hay patrocinadores con referidos</p></td></tr>';
+    return;
+  }
+
+  const medals = ['🥇 #1', '🥈 #2', '🥉 #3'];
+
+  tbody.innerHTML = topList.map((u, i) => {
+    const rankLabel = medals[i] || `#${i + 1}`;
+    const rankColor = i === 0 ? 'var(--amber)' : (i === 1 ? 'var(--ton2)' : (i === 2 ? '#cd7f32' : 'var(--text3)'));
+
+    return `
+      <tr>
+        <td style="font-weight:800;font-size:14px;color:${rankColor};">${rankLabel}</td>
+        <td>
+          <div class="user-cell">
+            <div class="user-avatar" style="background:rgba(139,92,246,0.15);color:var(--accent);">
+              ${escapeHtml((u.name || 'U').charAt(0).toUpperCase())}
+            </div>
+            <div>
+              <div class="user-name">${escapeHtml(u.name)}</div>
+              <div class="user-username" style="font-size:11px;color:var(--text3);">
+                ${u.username ? '@' + escapeHtml(u.username) : (u.telegram_id ? 'TG: ' + escapeHtml(u.telegram_id) : escapeHtml(u.id))}
+              </div>
+            </div>
+          </div>
+        </td>
+        <td>
+          <code style="background:rgba(255,255,255,0.06);padding:3px 8px;border-radius:6px;font-size:12px;font-weight:700;color:var(--accent);">
+            ${escapeHtml(u.code)}
+          </code>
+        </td>
+        <td style="text-align:center;">
+          <span style="font-size:16px;font-weight:800;color:var(--ton2);">${u.count}</span>
+          <div style="font-size:10px;color:var(--text3);">amigos</div>
+        </td>
+        <td style="font-weight:800;color:var(--green);font-size:13px;">
+          +${parseFloat(u.earnings || 0).toFixed(3)} ARPA
+        </td>
+        <td style="font-weight:700;color:var(--text);font-size:13px;">
+          ${parseFloat(u.balance || 0).toFixed(3)} ARPA
+        </td>
+        <td>
+          <button class="btn" style="background:var(--card);border-color:var(--card-border);color:var(--text2);font-size:11px;padding:4px 9px;" onclick="openEditUser('${escapeHtml(u.id)}', ${parseFloat(u.balance || 0)}, '${escapeHtml(u.password || '')}', ${u.banned || 0})">
+            <i class="fa-solid fa-pen-to-square"></i> Editar
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function renderReferralsAdmin(list) {
+  const tbody = document.getElementById('allReferralsTableBody');
+  if (!tbody) return;
+
+  if (!list || list.length === 0) {
+    tbody.innerHTML = '<tr><td colspan="7" class="empty-row"><i class="fa-solid fa-users"></i><p>No se encontraron registros de referidos</p></td></tr>';
+    return;
+  }
+
+  tbody.innerHTML = list.map(r => {
+    const dateFormatted = r.created_at ? new Date(r.created_at).toLocaleDateString('es-ES', { day:'2-digit', month:'short', year:'numeric', hour:'2-digit', minute:'2-digit' }) : '—';
+    const rewardStr = parseFloat(r.reward_amount || 0).toFixed(2);
+
+    return `
+      <tr>
+        <td style="font-size:12px;color:var(--text2);white-space:nowrap;">${dateFormatted}</td>
+        <td>
+          <div style="font-weight:700;font-size:13px;color:var(--text);">${escapeHtml(r.referrer_name)}</div>
+          <div style="font-size:11px;color:var(--ton2);">${r.referrer_username ? '@' + escapeHtml(r.referrer_username) : 'ID: ' + escapeHtml(r.referrer_id.substring(0,8))}</div>
+        </td>
+        <td>
+          <div style="display:flex;align-items:center;gap:8px;">
+            ${r.referred_photo ? `<img src="${escapeHtml(r.referred_photo)}" style="width:26px;height:26px;border-radius:50%;object-fit:cover;">` : `<div style="width:26px;height:26px;border-radius:50%;background:rgba(0,230,118,0.15);display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:800;color:var(--green);">${escapeHtml((r.referred_name || 'U').charAt(0).toUpperCase())}</div>`}
+            <div>
+              <div style="font-weight:700;font-size:13px;color:var(--text);">${escapeHtml(r.referred_name)}</div>
+              <div style="font-size:11px;color:var(--text3);">${r.referred_username ? '@' + escapeHtml(r.referred_username) : (r.referred_telegram_id ? 'TG: ' + escapeHtml(r.referred_telegram_id) : 'ID: ' + escapeHtml(r.referred_id.substring(0,8)))}</div>
+            </div>
+          </div>
+        </td>
+        <td>
+          <code style="background:rgba(255,255,255,0.06);padding:3px 7px;border-radius:6px;font-size:11px;color:var(--accent);">
+            ${escapeHtml(r.referrer_code)}
+          </code>
+        </td>
+        <td style="font-weight:800;color:var(--green);font-size:13px;white-space:nowrap;">
+          +${rewardStr} ARPA
+        </td>
+        <td>
+          <span class="badge approved" style="font-size:10px;padding:3px 8px;">
+            <span class="badge-dot"></span>Activo
+          </span>
+        </td>
+        <td>
+          <button class="btn" style="background:var(--card);border-color:var(--card-border);color:var(--text2);font-size:11px;padding:4px 8px;" onclick="openEditUser('${escapeHtml(r.referred_id)}', 0, '', 0)">
+            <i class="fa-solid fa-user"></i> Ver
+          </button>
+        </td>
+      </tr>
+    `;
+  }).join('');
+}
+
+function filterReferralsAdmin() {
+  const q = (document.getElementById('referralsSearchInput')?.value || '').trim().toLowerCase();
+  if (!q) {
+    renderReferralsAdmin(allReferralsAdminList);
+    return;
+  }
+  const filtered = allReferralsAdminList.filter(r =>
+    (r.referrer_name || '').toLowerCase().includes(q) ||
+    (r.referrer_username || '').toLowerCase().includes(q) ||
+    (r.referrer_code || '').toLowerCase().includes(q) ||
+    (r.referred_name || '').toLowerCase().includes(q) ||
+    (r.referred_username || '').toLowerCase().includes(q) ||
+    (r.referred_telegram_id || '').toLowerCase().includes(q) ||
+    (r.referrer_id || '').toLowerCase().includes(q) ||
+    (r.referred_id || '').toLowerCase().includes(q)
+  );
+  renderReferralsAdmin(filtered);
+}
+
+async function saveReferralSettingsFromPanel() {
+  const rewVal = parseFloat(document.getElementById('refAdminRewardInput')?.value || '1.0');
+  const pctVal = parseFloat(document.getElementById('refAdminPercentInput')?.value || '10');
+
+  if (isNaN(rewVal) || rewVal < 0) {
+    showAdminToast('⚠️ Ingrese una recompensa de referido válida', 'error');
+    return;
+  }
+  if (isNaN(pctVal) || pctVal < 0 || pctVal > 100) {
+    showAdminToast('⚠️ Ingrese un porcentaje de comisión válido (0 - 100%)', 'error');
+    return;
+  }
+
+  const updateData = {
+    referral_reward: rewVal,
+    referral_percent: pctVal,
+    updated_at: new Date().toISOString()
+  };
+
+  try {
+    await setDoc(doc(db, 'settings', 'global'), updateData, { merge: true });
+    await setDoc(doc(db, 'settings', 'config'), updateData, { merge: true });
+
+    if (document.getElementById('settReferralReward')) document.getElementById('settReferralReward').value = rewVal;
+    if (document.getElementById('settReferralPercent')) document.getElementById('settReferralPercent').value = pctVal;
+
+    settings.referral_reward = rewVal;
+    settings.referral_percent = pctVal;
+
+    showAdminToast(`✅ Ajustes de referidos guardados (${rewVal} ARPA / ${pctVal}%)`, 'success');
+  } catch(err) {
+    console.error('Error saving referral settings:', err);
+    showAdminToast('⚠️ Error al guardar: ' + (err.message || err), 'error');
+  }
+}
+
 // ─── Window Exports for HTML Event Handlers ──────────────
 Object.assign(window, {
   handleLogin,
@@ -2761,7 +3264,12 @@ Object.assign(window, {
   recalculateAll,
   copyArpaResult,
   applyValueToBonus,
-  applyValueToReferral
+  applyValueToReferral,
+  loadReferralsAdmin,
+  renderReferralsAdmin,
+  renderTopReferrersAdmin,
+  filterReferralsAdmin,
+  saveReferralSettingsFromPanel
 });
 </script>
 </body>
