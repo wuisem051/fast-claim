@@ -2632,16 +2632,18 @@ function calculateSwapOutput() {
   const arpaBal = parseFloat(userData?.balance || 0);
   if (availEl) availEl.textContent = arpaBal.toFixed(3);
 
-  // Tasa de cambio
+  // Tasa de cambio (Automática desde Binance o Fija por Admin)
   let rate = 0;
+  const isFixed = appSwapConfig.mode === 'fixed';
+
   if (target === 'USDT') {
-    rate = livePrices.ARPA; // 1 ARPA = X USDT
-    if (rateValEl) rateValEl.textContent = rate.toFixed(6) + ' USDT';
+    rate = (isFixed && appSwapConfig.rate_usdt > 0) ? appSwapConfig.rate_usdt : livePrices.ARPA;
+    if (rateValEl) rateValEl.textContent = rate.toFixed(6) + ' USDT' + (isFixed ? ' (Tasa fija)' : ' (Binance)');
     const usdtBal = parseFloat(userData?.balance_usdt || 0);
     if (targetHint) targetHint.textContent = 'Saldo: ' + usdtBal.toFixed(3) + ' USDT';
   } else if (target === 'DOGE') {
-    rate = livePrices.ARPA / livePrices.DOGE; // 1 ARPA = X DOGE
-    if (rateValEl) rateValEl.textContent = rate.toFixed(4) + ' DOGE';
+    rate = (isFixed && appSwapConfig.rate_doge > 0) ? appSwapConfig.rate_doge : (livePrices.ARPA / livePrices.DOGE);
+    if (rateValEl) rateValEl.textContent = rate.toFixed(4) + ' DOGE' + (isFixed ? ' (Tasa fija)' : ' (Binance)');
     const dogeBal = parseFloat(userData?.balance_doge || 0);
     if (targetHint) targetHint.textContent = 'Saldo: ' + dogeBal.toFixed(3) + ' DOGE';
   }
@@ -2685,7 +2687,13 @@ window.executeSwap = async function() {
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Convirtiendo...';
 
   try {
-    let rate = target === 'USDT' ? livePrices.ARPA : (livePrices.ARPA / livePrices.DOGE);
+    const isFixed = appSwapConfig.mode === 'fixed';
+    let rate = 0;
+    if (target === 'USDT') {
+      rate = (isFixed && appSwapConfig.rate_usdt > 0) ? appSwapConfig.rate_usdt : livePrices.ARPA;
+    } else {
+      rate = (isFixed && appSwapConfig.rate_doge > 0) ? appSwapConfig.rate_doge : (livePrices.ARPA / livePrices.DOGE);
+    }
     let receiveAmt = parseFloat((amt * rate).toFixed(4));
 
     const userRef = doc(db, 'users', userData.uid);

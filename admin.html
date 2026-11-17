@@ -1028,6 +1028,30 @@
                 </div>
               </div>
 
+              <!-- Tasas de conversión y modo de precio -->
+              <div style="background:rgba(0,0,0,0.25);border:1px solid var(--card-border);border-radius:10px;padding:12px;">
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px;">
+                  <span style="font-weight:700;font-size:12px;color:var(--text);"><i class="fa-solid fa-chart-line" style="color:var(--green);margin-right:6px;"></i> Modo de Tasas de Conversión</span>
+                  <select id="settSwapRateMode" class="form-control" style="width:auto;padding:4px 8px;font-size:11px;" onchange="toggleSwapRateModeInputs(this.value)">
+                    <option value="auto">🟢 Automático (Binance Spot en vivo)</option>
+                    <option value="fixed">⚙️ Tasa Fija Personalizada</option>
+                  </select>
+                </div>
+                <div id="swapFixedRateInputs" style="display:none;grid-template-columns:1fr 1fr;gap:10px;margin-top:8px;">
+                  <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label" style="font-size:10px;">1 ARPA = ? USDT</label>
+                    <input type="number" class="form-control" id="settSwapRateUsdt" step="0.0001" min="0" placeholder="0.0080" style="padding:6px 10px;font-size:12px;">
+                  </div>
+                  <div class="form-group" style="margin-bottom:0;">
+                    <label class="form-label" style="font-size:10px;">1 ARPA = ? DOGE</label>
+                    <input type="number" class="form-control" id="settSwapRateDoge" step="0.0001" min="0" placeholder="0.1370" style="padding:6px 10px;font-size:12px;">
+                  </div>
+                </div>
+                <div id="swapLiveRatesInfo" style="font-size:11px;color:var(--text3);margin-top:4px;">
+                  Tasas Binance Spot actuales: 1 ARPA ≈ <b id="adminLiveRateUsdt">...</b> USDT | 1 ARPA ≈ <b id="adminLiveRateDoge">...</b> DOGE
+                </div>
+              </div>
+
               <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
                 <span style="font-size:11px;color:var(--text3);">Precios de referencia (Binance Spot)</span>
                 <button class="btn btn-primary" onclick="saveSwapConfig(true)" style="padding:6px 16px;font-size:12px;">
@@ -4701,6 +4725,17 @@ async function loadCurrenciesAndSwapConfig() {
   if (swMinEl) swMinEl.value = swapConfig.min_arpa !== undefined ? swapConfig.min_arpa : 5.0;
   if (swMaxEl) swMaxEl.value = swapConfig.max_arpa !== undefined ? swapConfig.max_arpa : 5000.0;
 
+  const modeEl = document.getElementById('settSwapRateMode');
+  const rateUsdtEl = document.getElementById('settSwapRateUsdt');
+  const rateDogeEl = document.getElementById('settSwapRateDoge');
+  if (modeEl) {
+    modeEl.value = swapConfig.mode || 'auto';
+    toggleSwapRateModeInputs(modeEl.value);
+  }
+  if (rateUsdtEl && swapConfig.rate_usdt) rateUsdtEl.value = swapConfig.rate_usdt;
+  if (rateDogeEl && swapConfig.rate_doge) rateDogeEl.value = swapConfig.rate_doge;
+  fetchAdminLiveRates();
+
   renderCurrenciesList();
 }
 
@@ -4834,20 +4869,48 @@ async function deleteCurrencyItem(key) {
   showAdminToast(`Moneda ${key} eliminada`, 'info');
 }
 
+function toggleSwapRateModeInputs(mode) {
+  const box = document.getElementById('swapFixedRateInputs');
+  if (box) box.style.display = (mode === 'fixed') ? 'grid' : 'none';
+}
+
+async function fetchAdminLiveRates() {
+  try {
+    const [arpaRes, dogeRes] = await Promise.all([
+      fetch('https://api.binance.com/api/v3/ticker/price?symbol=ARPAUSDT').then(r => r.json()),
+      fetch('https://api.binance.com/api/v3/ticker/price?symbol=DOGEUSDT').then(r => r.json())
+    ]);
+    const arpaP = parseFloat(arpaRes.price);
+    const dogeP = parseFloat(dogeRes.price);
+    const elU = document.getElementById('adminLiveRateUsdt');
+    const elD = document.getElementById('adminLiveRateDoge');
+    if (elU && !isNaN(arpaP)) elU.textContent = arpaP.toFixed(6);
+    if (elD && !isNaN(arpaP) && !isNaN(dogeP)) elD.textContent = (arpaP / dogeP).toFixed(4);
+  } catch (e) {
+    console.warn('Could not fetch Binance prices in admin:', e);
+  }
+}
+
 async function saveSwapConfig(showNotice = false) {
   const enabled = document.getElementById('settSwapEnabled')?.checked ?? true;
   const minArpa = parseFloat(document.getElementById('settSwapMinArpa')?.value) || 5.0;
   const maxArpa = parseFloat(document.getElementById('settSwapMaxArpa')?.value) || 5000.0;
+  const mode = document.getElementById('settSwapRateMode')?.value || 'auto';
+  const rateUsdt = parseFloat(document.getElementById('settSwapRateUsdt')?.value) || 0;
+  const rateDoge = parseFloat(document.getElementById('settSwapRateDoge')?.value) || 0;
 
   swapConfig = {
     enabled: enabled,
     min_arpa: minArpa,
-    max_arpa: maxArpa
+    max_arpa: maxArpa,
+    mode: mode,
+    rate_usdt: rateUsdt,
+    rate_doge: rateDoge
   };
 
   await saveCurrenciesToDb();
   if (showNotice) {
-    showAdminToast('✅ Configuración y límites de Swap guardados', 'success');
+    showAdminToast('✅ Configuración de tasas y límites de Swap guardados', 'success');
   }
 }
 
@@ -4873,6 +4936,7 @@ Object.assign(window, {
   deleteCurrencyItem,
   toggleCurrencyEnabled,
   saveSwapConfig,
+  toggleSwapRateModeInputs,
   handleLogin,
   handleLogout,
   switchAdminPage,
