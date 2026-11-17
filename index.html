@@ -1227,14 +1227,94 @@
         </div>
       </div>
 
-      <div class="card form-card" style="margin-top:12px;">
+      <!-- ═══ Módulo SWAP / Conversor a USDT & DOGE ═══ -->
+      <div class="card" id="swapModuleCard" style="margin-top:12px;background:linear-gradient(135deg,rgba(0,152,234,0.08),rgba(124,58,237,0.05));border-color:rgba(0,152,234,0.3);padding:18px;">
+        <div style="display:flex;align-items:center;justify-content:space-between;margin-bottom:12px;">
+          <div style="display:flex;align-items:center;gap:8px;">
+            <div style="width:32px;height:32px;border-radius:10px;background:linear-gradient(135deg,var(--ton),var(--accent));display:flex;align-items:center;justify-content:center;color:#fff;font-size:14px;">
+              <i class="fa-solid fa-repeat"></i>
+            </div>
+            <div>
+              <div style="font-weight:800;font-size:14px;color:var(--text);">Convertir Saldo (Swap)</div>
+              <div style="font-size:10px;color:var(--text3);">Cambia tus ARPA a USDT o Dogecoin al instante</div>
+            </div>
+          </div>
+          <button class="btn" onclick="fetchSwapLivePrices(true)" style="padding:4px 8px;font-size:10px;background:rgba(255,255,255,0.06);border:1px solid var(--card-border);color:var(--text2);" title="Actualizar precios en vivo">
+            <i class="fa-solid fa-rotate"></i>
+          </button>
+        </div>
+
+        <div style="display:flex;flex-direction:column;gap:10px;">
+          <!-- De: ARPA -->
+          <div style="background:rgba(0,0,0,0.3);border:1px solid var(--card-border);border-radius:12px;padding:10px 12px;">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:6px;">
+              <span>Pagas (Desde tu balance)</span>
+              <span>Disp: <b id="swapAvailableArpa" style="color:var(--text);">0.000</b> ARPA</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+              <input type="number" id="swapInputArpa" placeholder="0.00" step="0.1" min="0" oninput="calculateSwapOutput()" style="background:transparent;border:none;color:#fff;font-size:18px;font-weight:800;width:100%;outline:none;">
+              <div style="display:flex;align-items:center;gap:6px;">
+                <button type="button" onclick="setSwapMax()" class="max-btn" style="padding:4px 8px;font-size:11px;">MAX</button>
+                <div style="background:rgba(255,255,255,0.08);padding:4px 10px;border-radius:8px;font-weight:800;font-size:12px;color:var(--text);display:flex;align-items:center;gap:4px;">
+                  <i class="fa-solid fa-cube" style="color:var(--accent);"></i> ARPA
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <!-- Botón de cambio central e indicador de tasa -->
+          <div style="display:flex;align-items:center;justify-content:space-between;padding:0 6px;">
+            <div style="font-size:11px;color:var(--text3);" id="swapRateInfo">
+              1 ARPA ≈ <span id="swapRateValue">...</span>
+            </div>
+            <div style="width:28px;height:28px;border-radius:50%;background:rgba(0,152,234,0.15);border:1px solid rgba(0,152,234,0.3);display:flex;align-items:center;justify-content:center;color:var(--ton2);font-size:12px;">
+              <i class="fa-solid fa-arrow-down"></i>
+            </div>
+          </div>
+
+          <!-- A: USDT o DOGE -->
+          <div style="background:rgba(0,0,0,0.3);border:1px solid var(--card-border);border-radius:12px;padding:10px 12px;">
+            <div style="display:flex;justify-content:space-between;font-size:11px;color:var(--text3);margin-bottom:6px;">
+              <span>Recibes estimado</span>
+              <span id="swapTargetBalanceHint">Saldo: 0.000</span>
+            </div>
+            <div style="display:flex;align-items:center;justify-content:space-between;gap:10px;">
+              <div id="swapOutputValue" style="font-size:18px;font-weight:800;color:var(--green);font-family:monospace;">0.0000</div>
+              <select id="swapTargetCurrency" onchange="onSwapTargetChange(this.value)" class="form-input" style="width:auto;min-width:110px;padding:6px 10px;font-size:12px;font-weight:800;background:#141432;color:#fff;border-radius:8px;cursor:pointer;">
+                <option value="USDT">💵 USDT</option>
+                <option value="DOGE">🐶 DOGE</option>
+              </select>
+            </div>
+          </div>
+
+          <div style="font-size:10px;color:var(--text3);line-height:1.4;" id="swapLimitsHint">
+            Límite de conversión: Min <b id="swapMinHint">5.0</b> ARPA • Max <b id="swapMaxHint">5000</b> ARPA
+          </div>
+
+          <button class="btn-primary" id="executeSwapBtn" onclick="executeSwap()" style="margin-top:4px;padding:12px;font-size:13px;background:linear-gradient(135deg,#0098ea,#7c3aed);">
+            <i class="fa-solid fa-bolt"></i> Realizar Conversión
+          </button>
+        </div>
+      </div>
+
+      <!-- ═══ Formulario de Solicitud de Retiro ═══ -->
+      <div class="card form-card" style="margin-top:14px;">
         <div class="info-box">
           <i class="fa-solid fa-triangle-exclamation"></i>
           <span>Mínimo de retiro: <strong id="minWithdrawInfo">10 ARPA</strong>. Tu balance disponible: <strong id="withdrawBalanceInfo">0.000 ARPA</strong>.</span>
         </div>
 
         <div class="form-group">
-          <label class="form-label">Método de Retiro</label>
+          <label class="form-label">Criptomoneda a Retirar</label>
+          <select id="withdrawCurrencySelect" class="form-input" style="background-color: #0e0e24; color: #ffffff; cursor: pointer;" onchange="window.onWithdrawCurrencyChange(this.value)">
+            <option value="ARPA" data-network="BSC (BEP20) / Binance Pay" data-min="10">ARPA (ARPA Network)</option>
+            <option value="USDT" data-network="BSC (BEP20) / Binance Pay" data-min="1">USDT (Tether USD)</option>
+            <option value="DOGE" data-network="Dogecoin Network / Binance Pay" data-min="5">DOGE (Dogecoin)</option>
+          </select>
+        </div>
+
+        <div class="form-group">
+          <label class="form-label">Método / Canal de Envío</label>
           <select id="withdrawMethod" class="form-input" style="background-color: #0e0e24; color: #ffffff; cursor: pointer;" onchange="window.onWithdrawMethodChange(this.value)">
             <option value="BSC (BEP20)" style="background-color: #141432; color: #ffffff;">Dirección Wallet (Red BSC - BNB Smart Chain BEP20)</option>
             <option value="Binance Pay" style="background-color: #141432; color: #ffffff;">ID de Binance Pay (Recomendado)</option>
@@ -1251,10 +1331,10 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label" for="amountInput">Monto a retirar (ARPA)</label>
+          <label class="form-label" for="amountInput">Monto a retirar (<span id="withdrawCurrencyLabel">ARPA</span>)</label>
           <input type="number" id="amountInput" class="form-input" placeholder="0.00" min="10" step="0.1">
           <div class="balance-hint">
-            <span>Disponible: <span id="withdrawAvail">0.000</span> ARPA</span>
+            <span>Disponible: <span id="withdrawAvail">0.000</span> <span id="withdrawAvailCurrency">ARPA</span></span>
             <button class="max-btn" onclick="setMaxWithdraw()">MAX</button>
           </div>
         </div>
@@ -2455,6 +2535,273 @@ function showClaimResult(success, message) {
 }
 
 // ─── Withdrawal ───────────────────────────────────────────
+
+// ─── SWAP & MULTI-CURRENCY LOGIC ─────────────────────────
+let appCurrencies = {
+  'ARPA': { symbol: 'ARPA', name: 'ARPA Network', network: 'BSC (BEP-20) / Binance Pay', min_withdraw: 10.0, enabled: true },
+  'USDT': { symbol: 'USDT', name: 'Tether USD', network: 'BSC (BEP-20) / Binance Pay', min_withdraw: 1.0, enabled: true },
+  'DOGE': { symbol: 'DOGE', name: 'Dogecoin', network: 'Dogecoin Network / Binance Pay', min_withdraw: 5.0, enabled: true }
+};
+
+let appSwapConfig = {
+  enabled: true,
+  min_arpa: 5.0,
+  max_arpa: 5000.0
+};
+
+let livePrices = {
+  ARPA: 0.0080,
+  USDT: 1.0,
+  DOGE: 0.0588
+};
+
+let selectedWithdrawCurrency = 'ARPA';
+
+// Cargar configuración de monedas desde Firestore
+async function loadCurrenciesConfig() {
+  try {
+    const snap = await getDoc(doc(db, 'settings', 'currencies'));
+    if (snap.exists()) {
+      const data = snap.data();
+      if (data.currencies) appCurrencies = Object.assign({}, appCurrencies, data.currencies);
+      if (data.swap) appSwapConfig = Object.assign({}, appSwapConfig, data.swap);
+    }
+  } catch (e) {
+    console.warn('Using default currencies config:', e);
+  }
+
+  // Actualizar selector de monedas de retiro
+  const sel = document.getElementById('withdrawCurrencySelect');
+  if (sel) {
+    const enabledCurrs = Object.keys(appCurrencies).filter(k => appCurrencies[k].enabled);
+    if (enabledCurrs.length > 0) {
+      sel.innerHTML = enabledCurrs.map(k => {
+        const c = appCurrencies[k];
+        return `<option value="${c.symbol}" data-network="${c.network || 'BSC'}" data-min="${c.min_withdraw || 1}">${c.symbol} (${c.name || c.symbol})</option>`;
+      }).join('');
+    }
+  }
+
+  // Visibilidad del Swap Card
+  const swapCard = document.getElementById('swapModuleCard');
+  if (swapCard) {
+    swapCard.style.display = appSwapConfig.enabled !== false ? 'block' : 'none';
+  }
+
+  const minHint = document.getElementById('swapMinHint');
+  const maxHint = document.getElementById('swapMaxHint');
+  if (minHint) minHint.textContent = appSwapConfig.min_arpa || 5.0;
+  if (maxHint) maxHint.textContent = appSwapConfig.max_arpa || 5000;
+
+  fetchSwapLivePrices();
+  updateWithdrawCurrencyDisplay();
+}
+
+// Obtener precios en vivo de Binance
+async function fetchSwapLivePrices(showToastMsg = false) {
+  try {
+    const [arpaRes, dogeRes] = await Promise.all([
+      fetch('https://api.binance.com/api/v3/ticker/price?symbol=ARPAUSDT').then(r => r.json()).catch(() => ({ price: '0.0080' })),
+      fetch('https://api.binance.com/api/v3/ticker/price?symbol=DOGEUSDT').then(r => r.json()).catch(() => ({ price: '0.0588' }))
+    ]);
+
+    const arpaP = parseFloat(arpaRes.price);
+    const dogeP = parseFloat(dogeRes.price);
+    if (!isNaN(arpaP) && arpaP > 0) livePrices.ARPA = arpaP;
+    if (!isNaN(dogeP) && dogeP > 0) livePrices.DOGE = dogeP;
+
+    calculateSwapOutput();
+    if (showToastMsg) showToast('✅ Precios actualizados en vivo', 'success');
+  } catch (err) {
+    console.warn('Error fetching swap prices:', err);
+  }
+}
+
+window.onSwapTargetChange = function(target) {
+  calculateSwapOutput();
+};
+
+function calculateSwapOutput() {
+  const target = document.getElementById('swapTargetCurrency')?.value || 'USDT';
+  const inputEl = document.getElementById('swapInputArpa');
+  const outputEl = document.getElementById('swapOutputValue');
+  const rateValEl = document.getElementById('swapRateValue');
+  const targetHint = document.getElementById('swapTargetBalanceHint');
+  const availEl = document.getElementById('swapAvailableArpa');
+
+  const arpaBal = parseFloat(userData?.balance || 0);
+  if (availEl) availEl.textContent = arpaBal.toFixed(3);
+
+  // Tasa de cambio
+  let rate = 0;
+  if (target === 'USDT') {
+    rate = livePrices.ARPA; // 1 ARPA = X USDT
+    if (rateValEl) rateValEl.textContent = rate.toFixed(6) + ' USDT';
+    const usdtBal = parseFloat(userData?.balance_usdt || 0);
+    if (targetHint) targetHint.textContent = 'Saldo: ' + usdtBal.toFixed(3) + ' USDT';
+  } else if (target === 'DOGE') {
+    rate = livePrices.ARPA / livePrices.DOGE; // 1 ARPA = X DOGE
+    if (rateValEl) rateValEl.textContent = rate.toFixed(4) + ' DOGE';
+    const dogeBal = parseFloat(userData?.balance_doge || 0);
+    if (targetHint) targetHint.textContent = 'Saldo: ' + dogeBal.toFixed(3) + ' DOGE';
+  }
+
+  const amt = parseFloat(inputEl?.value || 0);
+  if (!amt || amt <= 0) {
+    if (outputEl) outputEl.textContent = '0.0000';
+    return;
+  }
+
+  const output = amt * rate;
+  if (outputEl) outputEl.textContent = output.toFixed(4) + ' ' + target;
+}
+
+window.setSwapMax = function() {
+  const arpaBal = parseFloat(userData?.balance || 0);
+  const inputEl = document.getElementById('swapInputArpa');
+  const maxAllowed = appSwapConfig.max_arpa || 5000;
+  const val = Math.min(arpaBal, maxAllowed);
+  if (inputEl) {
+    inputEl.value = val > 0 ? val.toFixed(2) : '0';
+    calculateSwapOutput();
+  }
+};
+
+window.executeSwap = async function() {
+  const target = document.getElementById('swapTargetCurrency')?.value || 'USDT';
+  const amt = parseFloat(document.getElementById('swapInputArpa')?.value);
+  const btn = document.getElementById('executeSwapBtn');
+
+  if (isNaN(amt) || amt <= 0) return showToast('⚠️ Ingresa una cantidad válida de ARPA', 'error');
+
+  const minLimit = appSwapConfig.min_arpa || 5.0;
+  const maxLimit = appSwapConfig.max_arpa || 5000.0;
+
+  if (amt < minLimit) return showToast(`⚠️ Mínimo para swap: ${minLimit} ARPA`, 'error');
+  if (amt > maxLimit) return showToast(`⚠️ Máximo para swap: ${maxLimit} ARPA`, 'error');
+  if (amt > (userData?.balance || 0)) return showToast('❌ Saldo insuficiente de ARPA', 'error');
+
+  btn.disabled = true;
+  btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Convirtiendo...';
+
+  try {
+    let rate = target === 'USDT' ? livePrices.ARPA : (livePrices.ARPA / livePrices.DOGE);
+    let receiveAmt = parseFloat((amt * rate).toFixed(4));
+
+    const userRef = doc(db, 'users', userData.uid);
+    let newArpaBal, newTargetBal;
+
+    await runTransaction(db, async (tx) => {
+      const snap = await tx.get(userRef);
+      const curArpa = snap.data().balance || 0;
+      if (curArpa < amt) throw new Error('Saldo de ARPA insuficiente');
+      newArpaBal = curArpa - amt;
+
+      const targetField = target === 'USDT' ? 'balance_usdt' : 'balance_doge';
+      const curTarget = snap.data()[targetField] || 0;
+      newTargetBal = curTarget + receiveAmt;
+
+      tx.update(userRef, {
+        balance: newArpaBal,
+        [targetField]: newTargetBal
+      });
+    });
+
+    // Guardar evento de swap
+    await addDoc(collection(db, 'swap_events'), {
+      uid: userData.uid,
+      telegram_id: userData.telegram_id || userData.uid,
+      username: userData.username || '',
+      from_currency: 'ARPA',
+      from_amount: amt,
+      to_currency: target,
+      to_amount: receiveAmt,
+      rate: rate,
+      created_at: new Date().toISOString()
+    });
+
+    // Actualizar estado local
+    userData.balance = newArpaBal;
+    if (target === 'USDT') userData.balance_usdt = newTargetBal;
+    if (target === 'DOGE') userData.balance_doge = newTargetBal;
+
+    animateNumber('bigBalance', newArpaBal, 3);
+    animateNumber('profileBalance', newArpaBal, 3);
+    document.getElementById('withdrawAvail').textContent = newArpaBal.toFixed(3);
+    document.getElementById('withdrawBalanceInfo').textContent = newArpaBal.toFixed(3) + ' ARPA';
+    document.getElementById('swapInputArpa').value = '';
+    calculateSwapOutput();
+    updateWithdrawCurrencyDisplay();
+
+    tg?.HapticFeedback?.notificationOccurred('success');
+    showToast(`🎉 Convertidos ${amt} ARPA a ${receiveAmt} ${target} exitosamente`, 'success');
+
+  } catch (err) {
+    console.error('Swap error:', err);
+    showToast('❌ ' + (err.message || 'Error en conversión'), 'error');
+  } finally {
+    btn.disabled = false;
+    btn.innerHTML = '<i class="fa-solid fa-bolt"></i> Realizar Conversión';
+  }
+};
+
+// ─── Manejo de Cambio de Criptomoneda de Retiro ───────────
+window.onWithdrawCurrencyChange = function(symbol) {
+  selectedWithdrawCurrency = symbol;
+  updateWithdrawCurrencyDisplay();
+};
+
+function updateWithdrawCurrencyDisplay() {
+  const sel = document.getElementById('withdrawCurrencySelect');
+  const symbol = sel?.value || 'ARPA';
+  selectedWithdrawCurrency = symbol;
+
+  const curr = appCurrencies[symbol] || { min_withdraw: 10, network: 'BSC' };
+  const minWd = curr.min_withdraw || 10;
+
+  // Actualizar labels
+  const lbl = document.getElementById('withdrawCurrencyLabel');
+  if (lbl) lbl.textContent = symbol;
+  const availCurr = document.getElementById('withdrawAvailCurrency');
+  if (availCurr) availCurr.textContent = symbol;
+
+  // Balance disponible para esa moneda específica
+  let availBal = 0;
+  if (symbol === 'ARPA') availBal = parseFloat(userData?.balance || 0);
+  else if (symbol === 'USDT') availBal = parseFloat(userData?.balance_usdt || 0);
+  else if (symbol === 'DOGE') availBal = parseFloat(userData?.balance_doge || 0);
+
+  const availEl = document.getElementById('withdrawAvail');
+  if (availEl) availEl.textContent = availBal.toFixed(3);
+
+  const infoEl = document.getElementById('minWithdrawInfo');
+  if (infoEl) infoEl.textContent = `${minWd} ${symbol}`;
+
+  const balInfoEl = document.getElementById('withdrawBalanceInfo');
+  if (balInfoEl) balInfoEl.textContent = `${availBal.toFixed(3)} ${symbol}`;
+
+  const amountInput = document.getElementById('amountInput');
+  if (amountInput) amountInput.placeholder = `Mín. ${minWd} ${symbol}`;
+
+  // Actualizar opciones de métodos según la moneda
+  const methodSel = document.getElementById('withdrawMethod');
+  if (methodSel) {
+    if (symbol === 'DOGE') {
+      methodSel.innerHTML = `
+        <option value="Dogecoin Direct">Billetera Dogecoin (Red Oficial / Doge Mainnet)</option>
+        <option value="Binance Pay">ID de Binance Pay (Recomendado)</option>
+      `;
+    } else {
+      methodSel.innerHTML = `
+        <option value="BSC (BEP20)">Dirección Wallet (Red BSC - BNB Smart Chain BEP20)</option>
+        <option value="Binance Pay">ID de Binance Pay (Recomendado)</option>
+      `;
+    }
+  }
+
+  window.onWithdrawMethodChange(methodSel ? methodSel.value : 'BSC (BEP20)');
+}
+
 window.onWithdrawMethodChange = function(val) {
   const input = document.getElementById('walletInput');
   const label = document.getElementById('walletInputLabel');
@@ -2481,19 +2828,29 @@ window.onWithdrawMethodChange = function(val) {
 };
 
 window.handleWithdraw = async function() {
+  const currency = document.getElementById('withdrawCurrencySelect')?.value || 'ARPA';
   const method = document.getElementById('withdrawMethod').value;
   const rawWallet = document.getElementById('walletInput').value.trim();
   const amount = parseFloat(document.getElementById('amountInput').value);
   const btn    = document.getElementById('withdrawBtn');
 
+  const currInfo = appCurrencies[currency] || { min_withdraw: 10 };
+  const minRequired = currInfo.min_withdraw || 10;
+
+  let currentBal = 0;
+  let balanceField = 'balance';
+  if (currency === 'ARPA') { currentBal = parseFloat(userData?.balance || 0); balanceField = 'balance'; }
+  else if (currency === 'USDT') { currentBal = parseFloat(userData?.balance_usdt || 0); balanceField = 'balance_usdt'; }
+  else if (currency === 'DOGE') { currentBal = parseFloat(userData?.balance_doge || 0); balanceField = 'balance_doge'; }
+
   if (!rawWallet || rawWallet.length < 5) {
-    return showToast(method === 'Binance Pay' ? '⚠️ Ingresa tu Binance Pay ID válido' : '⚠️ Ingresa una dirección BSC BEP20 válida', 'error');
+    return showToast(method === 'Binance Pay' ? '⚠️ Ingresa tu Binance Pay ID válido' : '⚠️ Ingresa una dirección de billetera válida', 'error');
   }
   if (isNaN(amount) || amount <= 0)  return showToast('⚠️ Ingresa un monto válido', 'error');
-  if (amount < settings.min_withdraw) return showToast(`⚠️ Mínimo ${settings.min_withdraw} ARPA`, 'error');
-  if (amount > (userData?.balance || 0)) return showToast('❌ Balance insuficiente', 'error');
+  if (amount < minRequired) return showToast(`⚠️ Mínimo de retiro: ${minRequired} ${currency}`, 'error');
+  if (amount > currentBal) return showToast(`❌ Balance insuficiente de ${currency}`, 'error');
 
-  const formattedWallet = method === 'Binance Pay' ? `[Binance Pay] ${rawWallet}` : `[BSC (BEP20)] ${rawWallet}`;
+  const formattedWallet = method === 'Binance Pay' ? `[Binance Pay] ${rawWallet}` : `[${currency} - ${method}] ${rawWallet}`;
 
   btn.disabled = true;
   btn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Procesando...';
@@ -2504,10 +2861,10 @@ window.handleWithdraw = async function() {
 
     await runTransaction(db, async (tx) => {
       const snap = await tx.get(userRef);
-      const bal  = snap.data().balance || 0;
+      const bal  = snap.data()[balanceField] || 0;
       if (bal < amount) throw new Error('Balance insuficiente');
       newBalance = bal - amount;
-      tx.update(userRef, { balance: newBalance });
+      tx.update(userRef, { [balanceField]: newBalance });
     });
 
     await addDoc(collection(db, 'withdrawals'), {
@@ -2516,6 +2873,7 @@ window.handleWithdraw = async function() {
       username:      userData.username,
       first_name:    userData.first_name,
       amount,
+      currency:      currency,
       method:        method,
       wallet_address: formattedWallet,
       raw_address:   rawWallet,
@@ -2525,12 +2883,14 @@ window.handleWithdraw = async function() {
       processed_at:  null
     });
 
-    userData.balance = newBalance;
-    animateNumber('bigBalance',     newBalance, 3);
-    animateNumber('profileBalance', newBalance, 3);
-    document.getElementById('withdrawAvail').textContent         = newBalance.toFixed(3);
-    document.getElementById('withdrawBalanceInfo').textContent   = newBalance.toFixed(3) + ' ARPA';
-    document.getElementById('qsBalance').textContent             = newBalance.toFixed(3);
+    userData[balanceField] = newBalance;
+    if (currency === 'ARPA') {
+      animateNumber('bigBalance',     newBalance, 3);
+      animateNumber('profileBalance', newBalance, 3);
+      document.getElementById('qsBalance').textContent = newBalance.toFixed(3);
+    }
+    document.getElementById('withdrawAvail').textContent = newBalance.toFixed(3);
+    document.getElementById('withdrawBalanceInfo').textContent = newBalance.toFixed(3) + ' ' + currency;
     document.getElementById('walletInput').value = '';
     document.getElementById('amountInput').value  = '';
 
@@ -2849,6 +3209,9 @@ window.switchPage = function(page) {
   if (page === 'Referrals') {
     window.loadMyReferrals();
   }
+  if (page === 'Withdraw') {
+    if (typeof loadCurrenciesConfig === 'function') loadCurrenciesConfig();
+  }
   if (page === 'Profile' && userData) {
     const name = userData.first_name || userData.username || '—';
     const uname = '@' + (userData.username || '—');
@@ -3029,7 +3392,12 @@ window.loadMyReferrals = async function() {
 };
 
 window.setMaxWithdraw = function() {
-  document.getElementById('amountInput').value = (userData?.balance || 0).toFixed(3);
+  const sel = document.getElementById('withdrawCurrencySelect')?.value || 'ARPA';
+  let bal = 0;
+  if (sel === 'ARPA') bal = userData?.balance || 0;
+  else if (sel === 'USDT') bal = userData?.balance_usdt || 0;
+  else if (sel === 'DOGE') bal = userData?.balance_doge || 0;
+  document.getElementById('amountInput').value = parseFloat(bal).toFixed(3);
 };
 
 // ─── Utilities ────────────────────────────────────────────

@@ -2072,6 +2072,43 @@
 </main>
 
 <!-- ─── Toast ───────────────────────────────────────────── -->
+
+<!-- ─── Modal para Agregar / Editar Moneda de Retiro ─────── -->
+<div class="modal-overlay" id="currencyModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.75);backdrop-filter:blur(6px);z-index:9999;align-items:center;justify-content:center;padding:16px;">
+  <div class="modal" style="background:var(--card);border:1px solid var(--card-border);border-radius:18px;max-width:440px;width:100%;padding:24px;box-shadow:0 10px 40px rgba(0,0,0,0.5);">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px;">
+      <h2 class="modal-title" id="currencyModalTitle" style="font-size:18px;font-weight:800;color:var(--text);margin:0;"><i class="fa-solid fa-coins" style="color:var(--accent);"></i> Configurar Moneda</h2>
+      <button class="btn" onclick="closeCurrencyModal()" style="padding:4px 8px;background:transparent;border:none;color:var(--text3);font-size:18px;cursor:pointer;"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+    <input type="hidden" id="currencyEditKey">
+    <div class="form-group" style="margin-bottom:12px;">
+      <label class="form-label" style="font-size:12px;">Símbolo (ej: ARPA, USDT, DOGE)</label>
+      <input type="text" class="form-control" id="currSymbol" placeholder="USDT" style="text-transform:uppercase;">
+    </div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label class="form-label" style="font-size:12px;">Nombre Completo (ej: Tether USDT, Dogecoin)</label>
+      <input type="text" class="form-control" id="currName" placeholder="Tether USD">
+    </div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label class="form-label" style="font-size:12px;">Red / Método (ej: Red BSC (BEP-20) / Binance Pay, Dogecoin Mainnet)</label>
+      <input type="text" class="form-control" id="currNetwork" placeholder="BSC (BEP-20) / Binance Pay">
+    </div>
+    <div class="form-group" style="margin-bottom:12px;">
+      <label class="form-label" style="font-size:12px;">Mínimo de Retiro para esta moneda</label>
+      <input type="number" class="form-control" id="currMinWithdraw" step="0.001" min="0" placeholder="1.0">
+    </div>
+    <div class="form-group" style="margin-bottom:18px;">
+      <label class="form-label" style="font-size:12px;">Ícono FontAwesome o Emoji (ej: fa-solid fa-dollar-sign o 🪙)</label>
+      <input type="text" class="form-control" id="currIcon" placeholder="fa-solid fa-dollar-sign">
+    </div>
+    <div style="display:flex;gap:10px;justify-content:flex-end;">
+      <button class="btn" onclick="closeCurrencyModal()" style="padding:8px 16px;">Cancelar</button>
+      <button class="btn btn-primary" onclick="saveCurrencyItem()" style="padding:8px 20px;">
+        <i class="fa-solid fa-check"></i> Guardar Moneda
+      </button>
+    </div>
+  </div>
+</div>
 <div id="adminToast"></div>
 
 <!-- ─── Modal for Notes ─────────────────────────────────── -->
@@ -2257,7 +2294,7 @@ function switchAdminPage(page) {
 
   // Load data for the page
   if (page === 'dashboard')   loadDashboard();
-  if (page === 'withdrawals') loadWithdrawals();
+  if (page === 'withdrawals') { loadWithdrawals(); loadCurrenciesAndSwapConfig(); }
   if (page === 'users') {
     loadUsers();
     // Auto-refresh Users page every 30 seconds to keep "En Línea" status live
@@ -4565,7 +4602,212 @@ async function loadAdvancedStats() {
 }
 
 // ─── Window Exports for HTML Event Handlers ──────────────
+
+// ─── CURRENCIES & SWAP MANAGEMENT ──────────────────────────────
+let withdrawalCurrencies = {
+  'ARPA': { symbol: 'ARPA', name: 'ARPA Network', network: 'BSC (BEP-20) / Binance Pay', min_withdraw: 10.0, enabled: true, icon: 'fa-solid fa-cube' },
+  'USDT': { symbol: 'USDT', name: 'Tether USD', network: 'BSC (BEP-20) / Binance Pay', min_withdraw: 1.0, enabled: true, icon: 'fa-solid fa-dollar-sign' },
+  'DOGE': { symbol: 'DOGE', name: 'Dogecoin', network: 'Dogecoin Mainnet / Binance Pay', min_withdraw: 5.0, enabled: true, icon: 'fa-solid fa-paw' }
+};
+
+let swapConfig = {
+  enabled: true,
+  min_arpa: 5.0,
+  max_arpa: 5000.0
+};
+
+async function loadCurrenciesAndSwapConfig() {
+  try {
+    const snap = await getDoc(doc(db, 'settings', 'currencies'));
+    if (snap.exists()) {
+      const data = snap.data();
+      if (data.currencies) withdrawalCurrencies = Object.assign({}, withdrawalCurrencies, data.currencies);
+      if (data.swap) swapConfig = Object.assign({}, swapConfig, data.swap);
+    }
+  } catch (err) {
+    console.warn('Could not load currencies config from Firestore, using default:', err);
+  }
+
+  // Populate UI inputs
+  const swEnabledEl = document.getElementById('settSwapEnabled');
+  const swMinEl = document.getElementById('settSwapMinArpa');
+  const swMaxEl = document.getElementById('settSwapMaxArpa');
+  if (swEnabledEl) swEnabledEl.checked = swapConfig.enabled !== false;
+  if (swMinEl) swMinEl.value = swapConfig.min_arpa !== undefined ? swapConfig.min_arpa : 5.0;
+  if (swMaxEl) swMaxEl.value = swapConfig.max_arpa !== undefined ? swapConfig.max_arpa : 5000.0;
+
+  renderCurrenciesList();
+}
+
+function renderCurrenciesList() {
+  const container = document.getElementById('currenciesListContainer');
+  if (!container) return;
+
+  const keys = Object.keys(withdrawalCurrencies);
+  if (keys.length === 0) {
+    container.innerHTML = '<div style="color:var(--text3);text-align:center;padding:12px;">No hay monedas configuradas.</div>';
+    return;
+  }
+
+  container.innerHTML = keys.map(key => {
+    const c = withdrawalCurrencies[key];
+    const isChecked = c.enabled ? 'checked' : '';
+    const statusColor = c.enabled ? 'var(--green)' : 'var(--text3)';
+    return `
+      <div style="display:flex;align-items:center;justify-content:space-between;gap:12px;padding:12px 14px;background:rgba(0,0,0,0.25);border:1px solid var(--card-border);border-radius:12px;">
+        <div style="display:flex;align-items:center;gap:12px;">
+          <div style="width:36px;height:36px;border-radius:10px;background:rgba(255,255,255,0.06);display:flex;align-items:center;justify-content:center;font-size:16px;color:${statusColor};">
+            <i class="${c.icon || 'fa-solid fa-coins'}"></i>
+          </div>
+          <div>
+            <div style="display:flex;align-items:center;gap:6px;">
+              <span style="font-weight:800;color:var(--text);font-size:14px;">${escapeHtml(c.symbol || key)}</span>
+              <span style="font-size:11px;color:var(--text2);">(${escapeHtml(c.name || '')})</span>
+            </div>
+            <div style="font-size:11px;color:var(--text3);margin-top:2px;">
+              Red: ${escapeHtml(c.network || 'BSC')} • Mín: <b>${c.min_withdraw || 1} ${escapeHtml(c.symbol || key)}</b>
+            </div>
+          </div>
+        </div>
+
+        <div style="display:flex;align-items:center;gap:10px;">
+          <label style="display:flex;align-items:center;gap:6px;cursor:pointer;font-size:12px;color:var(--text2);margin:0;">
+            <input type="checkbox" ${isChecked} onchange="toggleCurrencyEnabled('${key}', this.checked)" style="width:16px;height:16px;accent-color:var(--green);cursor:pointer;">
+            <span>${c.enabled ? 'Activa' : 'Inactiva'}</span>
+          </label>
+          <button class="btn" onclick="editCurrencyItem('${key}')" style="padding:4px 8px;font-size:11px;background:var(--card);border:1px solid var(--card-border);" title="Editar moneda">
+            <i class="fa-solid fa-pen"></i>
+          </button>
+          ${key !== 'ARPA' ? `
+            <button class="btn" onclick="deleteCurrencyItem('${key}')" style="padding:4px 8px;font-size:11px;background:rgba(239,68,68,0.1);color:#ef4444;border:1px solid rgba(239,68,68,0.25);" title="Eliminar moneda">
+              <i class="fa-solid fa-trash"></i>
+            </button>
+          ` : ''}
+        </div>
+      </div>
+    `;
+  }).join('');
+}
+
+async function toggleCurrencyEnabled(key, enabled) {
+  if (!withdrawalCurrencies[key]) return;
+  withdrawalCurrencies[key].enabled = enabled;
+  renderCurrenciesList();
+  await saveCurrenciesToDb();
+  showAdminToast(`Moneda ${key} ${enabled ? 'activada' : 'desactivada'} para retiros`, enabled ? 'success' : 'info');
+}
+
+function openAddCurrencyModal() {
+  document.getElementById('currencyModalTitle').innerHTML = '<i class="fa-solid fa-plus" style="color:var(--accent);"></i> Agregar Nueva Moneda de Retiro';
+  document.getElementById('currencyEditKey').value = '';
+  document.getElementById('currSymbol').value = '';
+  document.getElementById('currSymbol').disabled = false;
+  document.getElementById('currName').value = '';
+  document.getElementById('currNetwork').value = '';
+  document.getElementById('currMinWithdraw').value = '1.0';
+  document.getElementById('currIcon').value = 'fa-solid fa-coins';
+  document.getElementById('currencyModal').style.display = 'flex';
+}
+
+function editCurrencyItem(key) {
+  const c = withdrawalCurrencies[key];
+  if (!c) return;
+  document.getElementById('currencyModalTitle').innerHTML = `<i class="fa-solid fa-pen" style="color:var(--accent);"></i> Editar Moneda: ${key}`;
+  document.getElementById('currencyEditKey').value = key;
+  document.getElementById('currSymbol').value = c.symbol || key;
+  document.getElementById('currSymbol').disabled = (key === 'ARPA');
+  document.getElementById('currName').value = c.name || '';
+  document.getElementById('currNetwork').value = c.network || '';
+  document.getElementById('currMinWithdraw').value = c.min_withdraw || 1.0;
+  document.getElementById('currIcon').value = c.icon || 'fa-solid fa-coins';
+  document.getElementById('currencyModal').style.display = 'flex';
+}
+
+function closeCurrencyModal() {
+  const modal = document.getElementById('currencyModal');
+  if (modal) modal.style.display = 'none';
+}
+
+async function saveCurrencyItem() {
+  const editKey = document.getElementById('currencyEditKey').value.trim();
+  const symbol = document.getElementById('currSymbol').value.trim().toUpperCase();
+  const name = document.getElementById('currName').value.trim();
+  const network = document.getElementById('currNetwork').value.trim();
+  const minWd = parseFloat(document.getElementById('currMinWithdraw').value) || 1.0;
+  const icon = document.getElementById('currIcon').value.trim() || 'fa-solid fa-coins';
+
+  if (!symbol) {
+    alert('Ingresa el símbolo de la moneda (ej: DOGE, USDT)');
+    return;
+  }
+
+  const targetKey = editKey || symbol;
+  withdrawalCurrencies[targetKey] = {
+    symbol: symbol,
+    name: name || symbol,
+    network: network || 'Binance Pay / Web3 Wallet',
+    min_withdraw: minWd,
+    enabled: withdrawalCurrencies[targetKey] ? withdrawalCurrencies[targetKey].enabled : true,
+    icon: icon
+  };
+
+  closeCurrencyModal();
+  renderCurrenciesList();
+  await saveCurrenciesToDb();
+  showAdminToast(`✅ Moneda ${symbol} guardada exitosamente`, 'success');
+}
+
+async function deleteCurrencyItem(key) {
+  if (key === 'ARPA') {
+    alert('La moneda principal ARPA no se puede eliminar (solo desactivar si es necesario)');
+    return;
+  }
+  if (!confirm(`¿Seguro que deseas eliminar la moneda ${key} de las opciones de retiro?`)) return;
+  delete withdrawalCurrencies[key];
+  renderCurrenciesList();
+  await saveCurrenciesToDb();
+  showAdminToast(`Moneda ${key} eliminada`, 'info');
+}
+
+async function saveSwapConfig(showNotice = false) {
+  const enabled = document.getElementById('settSwapEnabled')?.checked ?? true;
+  const minArpa = parseFloat(document.getElementById('settSwapMinArpa')?.value) || 5.0;
+  const maxArpa = parseFloat(document.getElementById('settSwapMaxArpa')?.value) || 5000.0;
+
+  swapConfig = {
+    enabled: enabled,
+    min_arpa: minArpa,
+    max_arpa: maxArpa
+  };
+
+  await saveCurrenciesToDb();
+  if (showNotice) {
+    showAdminToast('✅ Configuración y límites de Swap guardados', 'success');
+  }
+}
+
+async function saveCurrenciesToDb() {
+  try {
+    await setDoc(doc(db, 'settings', 'currencies'), {
+      currencies: withdrawalCurrencies,
+      swap: swapConfig,
+      updated_at: new Date().toISOString()
+    }, { merge: true });
+  } catch (err) {
+    console.error('Error saving currencies config:', err);
+    showAdminToast('⚠️ Error al guardar en Firebase: ' + err.message, 'error');
+  }
+}
+
 Object.assign(window, {
+  loadCurrenciesAndSwapConfig,
+  openAddCurrencyModal,
+  closeCurrencyModal,
+  saveCurrencyItem,
+  editCurrencyItem,
+  deleteCurrencyItem,
+  toggleCurrencyEnabled,
+  saveSwapConfig,
   handleLogin,
   handleLogout,
   switchAdminPage,
