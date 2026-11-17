@@ -975,6 +975,71 @@
         <p class="page-subtitle">Aprobar, rechazar y monitorear solicitudes de retiro</p>
       </div>
 
+      <!-- ═══ Módulo de Gestión de Monedas de Retiro y Conversor (Swap) ═══ -->
+      <div style="display:grid;grid-template-columns:repeat(auto-fit, minmax(340px, 1fr));gap:20px;margin-bottom:24px;">
+        
+        <!-- Panel 1: Monedas Activas para Retiro -->
+        <div class="panel" style="margin-bottom:0;">
+          <div class="panel-header" style="display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:10px;">
+            <div class="panel-title"><i class="fa-solid fa-coins" style="color:var(--accent);"></i> Monedas de Retiro Habilitadas</div>
+            <button class="btn btn-primary" onclick="openAddCurrencyModal()" style="font-size:12px;padding:6px 12px;">
+              <i class="fa-solid fa-plus"></i> Nueva Moneda
+            </button>
+          </div>
+          <div class="panel-body" style="padding:16px;">
+            <p style="font-size:12px;color:var(--text2);margin-bottom:14px;">
+              Activa, desactiva o define el monto mínimo de retiro para cada criptomoneda (ARPA, USDT, DOGECOIN, etc.) que ven los usuarios.
+            </p>
+            <div id="currenciesListContainer" style="display:flex;flex-direction:column;gap:10px;">
+              <div style="color:var(--text3);font-size:12px;text-align:center;padding:12px;"><i class="fa-solid fa-spinner fa-spin"></i> Cargando monedas...</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Panel 2: Configuración del Swap / Conversor a USDT & DOGE -->
+        <div class="panel" style="margin-bottom:0;border-color:rgba(0,152,234,0.3);background:linear-gradient(135deg,rgba(0,152,234,0.04),transparent);">
+          <div class="panel-header">
+            <div class="panel-title"><i class="fa-solid fa-repeat" style="color:var(--ton2);"></i> Conversor Interno (Swap a USDT / DOGE)</div>
+            <span class="badge" style="background:rgba(0,152,234,0.15);color:var(--ton2);border:1px solid rgba(0,152,234,0.3);">Mini App</span>
+          </div>
+          <div class="panel-body" style="padding:16px;">
+            <p style="font-size:12px;color:var(--text2);margin-bottom:14px;">
+              Permite a los usuarios cambiar su saldo ARPA acumulado directamente a <b>USDT</b> o <b>DOGECOIN</b> con precio real de mercado.
+            </p>
+            <div style="display:flex;flex-direction:column;gap:12px;">
+              <div style="display:flex;align-items:center;justify-content:space-between;padding:10px 14px;background:rgba(0,0,0,0.25);border:1px solid var(--card-border);border-radius:10px;">
+                <div>
+                  <div style="font-weight:700;font-size:13px;color:var(--text);">Habilitar Conversor (Swap)</div>
+                  <div style="font-size:11px;color:var(--text3);">Muestra la tarjeta de conversión en la pantalla de retiro</div>
+                </div>
+                <input type="checkbox" id="settSwapEnabled" style="width:20px;height:20px;accent-color:var(--accent);cursor:pointer;" onchange="saveSwapConfig()">
+              </div>
+
+              <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;">
+                <div class="form-group" style="margin-bottom:0;">
+                  <label class="form-label" style="font-size:11px;"><i class="fa-solid fa-arrow-down-short-wide"></i> Swap Mínimo (ARPA)</label>
+                  <input type="number" class="form-control" id="settSwapMinArpa" step="0.1" min="0" placeholder="Ej: 5.0" style="padding:8px 12px;font-size:13px;">
+                  <span class="form-hint" style="font-size:10px;">Mínimo a convertir</span>
+                </div>
+                <div class="form-group" style="margin-bottom:0;">
+                  <label class="form-label" style="font-size:11px;"><i class="fa-solid fa-arrow-up-wide-short"></i> Swap Máximo (ARPA)</label>
+                  <input type="number" class="form-control" id="settSwapMaxArpa" step="1" min="0" placeholder="Ej: 1000" style="padding:8px 12px;font-size:13px;">
+                  <span class="form-hint" style="font-size:10px;">Límite por transacción</span>
+                </div>
+              </div>
+
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-top:6px;">
+                <span style="font-size:11px;color:var(--text3);">Precios de referencia (Binance Spot)</span>
+                <button class="btn btn-primary" onclick="saveSwapConfig(true)" style="padding:6px 16px;font-size:12px;">
+                  <i class="fa-solid fa-floppy-disk"></i> Guardar Límites de Swap
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+      </div>
+
       <div class="panel">
         <div class="panel-header">
           <div class="panel-title"><i class="fa-solid fa-money-bill-transfer"></i> Todos los Retiros</div>
